@@ -55,6 +55,11 @@ This will pop up a notification after 15 minutes. Specifying a message is option
 At the moment there is no simple "1-step install". You need to compile and generate an executable yourself (or run
 directly from SBT).
 
+`application.conf` is needed to run Command Center. The following locations are searched (in order):
+1. `COMMAND_CENTER_CONFIG_PATH` (if defined)
+2. `~/.commandcenter/application.conf`
+3. `./application.conf`
+
 **Important note**: For the pop-up emulator window to activate and come to the front properly on macOS you need to make sure you
 place the `cc-tools` executable in the proper location. Either place it in `~/.command-center/cc-tools` or define the
 `COMMAND_CENTER_TOOLS_PATH` environment variable if you want to specify a custom location.

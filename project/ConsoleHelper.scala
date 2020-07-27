@@ -18,11 +18,12 @@ object ConsoleHelper {
          |${header(s"`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '   ${version.value}")}
          |Useful sbt tasks:
          |${item("~compile")} - Compile all modules with file-watch enabled
+         |${item("fmt")} - Run scalafmt on the entire project
          |${item("cli-client/run")} - Run Command Center CLI client (interactive mode by default)
          |${item("daemon/run")} - Run Command Center in daemon mode (cmd+space to summon terminal emulator)
          |${item("cli-client/assembly")} - Create an executable JAR for running command line utility
          |${item("cli-client/graalvm-native-image:packageBin")} - Create a native executable of the CLI client
-         |${item("daemon/graalvm-native-image:packageBin")} - Create a native executable of the daemon ${Console.RED}(work in progress)
          |${item("daemon/assembly")} - Create an executable JAR for running in daemon mode
+         |${item("daemon/graalvm-native-image:packageBin")} - Create a native executable of the daemon ${Console.RED}(work in progress)
       """.stripMargin
 }
