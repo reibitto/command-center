@@ -69,7 +69,8 @@ lazy val daemon = module("daemon")
     assemblyJarName in assembly := "commandcenterd.jar",
     resolvers := Resolvers,
     libraryDependencies ++= Seq(
-      "com.github.tulskiy" % "jkeymaster" % "1.3"
+      "com.github.tulskiy" % "jkeymaster" % "1.3",
+      "org.slf4j"          % "slf4j-api"  % "1.7.30" // Seems to be required for jkeymaster on Linux
     )
   )
 
