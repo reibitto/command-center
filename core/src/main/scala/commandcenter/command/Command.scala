@@ -28,12 +28,26 @@ trait Command[+R] extends ViewInstances {
 
   def supportedOS: Set[OS] = Set.empty
 
+  /**
+   * This event is fired whenever the input text changes (debounced). Override this method when you're writing a
+   * command that has to respond to arbitrary user input (such as a calculator command: `1 + 1` and so on).
+   * */
   def inputPreview(input: String, context: CommandContext): ZIO[Env, CommandError, List[PreviewResult[R]]] =
     IO.fail(NotApplicable)
 
+  /**
+   * This event is fired whenever the input text changes (debounced) and the input text is exactly equal to or starts
+   * with the command name. Override this method when you're writing commands that are triggered with a keyword and
+   * take in no arguments. Examples include: `exit`, `uuid`, `externalip`, etc.
+   */
   def keywordPreview(keyword: String, context: CommandContext): ZIO[Env, CommandError, List[PreviewResult[R]]] =
     IO.fail(NotApplicable)
 
+  /**
+   * This event is fired whenever the input text changes (debounced) and the input text starts with the full command name
+   * plus any additional text after that (stored in the `rest` field). Override this when you're writing commands that
+   * require a prefix and take in 1 long argument after it (spaces aren't parsed as separated arguments in this case).
+   */
   def prefixPreview(
     prefix: String,
     rest: String,
@@ -41,6 +55,11 @@ trait Command[+R] extends ViewInstances {
   ): ZIO[Env, CommandError, List[PreviewResult[R]]] =
     IO.fail(NotApplicable)
 
+  /**
+   * This event is fired whenever the input text changes (debounced) and the input text starts with the full command name
+   * plus any additional text after that (arguments are fully parsed passed in as a List). Override this when you're
+   * writing commands that behave like fully featured command-line interfaces where you can specify arguments and options.
+   */
   def argsPreview(args: List[String], context: CommandContext): ZIO[Env, CommandError, List[PreviewResult[R]]] =
     IO.fail(NotApplicable)
 
