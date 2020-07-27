@@ -37,7 +37,7 @@ object CommandCenterBuild {
     "-Xlint:stars-align",            // Pattern sequence wildcard must align with sequence component.
     "-Xlint:option-implicit",        // Option.apply used implicit view.
     "-Xlint:poly-implicit-overload", // Parameterized overloaded implicit methods are not visible as view bounds.
-    "-Ywarn-extra-implicit" // Warn when more than one implicit parameter section is defined.
+    "-Ywarn-extra-implicit"          // Warn when more than one implicit parameter section is defined.
   ) ++
     Seq(
       "-Ywarn-unused:imports",  // Warn if an import selector is not referenced.
