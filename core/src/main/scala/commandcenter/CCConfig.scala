@@ -34,8 +34,11 @@ object CCConfig {
 
   private def envConfigFile: Option[File] =
     sys.env
-      .get("CC_CONFIG_PATH")
-      .map(new File(_))
+      .get("COMMAND_CENTER_CONFIG_PATH")
+      .map { path =>
+        val file = new File(path)
+        if (file.isDirectory) new File(file, "application.conf") else file
+      }
 
   private def homeConfigFile: Option[File] = {
     val userHome = Try(System.getProperty("user.home")).toOption.getOrElse("")
