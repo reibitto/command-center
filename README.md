@@ -68,7 +68,7 @@ place the `cc-tools` executable in the proper location. Either place it in `~/.c
 
 Command Center mainly uses Scala with a strong focus on typed functional programming (via [ZIO](https://github.com/zio/zio)).
 Types make developing plugins a much more pleasant experience as you get feedback quicker and features are more discoverable.
-Writing a command is as simple as writing a single class [like so]().
+Writing a command is as simple as writing a single class [like so](https://github.com/reibitto/command-center/blob/master/core/src/main/scala/commandcenter/command/EpochUnixCommand.scala).
 
 Once you start SBT, you should be presented a list of common commands. For example:
 
@@ -87,7 +87,7 @@ create aliases (useful for shortening argument passing), and so on.
 #### Configuration format
 
 Commands and options are configured with a single [HOCON](https://github.com/lightbend/config) configuration file. To see
-an example, take a look at [application.conf]().
+an example, take a look at [application.conf](https://github.com/reibitto/command-center/blob/master/application.conf).
 
 ### Creating your own plugins
 
@@ -95,12 +95,12 @@ If you created a plugin and it's general-purpose and doesn't bring in extra depe
 to get the command into Command Center's core commands. If not (or if you'd prefer to maintain the plugin yourself), you can
 create your own separate repository to host it. If you let me know, I can add it to a list of external plugins.
 
-Eventually the goal is to make installing external plugins as simple as running a single install command. See this issue [here]().
+Eventually the goal is to make installing external plugins as simple as running a single install command. See this issue [here](https://github.com/reibitto/command-center/issues/24).
 Until then, it's a matter of dropping your jar file in the `plugins` folder and restarting the app.
 
 ## Contributing
 
-There are a lot of issues marked as "good first issue" [here](). Feel free to take any that interest you. I'd also appreciate
+There are a lot of issues marked as "good first issue" [here](https://github.com/reibitto/command-center/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22). Feel free to take any that interest you. I'd also appreciate
 any help for OS-specific features. Help with Windows and Linux would be great since I've mainly been focusing on macOS for now.
 
 Writing your own commands is a great way to begin learning ZIO. Each command can be developed, tested, and run in isolation.
