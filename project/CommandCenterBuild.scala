@@ -11,8 +11,9 @@ object CommandCenterBuild {
     val zio   = "1.0.0-RC21-2"
     val circe = "0.13.0"
 
-    // If you set this to None you can test with your locally installed version of Graal.
-    val imageGraal: Option[String] = None //Some("20.1.0-java11")
+    // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
+    // and build a Linux image (e.g. setting it to "20.1.0-java11").
+    val imageGraal: Option[String] = None
   }
 
   lazy val ScalacOptions = Seq(
@@ -36,7 +37,6 @@ object CommandCenterBuild {
     "-Xlint:stars-align",            // Pattern sequence wildcard must align with sequence component.
     "-Xlint:option-implicit",        // Option.apply used implicit view.
     "-Xlint:poly-implicit-overload", // Parameterized overloaded implicit methods are not visible as view bounds.
-//    "-Xlint:infer-any",                 // Warn when a type argument is inferred to be `Any`.
     "-Ywarn-extra-implicit" // Warn when more than one implicit parameter section is defined.
   ) ++
     Seq(
@@ -52,7 +52,6 @@ object CommandCenterBuild {
 
   def defaultSettings(projectName: String) = Seq(
     name := projectName,
-//    organization := "...",
     scalacOptions := ScalacOptions,
     scalaVersion in ThisBuild := ScalaVersion,
     libraryDependencies ++= Plugins.BaseCompilerPlugins,
