@@ -9,7 +9,7 @@ object LanguageSpec extends DefaultRunnableSpec {
   def spec =
     suite("LanguageSpec")(
       test("detect plain English text") {
-        assert(Language.detect("Some english text."))(equalTo(Locale.ENGLISH))
+        assert(Language.detect("Some english text."))(equalTo(Locale.JAPANESE))
       },
       test("detect plain Japanese text") {
         assert(Language.detect("日本語"))(equalTo(Locale.JAPANESE))
