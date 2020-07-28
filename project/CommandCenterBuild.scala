@@ -52,13 +52,21 @@ object CommandCenterBuild {
 
   def defaultSettings(projectName: String) = Seq(
     name := projectName,
+    version := CommandCenterVersion,
+    javaOptions in Test += "-Duser.timezone=UTC",
     scalacOptions := ScalacOptions,
     scalaVersion in ThisBuild := ScalaVersion,
     libraryDependencies ++= Plugins.BaseCompilerPlugins,
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-test"     % Version.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Version.zio % Test
+    ),
     incOptions ~= (_.withLogRecompileOnMacro(false)),
     autoAPIMappings := true,
     resolvers := Resolvers,
-    version := CommandCenterVersion
+    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
+    fork in Test := true,
+    logBuffered in Test := false
   )
 
   lazy val Resolvers = Seq(
