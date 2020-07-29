@@ -159,7 +159,6 @@ object Command {
                              .map(_.flatten.flatten)
       results = (inputPreviewResults.toVector ++ keywordPreviewResults ++ prefixPreviewResults ++ argsPreviewResults)
         .sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
-        .distinctBy(_.source)
     } yield SearchResults(input, results)
   }
 
