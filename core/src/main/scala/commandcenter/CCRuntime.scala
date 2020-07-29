@@ -1,13 +1,14 @@
 package commandcenter
 
 import commandcenter.CCRuntime.Env
+import sttp.client.asynchttpclient.zio.{ AsyncHttpClientZioBackend, SttpClient }
 import zio.internal.Platform
 import zio.logging.Logging
 import zio.{ Runtime, ZEnv }
 
 trait CCRuntime extends Runtime[Env] {
   lazy val runtime: Runtime.Managed[Env] = Runtime.unsafeFromLayer {
-    ZEnv.live ++ (ZEnv.live >>> Logging.console((_, logEntry) => logEntry))
+    ZEnv.live ++ (ZEnv.live >>> Logging.console((_, logEntry) => logEntry)) ++ AsyncHttpClientZioBackend.layer()
   }
 
   lazy val environment: Env   = runtime.environment
@@ -15,7 +16,7 @@ trait CCRuntime extends Runtime[Env] {
 }
 
 object CCRuntime {
-  type Env = ZEnv with Logging
+  type Env = ZEnv with Logging with SttpClient
 
   lazy val default: CCRuntime = new CCRuntime {}
 }

@@ -26,6 +26,7 @@ object CommandType extends Enum[CommandType] {
   case object ReloadCommand             extends CommandType
   case object ResizeCommand             extends CommandType
   case object SearchUrlCommand          extends CommandType
+  case object SearchMavenCommand        extends CommandType
   case object TemperatureCommand        extends CommandType
   case object TerminalCommand           extends CommandType
   case object TimerCommand              extends CommandType
