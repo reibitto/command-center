@@ -221,6 +221,7 @@ object Command {
                   case CommandType.ITunesCommand             => config.as[ITunesCommand]
                   case CommandType.LocalIPCommand            => config.as[LocalIPCommand]
                   case CommandType.LockCommand               => config.as[LockCommand]
+                  case CommandType.LoremIpsumCommand         => config.as[LoremIpsumCommand]
                   case CommandType.OpenBrowserCommand        => config.as[OpenBrowserCommand]
                   case CommandType.OpacityCommand            => config.as[OpacityCommand]
                   case CommandType.RadixCommand              => config.as[RadixCommand]
