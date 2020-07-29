@@ -19,7 +19,6 @@ final case class TemperatureCommand() extends Command[Double] {
 
   val temperatureRegex: Regex = """(-?\d+\.?\d*)\s*([cCＣfFＦ度どド])""".r
 
-  // TODO: Add Temperature value class and format to 1 decimal place
   override def inputPreview(
     input: String,
     context: CommandContext

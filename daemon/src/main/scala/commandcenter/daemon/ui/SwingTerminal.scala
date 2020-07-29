@@ -1,6 +1,6 @@
 package commandcenter.daemon.ui
 
-import java.awt.event.{ KeyAdapter, KeyEvent }
+import java.awt.event.KeyEvent
 import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment }
 
 import commandcenter.CCRuntime.Env
@@ -10,7 +10,6 @@ import commandcenter.util.{ Debounced, OS }
 import commandcenter.view.AnsiRendered
 import commandcenter.{ CCConfig, CCRuntime, CCTerminal, TerminalType }
 import javax.swing._
-import javax.swing.event.{ DocumentEvent, DocumentListener }
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.{ DefaultStyledDocument, StyleConstants, StyleContext }
 import zio._
@@ -26,7 +25,7 @@ final case class SwingTerminal(
   commandCursorRef: Ref[Int],
   searchResultsRef: Ref[SearchResults[Any]],
   searchDebounce: URIO[Env, Unit] => URIO[Env with Clock, Fiber[Nothing, Unit]]
-)(runtime: CCRuntime)
+)(implicit runtime: Runtime[Env])
     extends CCTerminal {
   val terminalType: TerminalType = TerminalType.Swing
 
@@ -41,7 +40,7 @@ final case class SwingTerminal(
   frame.setOpacity(config.display.opacity)
   frame.getContentPane.setLayout(new BorderLayout())
 
-  val inputTextField = new JTextField()
+  val inputTextField = new ZTextField
   inputTextField.setFont(font)
   inputTextField.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10))
   inputTextField.setBackground(theme.background)
@@ -54,11 +53,8 @@ final case class SwingTerminal(
   outputTextPane.setFont(font)
   outputTextPane.setBackground(theme.background)
   outputTextPane.setForeground(theme.foreground)
-//  outputTextPane.setCaretColor(Color.RED)
+//  outputTextPane.setCaretColor(Color.RED) // TODO: Make caret color configurable
   outputTextPane.setEditable(false)
-
-  // To prevent auto-scrolling to the bottom of the text pane
-//  outputTextPane.getCaret.asInstanceOf[DefaultCaret].setUpdatePolicy(DefaultCaret.NEVER_UPDATE)
 
   val outputScrollPane = new JScrollPane(
     outputTextPane,
@@ -101,24 +97,16 @@ final case class SwingTerminal(
 
   frame.getContentPane.add(outputScrollPane, BorderLayout.CENTER)
 
-  inputTextField.getDocument.addDocumentListener(new DocumentListener {
-    def onChange(e: DocumentEvent): Unit = {
-      val searchTerm = inputTextField.getText
+  inputTextField.addOnChangeListener { e =>
+    val searchTerm = inputTextField.getText
 
-      runtime.unsafeRunAsync_ {
-        searchDebounce(
-          Command
-            .search(config.commands, config.aliases, searchTerm, SwingTerminal.this)
-            .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-            .unit
-        ).flatMap(_.join)
-      }
-    }
-
-    override def insertUpdate(e: DocumentEvent): Unit  = onChange(e)
-    override def removeUpdate(e: DocumentEvent): Unit  = onChange(e)
-    override def changedUpdate(e: DocumentEvent): Unit = onChange(e)
-  })
+    searchDebounce(
+      Command
+        .search(config.commands, config.aliases, searchTerm, SwingTerminal.this)
+        .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+        .unit
+    ).flatMap(_.join)
+  }
 
   private def render(searchResults: SearchResults[Any]): UIO[Unit] =
     for {
@@ -189,55 +177,45 @@ final case class SwingTerminal(
       _             <- reset()
     } yield previewResult
 
-  // TODO: Add ZKeyListener that has unsafeRunAsync_ baked in
-  inputTextField.addKeyListener(new KeyAdapter {
-    override def keyPressed(e: KeyEvent): Unit =
+  inputTextField.addZKeyListener(new ZKeyAdapter {
+    override def keyPressed(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
         case KeyEvent.VK_ENTER =>
-          frame.setVisible(false)
-
-          runtime.unsafeRunAsync_ {
-            for {
-              previousResults <- searchResultsRef.get
-              cursorIndex     <- commandCursorRef.get
-              x               <- runSelected(previousResults, cursorIndex)
-              _ = if (x.map(_.result).contains(CommandResult.Exit)) {
-                System.exit(0)
-//              SwingUtilities.invokeLater(() => frame.dispose())
-              }
-            } yield ()
-          }
+          for {
+            _               <- UIO(frame.setVisible(false))
+            previousResults <- searchResultsRef.get
+            cursorIndex     <- commandCursorRef.get
+            resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
+            _ <- ZIO.whenCase(resultOpt) {
+                  case Some(o) if o.result == CommandResult.Exit =>
+                    UIO(System.exit(0))
+                }
+          } yield ()
 
         case KeyEvent.VK_ESCAPE =>
-          frame.setVisible(false)
-
-          runtime.unsafeRunAsync_ {
-            deactivate *> reset()
-          }
+          for {
+            _ <- UIO(frame.setVisible(false))
+            _ <- deactivate.ignore
+            _ <- reset()
+          } yield ()
 
         case KeyEvent.VK_DOWN =>
-          e.consume()
-
-          runtime.unsafeRunAsync_ {
-            for {
-              previousResults <- searchResultsRef.get
-              _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.results.length - 1))
-              _               <- render(previousResults)
-            } yield ()
-          }
+          for {
+            _               <- UIO(e.consume())
+            previousResults <- searchResultsRef.get
+            _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.results.length - 1))
+            _               <- render(previousResults)
+          } yield ()
 
         case KeyEvent.VK_UP =>
-          e.consume()
+          for {
+            _               <- UIO(e.consume())
+            previousResults <- searchResultsRef.get
+            _               <- commandCursorRef.update(cursor => (cursor - 1) max 0)
+            _               <- render(previousResults)
+          } yield ()
 
-          runtime.unsafeRunAsync_ {
-            for {
-              previousResults <- searchResultsRef.get
-              _               <- commandCursorRef.update(cursor => (cursor - 1) max 0)
-              _               <- render(previousResults)
-            } yield ()
-          }
-
-        case _ =>
+        case _ => ZIO.unit
       }
   })
 
