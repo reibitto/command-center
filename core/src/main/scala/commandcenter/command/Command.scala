@@ -228,6 +228,7 @@ object Command {
                   case CommandType.ResizeCommand             => config.as[ResizeCommand]
                   case CommandType.ReloadCommand             => config.as[ReloadCommand]
                   case CommandType.SearchUrlCommand          => config.as[SearchUrlCommand]
+                  case CommandType.SearchMavenCommand        => config.as[SearchMavenCommand]
                   case CommandType.TemperatureCommand        => config.as[TemperatureCommand]
                   case CommandType.TerminalCommand           => config.as[TerminalCommand]
                   case CommandType.TimerCommand              => config.as[TimerCommand]
