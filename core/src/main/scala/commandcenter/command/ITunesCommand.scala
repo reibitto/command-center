@@ -89,7 +89,7 @@ final case class ITunesCommand() extends Command[Unit] {
                           details                                 <- trackDetailsFn
                           Array(trackName, artist, album, rating) = details.trim.split("\t")
                         } yield fansi.Color.Magenta(trackName) ++ " " ++ artist ++ " " ++ fansi.Color
-                          .Yellow(album) ++ " " ++ fansi.Color.Yellow(rating))
+                          .Cyan(album) ++ " " ++ fansi.Color.Yellow(rating))
                           .mapError(
                             CommandError.UnexpectedException
                           ) // TODO: Always show track details at top for every command. May want to also cache this?
