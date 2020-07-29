@@ -290,7 +290,7 @@ object SwingTerminal {
     for {
       searchDebounce   <- Debounced[Env, Nothing, Unit](250.millis).toManaged_
       process          <- CCProcess.get.toManaged_
-      commandCursorRef <- Ref.make(0).toManaged_
-      searchResultsRef <- Ref.make(SearchResults.empty[Any]).toManaged_
+      commandCursorRef <- Ref.makeManaged(0)
+      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
     } yield new SwingTerminal(config, process, commandCursorRef, searchResultsRef, searchDebounce)(runtime)
 }

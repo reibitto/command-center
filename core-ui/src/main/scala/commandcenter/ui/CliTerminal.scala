@@ -20,10 +20,10 @@ import zio.duration._
 
 final case class CliTerminal[T <: Terminal](
   terminal: T,
-  var config: CCConfig, // TODO: Convert to Ref
   ccProcess: CCProcess,
   screen: TerminalScreen,
   graphics: TextGraphics,
+  configRef: Ref[CCConfig],
   commandCursorRef: Ref[Int],
   textCursorRef: Ref[TextCursor],
   searchResultsRef: Ref[SearchResults[Any]],
@@ -48,9 +48,8 @@ final case class CliTerminal[T <: Terminal](
   def reload: RIO[Env, Unit] =
     for {
       newConfig <- CCConfig.load
-    } yield {
-      config = newConfig
-    }
+      _         <- configRef.set(newConfig)
+    } yield ()
 
   def defaultKeyHandlers: Map[KeyStroke, URIO[Env, EventResult]] =
     Map(
@@ -283,19 +282,20 @@ object CliTerminal {
       process            <- CCProcess.get.toManaged_
       screen             <- ZManaged.fromAutoCloseable(Task(new TerminalScreen(terminal)))
       graphics           <- Task(screen.newTextGraphics()).toManaged_
-      commandCursorRef   <- Ref.make(0).toManaged_
-      textCursorRef      <- Ref.make(TextCursor.unit).toManaged_
-      searchResultsRef   <- Ref.make(SearchResults.empty[Any]).toManaged_
-      keyHandlersRef     <- Ref.make(Map.empty[KeyStroke, URIO[Env, EventResult]]).toManaged_
+      configRef          <- Ref.makeManaged(config)
+      commandCursorRef   <- Ref.makeManaged(0)
+      textCursorRef      <- Ref.makeManaged(TextCursor.unit)
+      searchResultsRef   <- Ref.makeManaged(SearchResults.empty[Any])
+      keyHandlersRef     <- Ref.makeManaged(Map.empty[KeyStroke, URIO[Env, EventResult]])
       searchDebounce     <- Debounced[Env, Nothing, Unit](250.millis).toManaged_
       renderQueue        <- Queue.sliding[SearchResults[Any]](1).toManaged_
-      lastSearchFiberRef <- Ref.make(Option.empty[Fiber[Throwable, SearchResults[Any]]]).toManaged_
+      lastSearchFiberRef <- Ref.makeManaged(Option.empty[Fiber[Throwable, SearchResults[Any]]])
     } yield CliTerminal(
       terminal,
-      config,
       process,
       screen,
       graphics,
+      configRef,
       commandCursorRef,
       textCursorRef,
       searchResultsRef,
