@@ -21,7 +21,7 @@ final case class LocalIPCommand() extends Command[String] {
     context: CommandContext
   ): ZIO[Blocking, CommandError, List[PreviewResult[String]]] =
     for {
-      localIP <- PCommand("ipconfig", "getifaddr", "en0").string.mapError(CommandError.UnexpectedException)
+      localIP <- PCommand("ipconfig", "getifaddr", "en0").string.bimap(CommandError.UnexpectedException, _.trim)
     } yield {
       List(
         Preview(localIP)

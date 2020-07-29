@@ -23,7 +23,7 @@ final case class ExternalIPCommand() extends Command[String] {
   ): ZIO[Blocking, CommandError, List[PreviewResult[String]]] =
     for {
       externalIP <- PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
-                     .mapError(CommandError.UnexpectedException)
+                     .bimap(CommandError.UnexpectedException, _.trim)
     } yield {
       List(
         Preview(externalIP)
