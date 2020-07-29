@@ -29,14 +29,14 @@ final case class LoremIpsumCommand() extends Command[Unit] {
   val lipsum = Source.fromResource("lipsum").getLines().mkString("\n")
 
   val numOpt = Opts.argument[Int]("number").withDefault(1)
-  val typeOpt = Opts.argument[String]("word, sentence, or paragraph").mapValidated {
-    case "words" => Validated.valid(Word)
-    case "sentences" => Validated.valid(Sentence)
-    case "paragraphs" => Validated.valid(Paragraph)
+  val typeOpt = Opts.argument[String]("words, sentences, or paragraphs").mapValidated {
+    case arg if arg.matches("words?") => Validated.valid(Word)
+    case arg if arg.matches("sentences?") => Validated.valid(Sentence)
+    case arg if arg.matches("paragraphs?") => Validated.valid(Paragraph)
     case s => Validated.invalidNel(s"${s} is not valid: should be 'words', 'sentences', or 'paragraphs'.")
   }.withDefault(Paragraph)
 
-  val lipsumCommand = decline.Command("Lorem Ipsum", title)((numOpt, typeOpt).tupled)
+  val lipsumCommand = decline.Command(title, title)((numOpt, typeOpt).tupled)
 
   override def argsPreview(args: List[String], context: CommandContext): IO[CommandError, List[PreviewResult[Unit]]] = {
     val parsed = lipsumCommand.parse(args)
