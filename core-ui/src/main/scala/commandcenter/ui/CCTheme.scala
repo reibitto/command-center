@@ -3,7 +3,7 @@ package commandcenter.ui
 import java.awt.Color
 
 // TODO: Add scrollbar colors
-case class CCTheme(
+final case class CCTheme(
   background: Color,
   foreground: Color,
   black: Color,

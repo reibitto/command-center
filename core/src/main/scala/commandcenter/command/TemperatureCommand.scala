@@ -1,7 +1,6 @@
 package commandcenter.command
 
 import commandcenter.CCRuntime.Env
-import commandcenter.CommandContext
 import commandcenter.command.CommandError._
 import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView
@@ -19,13 +18,10 @@ final case class TemperatureCommand() extends Command[Double] {
 
   val temperatureRegex: Regex = """(-?\d+\.?\d*)\s*([cCＣfFＦ度どド])""".r
 
-  override def inputPreview(
-    input: String,
-    context: CommandContext
-  ): ZIO[Env, CommandError, List[PreviewResult[Double]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Double]]] =
     for {
       (temperature, unit) <- ZIO.fromOption {
-                              temperatureRegex.unapplySeq(input.trim).map {
+                              temperatureRegex.unapplySeq(searchInput.input.trim).map {
                                 case List(value, sourceUnit) =>
                                   val v = value.toDouble
 
@@ -43,7 +39,7 @@ final case class TemperatureCommand() extends Command[Double] {
       temperatureFormatted = f"$temperature%.1f $unit"
     } yield List(
       Preview(temperature)
-        .score(Scores.high(context))
+        .score(Scores.high(searchInput.context))
         .view(DefaultView(title, temperatureFormatted))
         .onRun(ProcessUtil.copyToClipboard(temperatureFormatted))
     )

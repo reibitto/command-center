@@ -1,9 +1,9 @@
 package commandcenter.command
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.{ IO, UIO }
+import zio.ZIO
 
 // TODO: Work in progress
 final case class TerminalCommand() extends Command[Unit] {
@@ -13,16 +13,12 @@ final case class TerminalCommand() extends Command[Unit] {
 
   val title: String = "Terminal"
 
-  override def prefixPreview(
-    prefix: String,
-    rest: String,
-    context: CommandContext
-  ): IO[CommandError, List[PreviewResult[Unit]]] =
-    UIO(
-      List(
-        Preview.unit.view(DefaultView("Terminal", rest)).score(Scores.high(context))
-      )
-    )
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+    for {
+      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+    } yield {
+      List(Preview.unit.view(DefaultView("Terminal", input.rest)).score(Scores.high(input.context)))
+    }
 }
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {

@@ -1,10 +1,9 @@
 package commandcenter.command
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.util.ProcessUtil
 import io.circe.Decoder
-import zio.blocking.Blocking
 import zio.{ IO, UIO, ZIO }
 
 final case class OpenBrowserCommand() extends Command[Unit] {
@@ -14,10 +13,8 @@ final case class OpenBrowserCommand() extends Command[Unit] {
 
   val title: String = "Open in Browser"
 
-  override def inputPreview(
-    input: String,
-    context: CommandContext
-  ): ZIO[Blocking, CommandError, List[PreviewResult[Unit]]] = {
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
+    val input      = searchInput.input
     val startsWith = input.startsWith("http://") || input.startsWith("https://")
 
     // TODO: also check endsWith TLD + URL.isValid

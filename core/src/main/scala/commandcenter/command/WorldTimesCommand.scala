@@ -3,10 +3,11 @@ package commandcenter.command
 import java.time.format.DateTimeFormatter
 import java.time.{ OffsetDateTime, ZoneId, ZonedDateTime }
 
-import commandcenter.{ CommandContext, TerminalType }
+import commandcenter.CCRuntime.Env
 import commandcenter.view.View
+import commandcenter.{ CommandContext, TerminalType }
 import io.circe.Decoder
-import zio.{ IO, UIO }
+import zio.ZIO
 
 final case class WorldTimesCommand(dateTimeFormat: String, zones: List[TimeZone]) extends Command[Unit] {
   val commandType: CommandType = CommandType.WorldTimesCommand
@@ -15,13 +16,14 @@ final case class WorldTimesCommand(dateTimeFormat: String, zones: List[TimeZone]
 
   val title: String = "World Times"
 
-  override def keywordPreview(keyword: String, context: CommandContext): IO[CommandError, List[PreviewResult[Unit]]] = {
-    val now = OffsetDateTime.now
-
-    val times = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.atZoneSameInstant(tz.zoneId)))
-
-    UIO(List(Preview.unit.view(WorldTimesResults(dateTimeFormat, times, context)).score(Scores.high(context))))
-  }
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+    for {
+      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      now   = OffsetDateTime.now
+      times = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.atZoneSameInstant(tz.zoneId)))
+    } yield {
+      List(Preview.unit.view(WorldTimesResults(dateTimeFormat, times, input.context)).score(Scores.high(input.context)))
+    }
 }
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {

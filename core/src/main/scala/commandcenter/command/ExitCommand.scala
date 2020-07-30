@@ -1,9 +1,9 @@
 package commandcenter.command
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.{ IO, UIO }
+import zio.ZIO
 
 final case class ExitCommand() extends Command[CommandResult] {
   val commandType: CommandType = CommandType.ExitCommand
@@ -12,11 +12,12 @@ final case class ExitCommand() extends Command[CommandResult] {
 
   val title: String = "Exit Command Center"
 
-  override def keywordPreview(
-    keyword: String,
-    context: CommandContext
-  ): IO[CommandError, List[PreviewResult[CommandResult]]] =
-    UIO(List(Preview(CommandResult.Exit).view(DefaultView(title, "")).score(Scores.high(context))))
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[CommandResult]]] =
+    for {
+      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+    } yield {
+      List(Preview(CommandResult.Exit).view(DefaultView(title, "")).score(Scores.high(input.context)))
+    }
 }
 
 object ExitCommand extends CommandPlugin[ExitCommand] {

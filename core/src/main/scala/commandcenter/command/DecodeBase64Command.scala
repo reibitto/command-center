@@ -4,11 +4,11 @@ import java.util.Base64
 
 import cats.syntax.apply._
 import com.monovore.decline
-import commandcenter.CommandContext
-import CommonOpts._
+import commandcenter.CCRuntime.Env
+import commandcenter.command.CommonOpts._
 import commandcenter.util.ProcessUtil
 import io.circe.Decoder
-import zio.IO
+import zio.ZIO
 
 final case class DecodeBase64Command() extends Command[String] {
   val command                    = "decodebase64"
@@ -16,20 +16,16 @@ final case class DecodeBase64Command() extends Command[String] {
   val commandNames: List[String] = List(command)
   val title: String              = "Decode (Base64)"
 
-  override def argsPreview(
-    args: List[String],
-    context: CommandContext
-  ): IO[CommandError, List[PreviewResult[String]]] = {
-    val all           = (stringArg, encodingOpt).tupled
-    val parsedCommand = decline.Command(command, s"Base64 decodes the given string")(all).parse(args)
-
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
-      (valueToDecode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      input                    <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      all                      = (stringArg, encodingOpt).tupled
+      parsedCommand            = decline.Command(command, s"Base64 decodes the given string")(all).parse(input.args)
+      (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
       decoded                  = new String(Base64.getDecoder.decode(valueToDecode.getBytes(charset)), charset)
     } yield {
-      List(Preview(decoded).onRun(ProcessUtil.copyToClipboard(decoded)).score(Scores.high(context)))
+      List(Preview(decoded).onRun(ProcessUtil.copyToClipboard(decoded)).score(Scores.high(input.context)))
     }
-  }
 }
 
 object DecodeBase64Command extends CommandPlugin[DecodeBase64Command] {

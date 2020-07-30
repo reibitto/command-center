@@ -52,6 +52,10 @@ lazy val cliClient = module("cli-client")
   .settings(
     mainClass in assembly := Some("commandcenter.cli.Main"),
     assemblyJarName in assembly := "ccc.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", _ @_*) => MergeStrategy.discard
+      case _                           => MergeStrategy.first
+    },
     resolvers := Resolvers,
     graalVMNativeImageGraalVersion := Version.imageGraal,
     graalVMNativeImageOptions ++= Seq(
@@ -69,7 +73,11 @@ lazy val daemon = module("daemon")
   .settings(
     fork := true,
     mainClass in assembly := Some("commandcenter.daemon.Main"),
-    assemblyJarName in assembly := "commandcenterd.jar",
+    assemblyJarName in assembly := "ccd.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", _ @_*) => MergeStrategy.discard
+      case _                           => MergeStrategy.first
+    },
     resolvers := Resolvers,
     libraryDependencies ++= Seq(
       "com.github.tulskiy" % "jkeymaster" % "1.3",

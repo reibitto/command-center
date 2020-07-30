@@ -3,7 +3,6 @@ package commandcenter.command
 import com.monovore.decline
 import com.monovore.decline.Opts
 import commandcenter.CCRuntime.Env
-import commandcenter.CommandContext
 import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{ AppleScript, OS, TTS }
 import commandcenter.view.DefaultView
@@ -61,13 +60,10 @@ final case class ITunesCommand() extends Command[Unit] {
   val rateTrackFn     = AppleScript.loadFunction1[Int]("applescript/itunes/rate.applescript")
   val deleteTrackFn   = AppleScript.loadFunction0("applescript/itunes/delete-track.applescript")
 
-  override def argsPreview(
-    args: List[String],
-    context: CommandContext
-  ): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
-    val parsed = itunesCommand.parse(args)
-
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
+      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      parsed = itunesCommand.parse(input.args)
       message <- ZIO
                   .fromEither(parsed)
                   .foldM(
@@ -115,11 +111,10 @@ final case class ITunesCommand() extends Command[Unit] {
       List(
         Preview.unit
           .onRun(run.ignore)
-          .score(Scores.high(context))
+          .score(Scores.high(input.context))
           .view(DefaultView(title, message))
       )
     }
-  }
 }
 
 object ITunesCommand extends CommandPlugin[ITunesCommand] {

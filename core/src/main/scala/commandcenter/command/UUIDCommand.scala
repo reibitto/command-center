@@ -2,10 +2,10 @@ package commandcenter.command
 
 import java.util.UUID
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.util.ProcessUtil
 import io.circe.Decoder
-import zio.{ IO, UIO }
+import zio.ZIO
 
 final case class UUIDCommand() extends Command[UUID] {
   val commandType: CommandType = CommandType.UUIDCommand
@@ -14,11 +14,13 @@ final case class UUIDCommand() extends Command[UUID] {
 
   val title: String = "UUID"
 
-  override def keywordPreview(keyword: String, context: CommandContext): IO[CommandError, List[PreviewResult[UUID]]] = {
-    val uuid = UUID.randomUUID()
-
-    UIO(List(Preview(uuid).onRun(ProcessUtil.copyToClipboard(uuid.toString)).score(Scores.high(context))))
-  }
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[UUID]]] =
+    for {
+      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      uuid  = UUID.randomUUID()
+    } yield {
+      List(Preview(uuid).onRun(ProcessUtil.copyToClipboard(uuid.toString)).score(Scores.high(input.context)))
+    }
 }
 
 object UUIDCommand extends CommandPlugin[UUIDCommand] {
