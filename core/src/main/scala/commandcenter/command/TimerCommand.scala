@@ -4,13 +4,12 @@ import cats.syntax.apply._
 import com.monovore.decline
 import com.monovore.decline.Opts
 import commandcenter.CCRuntime.Env
-import commandcenter.CommandContext
 import commandcenter.command.CommonArgs._
 import commandcenter.util.{ AppleScript, OS }
 import commandcenter.view.DefaultView
 import io.circe.Decoder
+import zio.ZIO
 import zio.duration.Duration
-import zio.{ UIO, ZIO }
 
 final case class TimerCommand() extends Command[Unit] {
   // TODO: Add option to list active timers and also one for canceling them
@@ -31,19 +30,13 @@ final case class TimerCommand() extends Command[Unit] {
   // TODO: Support all OSes
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
-  override def argsPreview(
-    args: List[String],
-    context: CommandContext
-  ): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
-    val parsed = timerCommand.parse(args)
-
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
+      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      parsed = timerCommand.parse(input.args)
       message <- ZIO
                   .fromEither(parsed)
-                  .foldM(
-                    help => UIO(HelpMessage.formatted(help)),
-                    f => UIO(fansi.Str(s"Reminder after ${f._1.render}"))
-                  )
+                  .fold(HelpMessage.formatted, f => fansi.Str(s"Reminder after ${f._1.render}"))
     } yield {
       val run = for {
         (delay, timerMessageOpt) <- ZIO.fromEither(parsed)
@@ -55,11 +48,10 @@ final case class TimerCommand() extends Command[Unit] {
       List(
         Preview.unit
           .onRun(run.ignore)
-          .score(Scores.high(context))
+          .score(Scores.high(input.context))
           .view(DefaultView(title, message))
       )
     }
-  }
 
 }
 

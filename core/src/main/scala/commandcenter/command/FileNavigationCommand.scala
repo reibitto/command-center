@@ -2,10 +2,9 @@ package commandcenter.command
 
 import java.io.File
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import io.circe.Decoder
-import zio.blocking.Blocking
 import zio.{ IO, UIO, ZIO }
 
 import scala.util.Try
@@ -17,23 +16,17 @@ final case class FileNavigationCommand() extends Command[File] {
 
   val title: String = "File navigation"
 
-  val homeDirectory: Option[String] = None //Try(System.getProperty("user.home")).toOption
+  val homeDirectory: Option[String] = Try(System.getProperty("user.home")).toOption
 
-  override def inputPreview(
-    input: String,
-    context: CommandContext
-  ): ZIO[Blocking, CommandError, List[PreviewResult[File]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[File]]] = {
+    val input = searchInput.input
     if (!input.startsWith("/") && !input.startsWith("~/")) {
       IO.fail(NotApplicable)
     } else {
       val file = homeDirectory match {
-        case Some(home) if input == "~/" =>
-          new File(home)
-
-        case Some(home) if input.startsWith("~/") =>
-          new File(home, input.tail)
-
-        case _ => new File(input)
+        case Some(home) if input == "~/"          => new File(home)
+        case Some(home) if input.startsWith("~/") => new File(home, input.tail)
+        case _                                    => new File(input)
       }
 
       val exists     = file.exists()
@@ -62,6 +55,7 @@ final case class FileNavigationCommand() extends Command[File] {
         ) ++ sameLevel ++ children
       }
     }
+  }
 }
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {

@@ -1,10 +1,10 @@
 package commandcenter.command
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
 import io.circe.Decoder
+import zio.ZIO
 import zio.process.{ Command => PCommand }
-import zio.{ IO, UIO }
 
 final case class LockCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.LockCommand
@@ -17,11 +17,12 @@ final case class LockCommand() extends Command[Unit] {
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
-  override def keywordPreview(
-    keyword: String,
-    context: CommandContext
-  ): IO[CommandError, List[PreviewResult[Unit]]] =
-    UIO(List(Preview.unit.onRun(PCommand("pmset", "displaysleepnow").exitCode.unit).score(Scores.high(context))))
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+    for {
+      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+    } yield {
+      List(Preview.unit.onRun(PCommand("pmset", "displaysleepnow").exitCode.unit).score(Scores.high(input.context)))
+    }
 }
 
 object LockCommand extends CommandPlugin[LockCommand] {

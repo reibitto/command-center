@@ -1,9 +1,8 @@
 package commandcenter.command
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.util.ProcessUtil
 import io.circe.Decoder
-import zio.blocking.Blocking
 import zio.{ UIO, ZIO }
 
 final case class EpochUnixCommand() extends Command[Long] {
@@ -13,16 +12,14 @@ final case class EpochUnixCommand() extends Command[Long] {
 
   val title: String = "Epoch (Unix time)"
 
-  override def keywordPreview(
-    keyword: String,
-    context: CommandContext
-  ): ZIO[Blocking, CommandError, List[PreviewResult[Long]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Long]]] =
     for {
+      input     <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       epochTime <- UIO(System.currentTimeMillis() / 1000)
     } yield {
       List(
         Preview(epochTime)
-          .score(Scores.high(context))
+          .score(Scores.high(input.context))
           .onRun(ProcessUtil.copyToClipboard(epochTime.toString))
       )
     }

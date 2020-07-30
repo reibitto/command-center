@@ -10,7 +10,7 @@ import zio.{ RIO, Task, UIO }
 import scala.util.Try
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
-case class CCProcess(processId: Long, toolsPath: Option[File]) {
+final case class CCProcess(processId: Long, toolsPath: Option[File]) {
   def activate: RIO[Blocking, Unit] =
     toolsPath match {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "activate", processId.toString).exitCode.unit

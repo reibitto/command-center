@@ -1,10 +1,9 @@
 package commandcenter.command
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.util.{ OS, ProcessUtil }
 import io.circe.Decoder
 import zio.ZIO
-import zio.blocking._
 import zio.process.{ Command => PCommand }
 
 final case class LocalIPCommand() extends Command[String] {
@@ -16,17 +15,15 @@ final case class LocalIPCommand() extends Command[String] {
 
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
 
-  override def keywordPreview(
-    keyword: String,
-    context: CommandContext
-  ): ZIO[Blocking, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
+      input   <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       localIP <- PCommand("ipconfig", "getifaddr", "en0").string.bimap(CommandError.UnexpectedException, _.trim)
     } yield {
       List(
         Preview(localIP)
           .onRun(ProcessUtil.copyToClipboard(localIP))
-          .score(Scores.high(context))
+          .score(Scores.high(input.context))
       )
     }
 }

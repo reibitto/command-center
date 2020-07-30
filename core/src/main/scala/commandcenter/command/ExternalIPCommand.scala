@@ -1,10 +1,9 @@
 package commandcenter.command
 
-import commandcenter.CommandContext
+import commandcenter.CCRuntime.Env
 import commandcenter.util.{ OS, ProcessUtil }
 import io.circe.Decoder
 import zio.ZIO
-import zio.blocking.Blocking
 import zio.process.{ Command => PCommand }
 
 final case class ExternalIPCommand() extends Command[String] {
@@ -17,17 +16,15 @@ final case class ExternalIPCommand() extends Command[String] {
   // TODO: Also support Windows (nslookup?). If there's no good solution, making an api.ipify.org request could work too.
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
 
-  override def keywordPreview(
-    keyword: String,
-    context: CommandContext
-  ): ZIO[Blocking, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
+      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       externalIP <- PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
                      .bimap(CommandError.UnexpectedException, _.trim)
     } yield {
       List(
         Preview(externalIP)
-          .score(Scores.high(context))
+          .score(Scores.high(input.context))
           .onRun(ProcessUtil.copyToClipboard(externalIP))
       )
     }
