@@ -1,10 +1,15 @@
 package commandcenter.command
 
+import java.net.{ Inet4Address, NetworkInterface }
+
 import commandcenter.CCRuntime.Env
 import commandcenter.util.{ OS, ProcessUtil }
+import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.ZIO
-import zio.process.{ Command => PCommand }
+import zio.blocking._
+
+import scala.jdk.CollectionConverters._
 
 final case class LocalIPCommand() extends Command[String] {
   val commandType: CommandType = CommandType.LocalIPCommand
@@ -13,18 +18,27 @@ final case class LocalIPCommand() extends Command[String] {
 
   val title: String = "Local IP"
 
-  override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
-
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
-      input   <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      localIP <- PCommand("ipconfig", "getifaddr", "en0").string.bimap(CommandError.UnexpectedException, _.trim)
+      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      localIps <- effectBlocking {
+                   val interfaces = NetworkInterface.getNetworkInterfaces.asScala.toList
+                   interfaces
+                     .filter(interface => !interface.isLoopback && !interface.isVirtual && interface.isUp)
+                     .flatMap { interface =>
+                       interface.getInetAddresses.asScala.collect {
+                         case address: Inet4Address => interface.getDisplayName -> address.getHostAddress
+                       }
+                     }
+                 }.mapError(CommandError.UnexpectedException)
     } yield {
-      List(
-        Preview(localIP)
-          .onRun(ProcessUtil.copyToClipboard(localIP))
-          .score(Scores.high(input.context))
-      )
+      localIps.map {
+        case (interfaceName, localIp) =>
+          Preview(localIp)
+            .onRun(ProcessUtil.copyToClipboard(localIp))
+            .score(Scores.high(input.context))
+            .view(DefaultView(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp)))
+      }
     }
 }
 
