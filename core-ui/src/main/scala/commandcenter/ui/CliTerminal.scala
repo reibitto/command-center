@@ -84,7 +84,7 @@ final case class CliTerminal[T <: Terminal](
       new KeyStroke(KeyType.ArrowDown) -> (
         for {
           previousResults <- searchResultsRef.get
-          _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.results.length - 1))
+          _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.previews.length - 1))
         } yield EventResult.Success
       ),
       new KeyStroke(KeyType.ArrowUp) -> commandCursorRef.update(cursor => (cursor - 1) max 0).as(EventResult.Success),
@@ -140,7 +140,7 @@ final case class CliTerminal[T <: Terminal](
       rows          = size.getRows
       columns       = size.getColumns
       _             <- ZIO.foldLeft(results.rendered.take(rows - 1))(Cursor(prompt.length, 1))((s, r) => printRendered(r, s))
-      _ <- Task.when(results.results.nonEmpty) {
+      _ <- Task.when(results.previews.nonEmpty) {
             Task {
               val cursorRow = commandCursor + 1
 
@@ -177,7 +177,7 @@ final case class CliTerminal[T <: Terminal](
 
   def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
     for {
-      previewResult <- ZIO.fromOption(results.results.lift(cursorIndex)).option
+      previewResult <- ZIO.fromOption(results.previews.lift(cursorIndex)).option
       _             <- ZIO.fromOption(previewResult).flatMap(_.onRun).either.forkDaemon
       _             <- reset()
     } yield previewResult

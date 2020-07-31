@@ -1,9 +1,11 @@
 package commandcenter.command
 
+import java.util.concurrent.TimeUnit
+
 import commandcenter.CCRuntime.Env
 import commandcenter.util.ProcessUtil
 import io.circe.Decoder
-import zio.{ UIO, ZIO }
+import zio.{ clock, ZIO }
 
 final case class EpochMillisCommand() extends Command[Long] {
   val commandType: CommandType = CommandType.EpochMillisCommand
@@ -15,7 +17,7 @@ final case class EpochMillisCommand() extends Command[Long] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Long]]] =
     for {
       input     <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      epochTime <- UIO(System.currentTimeMillis())
+      epochTime <- clock.currentTime(TimeUnit.MILLISECONDS)
     } yield List(
       Preview(epochTime)
         .score(Scores.high(input.context))

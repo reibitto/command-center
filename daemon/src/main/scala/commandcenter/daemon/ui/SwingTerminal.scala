@@ -62,7 +62,7 @@ final case class SwingTerminal(
     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
   ) {
     override def getPreferredSize: Dimension = {
-      val height = if (runtime.unsafeRun(searchResultsRef.get).results.isEmpty) {
+      val height = if (runtime.unsafeRun(searchResultsRef.get).previews.isEmpty) {
         0
       } else {
         outputTextPane.getPreferredSize.height min config.display.maxHeight
@@ -172,7 +172,7 @@ final case class SwingTerminal(
 
   def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
     for {
-      previewResult <- ZIO.fromOption(results.results.lift(cursorIndex)).option
+      previewResult <- ZIO.fromOption(results.previews.lift(cursorIndex)).option
       _             <- ZIO.fromOption(previewResult).flatMap(_.onRun).either.forkDaemon
       _             <- reset()
     } yield previewResult
@@ -203,7 +203,7 @@ final case class SwingTerminal(
           for {
             _               <- UIO(e.consume())
             previousResults <- searchResultsRef.get
-            _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.results.length - 1))
+            _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.previews.length - 1))
             _               <- render(previousResults)
           } yield ()
 

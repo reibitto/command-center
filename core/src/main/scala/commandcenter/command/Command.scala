@@ -40,12 +40,12 @@ trait Command[+R] extends ViewInstances {
 }
 
 object Command {
-  def search(
-    commands: Vector[Command[Any]],
+  def search[A](
+    commands: Vector[Command[A]],
     aliases: Map[String, List[String]],
     input: String,
     terminal: CCTerminal
-  ): URIO[Env, SearchResults[Any]] = {
+  ): URIO[Env, SearchResults[A]] = {
     val context = CommandContext(Language.detect(input), terminal, 1.0)
 
     val (commandPart, rest) = input.split("[ ]+", 2) match {
@@ -62,7 +62,7 @@ object Command {
       }(_.option) // TODO: Use `.either` here and log errors instead of ignoring them
       .map { r =>
         val results = r.flatten.flatten.sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
-        
+
         SearchResults(input, results.toVector)
       }
   }
