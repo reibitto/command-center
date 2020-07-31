@@ -7,6 +7,7 @@ sealed trait TerminalType extends EnumEntry
 object TerminalType extends Enum[TerminalType] {
   case object Cli   extends TerminalType
   case object Swing extends TerminalType
+  case object Test  extends TerminalType
 
   override def values: IndexedSeq[TerminalType] = findValues
 }
