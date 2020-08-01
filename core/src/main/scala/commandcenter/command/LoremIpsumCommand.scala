@@ -5,13 +5,11 @@ import cats.syntax.apply._
 import com.monovore.decline
 import com.monovore.decline.Opts
 import commandcenter.CCRuntime.Env
-import commandcenter.CommandContext
-import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView
 import io.circe.Decoder
+import zio._
 
 import scala.io.Source
-import zio._
 
 sealed trait ChunkType
 
@@ -62,7 +60,7 @@ final case class LoremIpsumCommand() extends Command[Unit] {
           case Sentence  => Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
           case Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
         }
-        _ <- ProcessUtil.copyToClipboard(text)
+        _ <- input.context.ccProcess.setClipboard(text)
       } yield ()
       List(
         Preview.unit

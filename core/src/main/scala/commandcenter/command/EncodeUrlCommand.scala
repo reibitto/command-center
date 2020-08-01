@@ -6,7 +6,6 @@ import cats.syntax.apply._
 import com.monovore.decline
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
-import commandcenter.util.ProcessUtil
 import io.circe.Decoder
 import zio.{ IO, ZIO }
 
@@ -26,7 +25,7 @@ final case class EncodeUrlCommand() extends Command[String] {
       (valueToEncode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       encoded                  = URLEncoder.encode(valueToEncode, charset)
     } yield List(
-      Preview(encoded).onRun(ProcessUtil.copyToClipboard(encoded)).score(Scores.high(input.context))
+      Preview(encoded).onRun(searchInput.context.ccProcess.setClipboard(encoded)).score(Scores.high(input.context))
     )
 }
 

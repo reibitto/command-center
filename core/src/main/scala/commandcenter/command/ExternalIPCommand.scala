@@ -1,7 +1,7 @@
 package commandcenter.command
 
 import commandcenter.CCRuntime.Env
-import commandcenter.util.{ OS, ProcessUtil }
+import commandcenter.util.OS
 import io.circe.Decoder
 import zio.ZIO
 import zio.process.{ Command => PCommand }
@@ -25,7 +25,7 @@ final case class ExternalIPCommand() extends Command[String] {
       List(
         Preview(externalIP)
           .score(Scores.high(input.context))
-          .onRun(ProcessUtil.copyToClipboard(externalIP))
+          .onRun(input.context.ccProcess.setClipboard(externalIP))
       )
     }
 }

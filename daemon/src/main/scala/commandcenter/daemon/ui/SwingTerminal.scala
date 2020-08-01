@@ -5,10 +5,11 @@ import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment }
 
 import commandcenter.CCRuntime.Env
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
-import commandcenter.ui.{ CCProcess, CCTheme }
+import commandcenter.locale.Language
+import commandcenter.ui.CCTheme
 import commandcenter.util.{ Debounced, OS }
 import commandcenter.view.AnsiRendered
-import commandcenter.{ CCConfig, CCRuntime, CCTerminal, TerminalType }
+import commandcenter._
 import javax.swing._
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.{ DefaultStyledDocument, StyleConstants, StyleContext }
@@ -99,10 +100,11 @@ final case class SwingTerminal(
 
   inputTextField.addOnChangeListener { e =>
     val searchTerm = inputTextField.getText
+    val context    = CommandContext(Language.detect(searchTerm), SwingTerminal.this, ccProcess, 1.0)
 
     searchDebounce(
       Command
-        .search(config.commands, config.aliases, searchTerm, SwingTerminal.this)
+        .search(config.commands, config.aliases, searchTerm, context)
         .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
         .unit
     ).flatMap(_.join)

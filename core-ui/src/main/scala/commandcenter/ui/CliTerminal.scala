@@ -10,9 +10,10 @@ import com.googlecode.lanterna.terminal.{ DefaultTerminalFactory, Terminal }
 import com.googlecode.lanterna.{ TerminalPosition, TerminalSize, TerminalTextUtils }
 import commandcenter.CCRuntime.Env
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
+import commandcenter.locale.Language
 import commandcenter.util.{ Debounced, TextUtils }
 import commandcenter.view.{ AnsiRendered, Rendered }
-import commandcenter.{ CCConfig, CCTerminal, TerminalType }
+import commandcenter.{ CCConfig, CCProcess, CCTerminal, CommandContext, TerminalType }
 import zio._
 import zio.blocking._
 import zio.clock.Clock
@@ -121,9 +122,13 @@ final case class CliTerminal[T <: Terminal](
       _ = buffer.clear()
     } yield ()
 
-  def search(commands: Vector[Command[Any]], aliases: Map[String, List[String]])(searchTerm: String): URIO[Env, Unit] =
+  def search(commands: Vector[Command[Any]], aliases: Map[String, List[String]])(
+    searchTerm: String
+  ): URIO[Env, Unit] = {
+    val context = CommandContext(Language.detect(searchTerm), this, ccProcess, 1.0)
+
     Command
-      .search(commands, aliases, searchTerm, this)
+      .search(commands, aliases, searchTerm, context)
       .tap { r =>
         // TODO: Make resetCursorOnChange customizable
         commandCursorRef.set(0) *> searchResultsRef.set(r) *> renderQueue.offer(r)
@@ -131,6 +136,7 @@ final case class CliTerminal[T <: Terminal](
       .forkDaemon
       .tap(searchFiber => lastSearchFiberRef.set(Some(searchFiber)))
       .unit
+  }
 
   def render(results: SearchResults[Any]): Task[Unit] =
     for {

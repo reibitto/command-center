@@ -3,7 +3,6 @@ package commandcenter.command
 import java.net.{ Inet4Address, NetworkInterface }
 
 import commandcenter.CCRuntime.Env
-import commandcenter.util.{ OS, ProcessUtil }
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.ZIO
@@ -35,7 +34,7 @@ final case class LocalIPCommand() extends Command[String] {
       localIps.map {
         case (interfaceName, localIp) =>
           Preview(localIp)
-            .onRun(ProcessUtil.copyToClipboard(localIp))
+            .onRun(searchInput.context.ccProcess.setClipboard(localIp))
             .score(Scores.high(input.context))
             .view(DefaultView(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp)))
       }

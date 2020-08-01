@@ -6,7 +6,6 @@ import cats.syntax.apply._
 import com.monovore.decline
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
-import commandcenter.util.ProcessUtil
 import io.circe.Decoder
 import zio.ZIO
 
@@ -24,7 +23,7 @@ final case class DecodeBase64Command() extends Command[String] {
       (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
       decoded                  = new String(Base64.getDecoder.decode(valueToDecode.getBytes(charset)), charset)
     } yield {
-      List(Preview(decoded).onRun(ProcessUtil.copyToClipboard(decoded)).score(Scores.high(input.context)))
+      List(Preview(decoded).onRun(input.context.ccProcess.setClipboard(decoded)).score(Scores.high(input.context)))
     }
 }
 
