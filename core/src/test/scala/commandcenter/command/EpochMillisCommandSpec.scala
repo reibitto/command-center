@@ -1,6 +1,6 @@
 package commandcenter.command
 
-import commandcenter.{ CommandSpec, TestTerminal }
+import commandcenter.CommandSpec
 import zio.duration._
 import zio.test.Assertion._
 import zio.test._
@@ -12,7 +12,7 @@ object EpochMillisCommandSpec extends CommandSpec {
   def spec =
     suite("EpochMillisCommandSpec")(
       testM("get current time") {
-        val results = Command.search(Vector(command), Map.empty, "epoch", TestTerminal)
+        val results = Command.search(Vector(command), Map.empty, "epoch", defaultCommandContext)
 
         for {
           _        <- TestClock.setTime(5.seconds)
@@ -20,7 +20,7 @@ object EpochMillisCommandSpec extends CommandSpec {
         } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo(5000L))))
       },
       testM("return nothing for non-matching search") {
-        val results = Command.search(Vector(command), Map.empty, "not matching", TestTerminal)
+        val results = Command.search(Vector(command), Map.empty, "not matching", defaultCommandContext)
 
         assertM(results.map(_.previews))(isEmpty)
       }

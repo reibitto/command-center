@@ -41,7 +41,7 @@ final case class TemperatureCommand() extends Command[Double] {
       Preview(temperature)
         .score(Scores.high(searchInput.context))
         .view(DefaultView(title, temperatureFormatted))
-        .onRun(ProcessUtil.copyToClipboard(temperatureFormatted))
+        .onRun(searchInput.context.ccProcess.setClipboard(temperatureFormatted))
     )
 }
 

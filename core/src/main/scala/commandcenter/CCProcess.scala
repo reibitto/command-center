@@ -1,9 +1,11 @@
-package commandcenter.ui
+package commandcenter
 
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.io.File
 
-import commandcenter.util.{ AppleScript, OS }
-import zio.blocking.Blocking
+import commandcenter.util.AppleScript
+import zio.blocking.{ effectBlocking, Blocking }
 import zio.process.{ Command => PCommand }
 import zio.{ RIO, Task, UIO }
 
@@ -17,7 +19,7 @@ final case class CCProcess(processId: Long, toolsPath: Option[File]) {
       case None =>
         AppleScript.runScript(s"""
                                  |tell application "System Events"
-                                 | set frontmost of the first process whose unix id is ${ProcessHandle.current.pid} to true
+                                 | set frontmost of the first process whose unix id is $processId to true
                                  |end tell
                                  |""".stripMargin).unit
     }
@@ -27,6 +29,15 @@ final case class CCProcess(processId: Long, toolsPath: Option[File]) {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", processId.toString).exitCode.unit
       // TODO: Fallback to AppleScript if macOS
       case None => UIO.unit
+    }
+
+  def setClipboard(text: String): RIO[Blocking, Unit] =
+    toolsPath match {
+      case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "set-clipboard", text).exitCode.unit
+      case None =>
+        effectBlocking {
+          Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(text), null)
+        }
     }
 }
 

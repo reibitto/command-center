@@ -3,7 +3,6 @@ package commandcenter.command
 import java.util.concurrent.TimeUnit
 
 import commandcenter.CCRuntime.Env
-import commandcenter.util.ProcessUtil
 import io.circe.Decoder
 import zio.{ clock, ZIO }
 
@@ -22,7 +21,7 @@ final case class EpochUnixCommand() extends Command[Long] {
       List(
         Preview(epochTime)
           .score(Scores.high(input.context))
-          .onRun(ProcessUtil.copyToClipboard(epochTime.toString))
+          .onRun(input.context.ccProcess.setClipboard(epochTime.toString))
       )
     }
 }

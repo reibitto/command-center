@@ -4,11 +4,10 @@ import java.util.Locale
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.locale.Language
+import commandcenter.CommandContext
 import commandcenter.util.OS
 import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
-import commandcenter.{ CCTerminal, CommandContext }
 import io.circe
 import zio._
 
@@ -44,10 +43,8 @@ object Command {
     commands: Vector[Command[A]],
     aliases: Map[String, List[String]],
     input: String,
-    terminal: CCTerminal
+    context: CommandContext
   ): URIO[Env, SearchResults[A]] = {
-    val context = CommandContext(Language.detect(input), terminal, 1.0)
-
     val (commandPart, rest) = input.split("[ ]+", 2) match {
       case Array(prefix, rest) => (prefix, s" $rest")
       case Array(prefix)       => (prefix, "")
