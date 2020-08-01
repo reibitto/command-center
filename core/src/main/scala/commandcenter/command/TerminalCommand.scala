@@ -16,9 +16,7 @@ final case class TerminalCommand() extends Command[Unit] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-    } yield {
-      List(Preview.unit.view(DefaultView("Terminal", input.rest)).score(Scores.high(input.context)))
-    }
+    } yield List(Preview.unit.view(DefaultView("Terminal", input.rest)).score(Scores.high(input.context)))
 }
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {

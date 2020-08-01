@@ -10,16 +10,16 @@ import zio.process.{ Command => PCommand }
 object ProcessUtil {
   def openBrowser(url: String): RIO[Blocking, Unit] =
     OS.os match {
-      case OS.MacOS =>
+      case OS.MacOS   =>
         PCommand("open", url).exitCode.unit
 
-      case OS.Linux =>
+      case OS.Linux   =>
         PCommand("xdg-open", url).exitCode.unit
 
       case OS.Windows =>
         PCommand("start", url).exitCode.unit
 
-      case OS.Other =>
+      case OS.Other   =>
         effectBlocking(
           Desktop.getDesktop.browse(new URI(url))
         )

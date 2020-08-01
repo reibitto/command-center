@@ -18,16 +18,14 @@ final case class ExternalIPCommand() extends Command[String] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
-      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      input      <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       externalIP <- PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
-                     .bimap(CommandError.UnexpectedException, _.trim)
-    } yield {
-      List(
-        Preview(externalIP)
-          .score(Scores.high(input.context))
-          .onRun(input.context.ccProcess.setClipboard(externalIP))
-      )
-    }
+                      .bimap(CommandError.UnexpectedException, _.trim)
+    } yield List(
+      Preview(externalIP)
+        .score(Scores.high(input.context))
+        .onRun(input.context.ccProcess.setClipboard(externalIP))
+    )
 }
 
 object ExternalIPCommand extends CommandPlugin[ExternalIPCommand] {

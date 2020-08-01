@@ -21,7 +21,14 @@ final case class ToggleHiddenFilesCommand() extends Command[Unit] {
     } yield {
       val run = for {
         showingAll <- PCommand("defaults", "read", "com.apple.finder", "AppleShowAllFiles").string.map(_.trim == "1")
-        _          <- PCommand("defaults", "write", "com.apple.finder", "AppleShowAllFiles", "-bool", (!showingAll).toString).exitCode
+        _          <- PCommand(
+                        "defaults",
+                        "write",
+                        "com.apple.finder",
+                        "AppleShowAllFiles",
+                        "-bool",
+                        (!showingAll).toString
+                      ).exitCode
         _          <- PCommand("killall", "Finder").exitCode
       } yield ()
 

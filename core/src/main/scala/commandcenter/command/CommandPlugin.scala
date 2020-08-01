@@ -32,19 +32,19 @@ object CommandPlugin {
 
     for {
       commandConfigs <- Task(config.getConfigList(path).asScala.toList)
-      commands <- Task.foreach(commandConfigs) { c =>
-                   for {
-                     typeName    <- Task(c.getString("type"))
-                     pluginClass <- Task(Class.forName(typeName))
-                     plugin <- Task(
-                                mirror
-                                  .reflectModule(mirror.moduleSymbol(pluginClass))
-                                  .instance
-                                  .asInstanceOf[CommandPlugin[Command[_]]]
-                              )
-                     command <- Task.fromEither(plugin.load(c))
-                   } yield command
-                 }
+      commands       <- Task.foreach(commandConfigs) { c =>
+                          for {
+                            typeName    <- Task(c.getString("type"))
+                            pluginClass <- Task(Class.forName(typeName))
+                            plugin      <- Task(
+                                             mirror
+                                               .reflectModule(mirror.moduleSymbol(pluginClass))
+                                               .instance
+                                               .asInstanceOf[CommandPlugin[Command[_]]]
+                                           )
+                            command     <- Task.fromEither(plugin.load(c))
+                          } yield command
+                        }
     } yield commands.filter(c => c.supportedOS.isEmpty || c.supportedOS.contains(OS.os))
   }
 }

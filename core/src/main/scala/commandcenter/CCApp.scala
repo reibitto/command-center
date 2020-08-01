@@ -11,12 +11,12 @@ trait CCApp extends CCRuntime {
     try sys.exit(
       unsafeRun(
         for {
-          fiber <- run(args0.toList).fork
-          _ <- IO.effectTotal(java.lang.Runtime.getRuntime.addShutdownHook(new Thread {
-                override def run(): Unit = {
-                  val _ = unsafeRunSync(fiber.interrupt)
-                }
-              }))
+          fiber  <- run(args0.toList).fork
+          _      <- IO.effectTotal(java.lang.Runtime.getRuntime.addShutdownHook(new Thread {
+                      override def run(): Unit = {
+                        val _ = unsafeRunSync(fiber.interrupt)
+                      }
+                    }))
           result <- fiber.join
           _      <- fiber.interrupt
         } yield result.code
@@ -24,7 +24,7 @@ trait CCApp extends CCRuntime {
     )
     catch { case _: SecurityException => }
 
-  override lazy val platform: Platform = runtime.platform.withReportFailure { c =>
+  override lazy val platform: Platform       = runtime.platform.withReportFailure { c =>
     if (!c.interrupted) {
       // TODO: Only log to console if running in daemon mode. Because in CLI mode it'll interfere with the UI.
       // Need a solution for CLI mode. Maybe log into a file or an in-memory ring buffer and then have a separate

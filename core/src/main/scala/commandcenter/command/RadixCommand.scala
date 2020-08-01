@@ -23,29 +23,28 @@ final case class RadixCommand() extends Command[Unit] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      parsed = radixCommand.parse(input.args)
+      input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      parsed   = radixCommand.parse(input.args)
       message <- ZIO
-                  .fromEither(parsed)
-                  .fold(
-                    HelpMessage.formatted, {
-                      case (fromRadixOpt, toRadixOpt, number) =>
-                        val fromRadix = fromRadixOpt.getOrElse(10)
-                        val toRadix   = toRadixOpt.getOrElse(10)
-                        val n         = java.lang.Long.valueOf(number, fromRadix)
-                        val formatted = java.lang.Long.toString(n, toRadix)
+                   .fromEither(parsed)
+                   .fold(
+                     HelpMessage.formatted,
+                     {
+                       case (fromRadixOpt, toRadixOpt, number) =>
+                         val fromRadix = fromRadixOpt.getOrElse(10)
+                         val toRadix   = toRadixOpt.getOrElse(10)
+                         val n         = java.lang.Long.valueOf(number, fromRadix)
+                         val formatted = java.lang.Long.toString(n, toRadix)
 
-                        fansi.Str(s"$formatted")
-                    }
-                  )
-    } yield {
-      List(
-        Preview.unit
-          .score(Scores.high(input.context))
-          .onRun(input.context.ccProcess.setClipboard(message.plainText))
-          .view(DefaultView(title, message))
-      )
-    }
+                         fansi.Str(s"$formatted")
+                     }
+                   )
+    } yield List(
+      Preview.unit
+        .score(Scores.high(input.context))
+        .onRun(input.context.ccProcess.setClipboard(message.plainText))
+        .view(DefaultView(title, message))
+    )
 
 }
 

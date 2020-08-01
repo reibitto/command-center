@@ -16,25 +16,27 @@ final case class CCProcess(processId: Long, toolsPath: Option[File]) {
   def activate: RIO[Blocking, Unit] =
     toolsPath match {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "activate", processId.toString).exitCode.unit
-      case None =>
-        AppleScript.runScript(s"""
-                                 |tell application "System Events"
-                                 | set frontmost of the first process whose unix id is $processId to true
-                                 |end tell
-                                 |""".stripMargin).unit
+      case None          =>
+        AppleScript
+          .runScript(s"""
+                        |tell application "System Events"
+                        | set frontmost of the first process whose unix id is $processId to true
+                        |end tell
+                        |""".stripMargin)
+          .unit
     }
 
   def hide: RIO[Blocking, Unit] =
     toolsPath match {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", processId.toString).exitCode.unit
       // TODO: Fallback to AppleScript if macOS
-      case None => UIO.unit
+      case None          => UIO.unit
     }
 
   def setClipboard(text: String): RIO[Blocking, Unit] =
     toolsPath match {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "set-clipboard", text).exitCode.unit
-      case None =>
+      case None          =>
         effectBlocking {
           Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(text), null)
         }

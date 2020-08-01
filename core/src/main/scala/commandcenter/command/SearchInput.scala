@@ -25,11 +25,10 @@ final case class SearchInput(
         case Array(prefix)       => (prefix, "")
       }
 
-      if (commandNames.exists(_.equalsIgnoreCase(commandName))) {
+      if (commandNames.exists(_.equalsIgnoreCase(commandName)))
         Some(CommandInput.Args(commandName, SearchInput.tokenizeArgs(rest), context))
-      } else {
+      else
         None
-      }
     }.headOption
 
   /**
@@ -46,11 +45,10 @@ final case class SearchInput(
         case Array(prefix)       => (prefix, "")
       }
 
-      if (commandNames.contains(prefix)) {
+      if (commandNames.contains(prefix))
         Some(CommandInput.Prefixed(prefix, rest, context))
-      } else {
+      else
         None
-      }
     }.headOption
 
   /**
@@ -68,21 +66,21 @@ final case class SearchInput(
   private def scoreInput(text: String): Option[Double] =
     aliasedInputs.flatMap { aliasedInput =>
       commandNames.map { commandName =>
-        val matchScore = if (commandName.startsWith(text)) {
-          1.0 - (commandName.length - text.length) / commandName.length.toDouble
-        } else if (commandName.contains(text)) {
-          (1.0 - (commandName.length - text.length) / commandName.length.toDouble) * 0.5
-        } else {
-          0
-        }
+        val matchScore =
+          if (commandName.startsWith(text))
+            1.0 - (commandName.length - text.length) / commandName.length.toDouble
+          else if (commandName.contains(text))
+            (1.0 - (commandName.length - text.length) / commandName.length.toDouble) * 0.5
+          else
+            0
 
-        val aliasMatchScore = if (commandName.startsWith(aliasedInput)) {
-          1.0 - (commandName.length - aliasedInput.length) / commandName.length.toDouble
-        } else if (commandName.contains(aliasedInput)) {
-          (1.0 - (commandName.length - aliasedInput.length) / commandName.length.toDouble) * 0.5
-        } else {
-          0
-        }
+        val aliasMatchScore =
+          if (commandName.startsWith(aliasedInput))
+            1.0 - (commandName.length - aliasedInput.length) / commandName.length.toDouble
+          else if (commandName.contains(aliasedInput))
+            (1.0 - (commandName.length - aliasedInput.length) / commandName.length.toDouble) * 0.5
+          else
+            0
 
         matchScore max aliasMatchScore
       }
@@ -105,7 +103,7 @@ object SearchInput {
       if (c == ' ' && start >= 0 && !quote) {
         tokens += input.substring(start, i)
         start = -1
-      } else if (c == '"') {
+      } else if (c == '"')
         if (quote) {
           tokens += input.substring(start, i)
           quote = false
@@ -114,16 +112,14 @@ object SearchInput {
           start = i + 1
           quote = true
         }
-      } else if (start < 0 && c != ' ') {
+      else if (start < 0 && c != ' ')
         start = i
-      }
 
       i += 1
     }
 
-    if (start != -1) {
+    if (start != -1)
       tokens += input.substring(start)
-    }
 
     tokens.toList
   }

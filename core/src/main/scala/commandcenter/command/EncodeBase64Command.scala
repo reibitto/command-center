@@ -18,10 +18,10 @@ final case class EncodeBase64Command() extends Command[String] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
       input                    <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      all                      = (stringArg, encodingOpt).tupled
-      parsedCommand            = decline.Command(command, s"Base64 encodes the given string")(all).parse(input.args)
+      all                       = (stringArg, encodingOpt).tupled
+      parsedCommand             = decline.Command(command, s"Base64 encodes the given string")(all).parse(input.args)
       (valueToEncode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
-      encoded                  = Base64.getEncoder.encodeToString(valueToEncode.getBytes(charset))
+      encoded                   = Base64.getEncoder.encodeToString(valueToEncode.getBytes(charset))
     } yield List(
       Preview(encoded).onRun(input.context.ccProcess.setClipboard(encoded)).score(Scores.high(input.context))
     )

@@ -19,11 +19,10 @@ final case class OpenBrowserCommand() extends Command[Unit] {
 
     // TODO: also check endsWith TLD + URL.isValid
 
-    if (startsWith) {
+    if (startsWith)
       UIO(List(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
-    } else {
+    else
       IO.fail(NotApplicable)
-    }
   }
 }
 

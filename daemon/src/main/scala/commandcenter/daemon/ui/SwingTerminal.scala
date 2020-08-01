@@ -63,11 +63,11 @@ final case class SwingTerminal(
     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
   ) {
     override def getPreferredSize: Dimension = {
-      val height = if (runtime.unsafeRun(searchResultsRef.get).previews.isEmpty) {
-        0
-      } else {
-        outputTextPane.getPreferredSize.height min config.display.maxHeight
-      }
+      val height =
+        if (runtime.unsafeRun(searchResultsRef.get).previews.isEmpty)
+          0
+        else
+          outputTextPane.getPreferredSize.height min config.display.maxHeight
 
       new Dimension(config.display.width, height)
     }
@@ -113,55 +113,52 @@ final case class SwingTerminal(
   private def render(searchResults: SearchResults[Any]): UIO[Unit] =
     for {
       commandCursor <- commandCursorRef.get
-    } yield {
-      SwingUtilities.invokeLater { () =>
-        def colorMask(width: Int): Long = ~0L >>> (64 - width)
+    } yield SwingUtilities.invokeLater { () =>
+      def colorMask(width: Int): Long = ~0L >>> (64 - width)
 
-        document.remove(0, document.getLength)
+      document.remove(0, document.getLength)
 
-        var scrollToPosition: Int = 0
+      var scrollToPosition: Int = 0
 
-        val str = searchResults.rendered.zipWithIndex.map {
-          case (r, i) =>
-            r match {
-              case ar: AnsiRendered =>
-                val bar = if (i == commandCursor) {
+      val str = searchResults.rendered.zipWithIndex.map {
+        case (r, i) =>
+          r match {
+            case ar: AnsiRendered =>
+              val bar =
+                if (i == commandCursor)
                   fansi.Back.Green(" ")
-                } else {
+                else
                   fansi.Back.DarkGray(" ")
-                }
 
-                if (i < commandCursor) {
-                  scrollToPosition += ar.ansiStr.length + 3
-                }
+              if (i < commandCursor)
+                scrollToPosition += ar.ansiStr.length + 3
 
-                bar ++ fansi.Str(" ") ++ ar.ansiStr
-            }
-        }.reduceOption(_ ++ fansi.Str("\n") ++ _).getOrElse(fansi.Str(""))
+              bar ++ fansi.Str(" ") ++ ar.ansiStr
+          }
+      }.reduceOption(_ ++ fansi.Str("\n") ++ _).getOrElse(fansi.Str(""))
 
-        var i: Int = 0
-        groupConsecutive(str.getColors.toList).foreach { c =>
-          val s = str.plainText.substring(i, i + c.length)
+      var i: Int = 0
+      groupConsecutive(str.getColors.toList).foreach { c =>
+        val s = str.plainText.substring(i, i + c.length)
 
-          i += c.length
+        i += c.length
 
-          val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
-          val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
+        val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
+        val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
 
-          val awtForeground = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
-          val awtBackground = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
+        val awtForeground = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
+        val awtBackground = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
 
-          val style = context.addStyle(ansiForeground.toString, null)
-          awtForeground.foreach(StyleConstants.setForeground(style, _))
-          awtBackground.foreach(StyleConstants.setBackground(style, _))
+        val style = context.addStyle(ansiForeground.toString, null)
+        awtForeground.foreach(StyleConstants.setForeground(style, _))
+        awtBackground.foreach(StyleConstants.setBackground(style, _))
 
-          document.insertString(document.getLength, s, style)
-        }
-
-        outputTextPane.setCaretPosition(scrollToPosition)
-
-        frame.pack()
+        document.insertString(document.getLength, s, style)
       }
+
+      outputTextPane.setCaretPosition(scrollToPosition)
+
+      frame.pack()
     }
 
   def reset(): UIO[Unit] =
@@ -182,16 +179,16 @@ final case class SwingTerminal(
   inputTextField.addZKeyListener(new ZKeyAdapter {
     override def keyPressed(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
-        case KeyEvent.VK_ENTER =>
+        case KeyEvent.VK_ENTER  =>
           for {
             _               <- UIO(frame.setVisible(false))
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
             resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
-            _ <- ZIO.whenCase(resultOpt) {
-                  case Some(o) if o.result == CommandResult.Exit =>
-                    UIO(System.exit(0))
-                }
+            _               <- ZIO.whenCase(resultOpt) {
+                                 case Some(o) if o.result == CommandResult.Exit =>
+                                   UIO(System.exit(0))
+                               }
           } yield ()
 
         case KeyEvent.VK_ESCAPE =>
@@ -201,7 +198,7 @@ final case class SwingTerminal(
             _ <- reset()
           } yield ()
 
-        case KeyEvent.VK_DOWN =>
+        case KeyEvent.VK_DOWN   =>
           for {
             _               <- UIO(e.consume())
             previousResults <- searchResultsRef.get
@@ -209,7 +206,7 @@ final case class SwingTerminal(
             _               <- render(previousResults)
           } yield ()
 
-        case KeyEvent.VK_UP =>
+        case KeyEvent.VK_UP     =>
           for {
             _               <- UIO(e.consume())
             previousResults <- searchResultsRef.get
@@ -217,7 +214,7 @@ final case class SwingTerminal(
             _               <- render(previousResults)
           } yield ()
 
-        case _ => ZIO.unit
+        case _                  => ZIO.unit
       }
   })
 
@@ -226,31 +223,35 @@ final case class SwingTerminal(
   frame.setMinimumSize(new Dimension(config.display.width, 20))
   frame.pack()
 
-  def clearScreen: UIO[Unit] = UIO {
-    document.remove(0, document.getLength)
-  }
+  def clearScreen: UIO[Unit] =
+    UIO {
+      document.remove(0, document.getLength)
+    }
 
-  def open: Task[Unit] = Task {
-    val bounds =
-      GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
+  def open: Task[Unit] =
+    Task {
+      val bounds =
+        GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
 
-    val x = (bounds.width - frame.getWidth) / 2
+      val x = (bounds.width - frame.getWidth) / 2
 
-    frame.setLocation(x, 0)
-    frame.setVisible(true)
-  }
+      frame.setLocation(x, 0)
+      frame.setVisible(true)
+    }
 
   def hide: UIO[Unit] = UIO(frame.setVisible(false))
 
-  def activate: RIO[Blocking, Unit] = OS.os match {
-    case OS.MacOS => ccProcess.activate
-    case _        => UIO(frame.requestFocus())
-  }
+  def activate: RIO[Blocking, Unit] =
+    OS.os match {
+      case OS.MacOS => ccProcess.activate
+      case _        => UIO(frame.requestFocus())
+    }
 
-  def deactivate: RIO[Blocking, Unit] = OS.os match {
-    case OS.MacOS => ccProcess.hide
-    case _        => UIO.unit
-  }
+  def deactivate: RIO[Blocking, Unit] =
+    OS.os match {
+      case OS.MacOS => ccProcess.hide
+      case _        => UIO.unit
+    }
 
   def opacity: RIO[Env, Float] = UIO(frame.getOpacity)
 
@@ -268,9 +269,7 @@ final case class SwingTerminal(
   def reload: RIO[Env, Unit] =
     for {
       newConfig <- CCConfig.load
-    } yield {
-      config = newConfig
-    }
+    } yield config = newConfig
 
   private def filterMissingFonts(fonts: List[Font]): List[Font] = {
     val installedFontNames = GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet
@@ -279,12 +278,13 @@ final case class SwingTerminal(
   }
 
   @tailrec
-  private def groupConsecutive[A](list: List[A], acc: List[List[A]] = Nil): List[List[A]] = list match {
-    case head :: tail =>
-      val (t1, t2) = tail.span(_ == head)
-      groupConsecutive(t2, acc :+ (head :: t1))
-    case _ => acc
-  }
+  private def groupConsecutive[A](list: List[A], acc: List[List[A]] = Nil): List[List[A]] =
+    list match {
+      case head :: tail =>
+        val (t1, t2) = tail.span(_ == head)
+        groupConsecutive(t2, acc :+ (head :: t1))
+      case _            => acc
+    }
 }
 
 object SwingTerminal {

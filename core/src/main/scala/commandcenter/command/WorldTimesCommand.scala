@@ -19,11 +19,11 @@ final case class WorldTimesCommand(dateTimeFormat: String, zones: List[TimeZone]
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      now   = OffsetDateTime.now
-      times = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.atZoneSameInstant(tz.zoneId)))
-    } yield {
-      List(Preview.unit.view(WorldTimesResults(dateTimeFormat, times, input.context)).score(Scores.high(input.context)))
-    }
+      now    = OffsetDateTime.now
+      times  = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.atZoneSameInstant(tz.zoneId)))
+    } yield List(
+      Preview.unit.view(WorldTimesResults(dateTimeFormat, times, input.context)).score(Scores.high(input.context))
+    )
 }
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
@@ -47,11 +47,12 @@ object WorldTimesResults {
   }
 
   // TODO: Move to extension object
-  def intersperse[E](separator: E)(xs: List[E]): List[E] = (separator, xs) match {
-    case (_, Nil)             => Nil
-    case (_, list @ _ :: Nil) => list
-    case (sep, y :: ys)       => y :: sep :: intersperse(sep)(ys)
-  }
+  def intersperse[E](separator: E)(xs: List[E]): List[E] =
+    (separator, xs) match {
+      case (_, Nil)             => Nil
+      case (_, list @ _ :: Nil) => list
+      case (sep, y :: ys)       => y :: sep :: intersperse(sep)(ys)
+    }
 }
 
 final case class WorldTimesResult(zone: ZoneId, displayName: String, dateTime: ZonedDateTime)

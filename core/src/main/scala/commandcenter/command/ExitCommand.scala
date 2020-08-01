@@ -15,9 +15,7 @@ final case class ExitCommand() extends Command[CommandResult] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[CommandResult]]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield {
-      List(Preview(CommandResult.Exit).view(DefaultView(title, "")).score(Scores.high(input.context)))
-    }
+    } yield List(Preview(CommandResult.Exit).view(DefaultView(title, "")).score(Scores.high(input.context)))
 }
 
 object ExitCommand extends CommandPlugin[ExitCommand] {

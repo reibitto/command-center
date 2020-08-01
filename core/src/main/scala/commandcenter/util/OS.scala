@@ -13,15 +13,14 @@ object OS {
   lazy val os: OS = {
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
 
-    if (osName.contains("mac") || osName.contains("darwin")) {
+    if (osName.contains("mac") || osName.contains("darwin"))
       OS.MacOS
-    } else if (osName.contains("win")) {
+    else if (osName.contains("win"))
       OS.Windows
-    } else if (osName.contains("nux")) {
+    else if (osName.contains("nux"))
       OS.Linux
-    } else {
+    else
       OS.Other
-    }
   }
 
 }

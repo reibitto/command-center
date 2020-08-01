@@ -20,9 +20,9 @@ final case class FileNavigationCommand() extends Command[File] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[File]]] = {
     val input = searchInput.input
-    if (!input.startsWith("/") && !input.startsWith("~/")) {
+    if (!input.startsWith("/") && !input.startsWith("~/"))
       IO.fail(NotApplicable)
-    } else {
+    else {
       val file = homeDirectory match {
         case Some(home) if input == "~/"          => new File(home)
         case Some(home) if input.startsWith("~/") => new File(home, input.tail)

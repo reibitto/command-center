@@ -28,7 +28,7 @@ final case class LoremIpsumCommand() extends Command[Unit] {
 
   val lipsum = Source.fromResource("lipsum").getLines().mkString("\n")
 
-  val numOpt = Opts.argument[Int]("number").withDefault(1)
+  val numOpt  = Opts.argument[Int]("number").withDefault(1)
   val typeOpt = Opts
     .argument[String]("words, sentences, or paragraphs")
     .mapValidated {
@@ -43,24 +43,25 @@ final case class LoremIpsumCommand() extends Command[Unit] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      parsed = lipsumCommand.parse(input.args)
+      input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      parsed   = lipsumCommand.parse(input.args)
       message <- ZIO
-                  .fromEither(parsed)
-                  .fold(
-                    HelpMessage.formatted, {
-                      case (i, chunkType) => fansi.Str(s"Will generate ${i} ${chunkType.toString}s to the clipboard")
-                    }
-                  )
+                   .fromEither(parsed)
+                   .fold(
+                     HelpMessage.formatted,
+                     {
+                       case (i, chunkType) => fansi.Str(s"Will generate ${i} ${chunkType.toString}s to the clipboard")
+                     }
+                   )
     } yield {
       val run = for {
         (i, chunkType) <- ZIO.fromEither(parsed)
-        text = chunkType match {
-          case Word      => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
-          case Sentence  => Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
-          case Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
-        }
-        _ <- input.context.ccProcess.setClipboard(text)
+        text            = chunkType match {
+                            case Word      => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
+                            case Sentence  => Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
+                            case Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
+                          }
+        _              <- input.context.ccProcess.setClipboard(text)
       } yield ()
       List(
         Preview.unit

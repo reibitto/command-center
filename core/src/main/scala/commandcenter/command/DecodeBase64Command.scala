@@ -18,13 +18,13 @@ final case class DecodeBase64Command() extends Command[String] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
       input                    <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      all                      = (stringArg, encodingOpt).tupled
-      parsedCommand            = decline.Command(command, s"Base64 decodes the given string")(all).parse(input.args)
+      all                       = (stringArg, encodingOpt).tupled
+      parsedCommand             = decline.Command(command, s"Base64 decodes the given string")(all).parse(input.args)
       (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
-      decoded                  = new String(Base64.getDecoder.decode(valueToDecode.getBytes(charset)), charset)
-    } yield {
-      List(Preview(decoded).onRun(input.context.ccProcess.setClipboard(decoded)).score(Scores.high(input.context)))
-    }
+      decoded                   = new String(Base64.getDecoder.decode(valueToDecode.getBytes(charset)), charset)
+    } yield List(
+      Preview(decoded).onRun(input.context.ccProcess.setClipboard(decoded)).score(Scores.high(input.context))
+    )
 }
 
 object DecodeBase64Command extends CommandPlugin[DecodeBase64Command] {

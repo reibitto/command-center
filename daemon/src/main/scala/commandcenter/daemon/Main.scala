@@ -13,15 +13,15 @@ object Main extends CCApp {
       provider <- HotKeyProvider.make
       config   <- CCConfig.load.toManaged_
       terminal <- SwingTerminal.create(config, this)
-      _ <- (for {
-            _ <- provider.registerHotKey(JKeyStroke.getKeyStroke("meta SPACE"))(_ =>
-                  (for {
-                    _ <- log.debug("Opening emulated terminal...")
-                    _ <- terminal.open
-                    _ <- terminal.activate
-                  } yield ()).ignore
-                )
-            _ <- log.debug("Ready to accept input")
-          } yield ()).toManaged_
+      _        <- (for {
+                      _ <- provider.registerHotKey(JKeyStroke.getKeyStroke("meta SPACE"))(_ =>
+                             (for {
+                               _ <- log.debug("Opening emulated terminal...")
+                               _ <- terminal.open
+                               _ <- terminal.activate
+                             } yield ()).ignore
+                           )
+                      _ <- log.debug("Ready to accept input")
+                    } yield ()).toManaged_
     } yield ()).useForever.exitCode
 }

@@ -20,11 +20,11 @@ final case class OpacityCommand() extends Command[Unit] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      parsed = opacityCommand.parse(input.args)
-      message <- ZIO
-                  .fromEither(parsed)
-                  .fold(HelpMessage.formatted, o => fansi.Str(s"Set opacity to ${o}"))
+      input          <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      parsed          = opacityCommand.parse(input.args)
+      message        <- ZIO
+                          .fromEither(parsed)
+                          .fold(HelpMessage.formatted, o => fansi.Str(s"Set opacity to ${o}"))
       currentOpacity <- input.context.terminal.opacity.mapError(CommandError.UnexpectedException)
     } yield {
       val run = ZIO.fromEither(parsed).flatMap(o => input.context.terminal.setOpacity(o))

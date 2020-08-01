@@ -23,23 +23,21 @@ final case class SearchUrlCommand(
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
     def prefixPreview: ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
       for {
-        input       <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-        _           <- ZIO.fail(NotApplicable).when(input.rest.isEmpty)
+        input      <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+        _          <- ZIO.fail(NotApplicable).when(input.rest.isEmpty)
         url         = urlTemplate.replace("{query}", URLEncoder.encode(input.rest, StandardCharsets.UTF_8))
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
-      } yield {
-        List(
-          Preview.unit
-            .score(Scores.high * localeBoost)
-            .onRun(ProcessUtil.openBrowser(url))
-            .view(DefaultView(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
-        )
-      }
+      } yield List(
+        Preview.unit
+          .score(Scores.high * localeBoost)
+          .onRun(ProcessUtil.openBrowser(url))
+          .view(DefaultView(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
+      )
 
     def rawInputPreview: ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
-      if (searchInput.input.isEmpty || !(locales.isEmpty || locales.contains(searchInput.context.locale))) {
+      if (searchInput.input.isEmpty || !(locales.isEmpty || locales.contains(searchInput.context.locale)))
         IO.fail(NotApplicable)
-      } else {
+      else {
         val url = urlTemplate.replace("{query}", URLEncoder.encode(searchInput.input, StandardCharsets.UTF_8))
 
         UIO(

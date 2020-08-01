@@ -22,13 +22,16 @@ final case class ResizeCommand() extends Command[Unit] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      parsed = resizeCommand.parse(input.args)
+      input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      parsed   = resizeCommand.parse(input.args)
       message <- ZIO
-                  .fromEither(parsed)
-                  .fold(HelpMessage.formatted, {
-                    case (w, h) => fansi.Str(s"Set window size to width: $w, maxHeight: $h)")
-                  })
+                   .fromEither(parsed)
+                   .fold(
+                     HelpMessage.formatted,
+                     {
+                       case (w, h) => fansi.Str(s"Set window size to width: $w, maxHeight: $h)")
+                     }
+                   )
     } yield {
       val run = ZIO.fromEither(parsed).flatMap { case (w, h) => input.context.terminal.setSize(w, h) }
 

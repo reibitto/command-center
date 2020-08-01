@@ -69,46 +69,46 @@ object Command {
 
     for {
       typeName <- Try(config.getString("type")).toEither
-      command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
-                  case CommandType.DecodeBase64Command       => config.as[DecodeBase64Command]
-                  case CommandType.DecodeUrlCommand          => config.as[DecodeUrlCommand]
-                  case CommandType.EncodeBase64Command       => config.as[EncodeBase64Command]
-                  case CommandType.EncodeUrlCommand          => config.as[EncodeUrlCommand]
-                  case CommandType.EpochMillisCommand        => config.as[EpochMillisCommand]
-                  case CommandType.EpochUnixCommand          => config.as[EpochUnixCommand]
-                  case CommandType.ExitCommand               => config.as[ExitCommand]
-                  case CommandType.ExternalIPCommand         => config.as[ExternalIPCommand]
-                  case CommandType.FileNavigationCommand     => config.as[FileNavigationCommand]
-                  case CommandType.FindFileCommand           => config.as[FindFileCommand]
-                  case CommandType.FindInFileCommand         => config.as[FindInFileCommand]
-                  case CommandType.HashCommand               => config.as[HashCommand]
-                  case CommandType.ITunesCommand             => config.as[ITunesCommand]
-                  case CommandType.LocalIPCommand            => config.as[LocalIPCommand]
-                  case CommandType.LockCommand               => config.as[LockCommand]
-                  case CommandType.LoremIpsumCommand         => config.as[LoremIpsumCommand]
-                  case CommandType.OpenBrowserCommand        => config.as[OpenBrowserCommand]
-                  case CommandType.OpacityCommand            => config.as[OpacityCommand]
-                  case CommandType.RadixCommand              => config.as[RadixCommand]
-                  case CommandType.ResizeCommand             => config.as[ResizeCommand]
-                  case CommandType.ReloadCommand             => config.as[ReloadCommand]
-                  case CommandType.SearchUrlCommand          => config.as[SearchUrlCommand]
-                  case CommandType.SearchMavenCommand        => config.as[SearchMavenCommand]
-                  case CommandType.TemperatureCommand        => config.as[TemperatureCommand]
-                  case CommandType.TerminalCommand           => config.as[TerminalCommand]
-                  case CommandType.TimerCommand              => config.as[TimerCommand]
-                  case CommandType.ToggleDesktopIconsCommand => config.as[ToggleDesktopIconsCommand]
-                  case CommandType.ToggleHiddenFilesCommand  => config.as[ToggleHiddenFilesCommand]
-                  case CommandType.UUIDCommand               => config.as[UUIDCommand]
-                  case CommandType.WorldTimesCommand         => config.as[WorldTimesCommand]
+      command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
+                    case CommandType.DecodeBase64Command       => config.as[DecodeBase64Command]
+                    case CommandType.DecodeUrlCommand          => config.as[DecodeUrlCommand]
+                    case CommandType.EncodeBase64Command       => config.as[EncodeBase64Command]
+                    case CommandType.EncodeUrlCommand          => config.as[EncodeUrlCommand]
+                    case CommandType.EpochMillisCommand        => config.as[EpochMillisCommand]
+                    case CommandType.EpochUnixCommand          => config.as[EpochUnixCommand]
+                    case CommandType.ExitCommand               => config.as[ExitCommand]
+                    case CommandType.ExternalIPCommand         => config.as[ExternalIPCommand]
+                    case CommandType.FileNavigationCommand     => config.as[FileNavigationCommand]
+                    case CommandType.FindFileCommand           => config.as[FindFileCommand]
+                    case CommandType.FindInFileCommand         => config.as[FindInFileCommand]
+                    case CommandType.HashCommand               => config.as[HashCommand]
+                    case CommandType.ITunesCommand             => config.as[ITunesCommand]
+                    case CommandType.LocalIPCommand            => config.as[LocalIPCommand]
+                    case CommandType.LockCommand               => config.as[LockCommand]
+                    case CommandType.LoremIpsumCommand         => config.as[LoremIpsumCommand]
+                    case CommandType.OpenBrowserCommand        => config.as[OpenBrowserCommand]
+                    case CommandType.OpacityCommand            => config.as[OpacityCommand]
+                    case CommandType.RadixCommand              => config.as[RadixCommand]
+                    case CommandType.ResizeCommand             => config.as[ResizeCommand]
+                    case CommandType.ReloadCommand             => config.as[ReloadCommand]
+                    case CommandType.SearchUrlCommand          => config.as[SearchUrlCommand]
+                    case CommandType.SearchMavenCommand        => config.as[SearchMavenCommand]
+                    case CommandType.TemperatureCommand        => config.as[TemperatureCommand]
+                    case CommandType.TerminalCommand           => config.as[TerminalCommand]
+                    case CommandType.TimerCommand              => config.as[TimerCommand]
+                    case CommandType.ToggleDesktopIconsCommand => config.as[ToggleDesktopIconsCommand]
+                    case CommandType.ToggleHiddenFilesCommand  => config.as[ToggleHiddenFilesCommand]
+                    case CommandType.UUIDCommand               => config.as[UUIDCommand]
+                    case CommandType.WorldTimesCommand         => config.as[WorldTimesCommand]
 
-                  case CommandType.External(typeName) =>
-                    Left(
-                      circe.DecodingFailure(
-                        s"Failed to load command '$typeName' Loading external plugins not support in this mode.",
-                        List.empty
+                    case CommandType.External(typeName) =>
+                      Left(
+                        circe.DecodingFailure(
+                          s"Failed to load command '$typeName' Loading external plugins not support in this mode.",
+                          List.empty
+                        )
                       )
-                    )
-                }
+                  }
     } yield command
   }
 

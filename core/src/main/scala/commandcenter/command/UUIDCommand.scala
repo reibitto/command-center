@@ -16,12 +16,10 @@ final case class UUIDCommand() extends Command[UUID] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[UUID]]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      uuid  = UUID.randomUUID()
-    } yield {
-      List(
-        Preview(uuid).onRun(searchInput.context.ccProcess.setClipboard(uuid.toString)).score(Scores.high(input.context))
-      )
-    }
+      uuid   = UUID.randomUUID()
+    } yield List(
+      Preview(uuid).onRun(searchInput.context.ccProcess.setClipboard(uuid.toString)).score(Scores.high(input.context))
+    )
 }
 
 object UUIDCommand extends CommandPlugin[UUIDCommand] {

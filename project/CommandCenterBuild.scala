@@ -41,34 +41,35 @@ object CommandCenterBuild {
     "-Ywarn-extra-implicit"          // Warn when more than one implicit parameter section is defined.
   ) ++
     Seq(
-      "-Ywarn-unused:imports",  // Warn if an import selector is not referenced.
-      "-Ywarn-unused:locals",   // Warn if a local definition is unused.
-      "-Ywarn-unused:privates", // Warn if a private member is unused.
-      "-Ywarn-unused:implicits" // Warn if an implicit parameter is unused.
+      "-Ywarn-unused:imports",       // Warn if an import selector is not referenced.
+      "-Ywarn-unused:locals",        // Warn if a local definition is unused.
+      "-Ywarn-unused:privates",      // Warn if a private member is unused.
+      "-Ywarn-unused:implicits"      // Warn if an implicit parameter is unused.
     ).filter(_ => shouldWarnForUnusedCode) ++
     Seq(
       "-opt:l:inline",
       "-opt-inline-from:**"
     ).filter(_ => shouldOptimize)
 
-  def defaultSettings(projectName: String) = Seq(
-    name := projectName,
-    version := CommandCenterVersion,
-    javaOptions in Test += "-Duser.timezone=UTC",
-    scalacOptions := ScalacOptions,
-    scalaVersion in ThisBuild := ScalaVersion,
-    libraryDependencies ++= Plugins.BaseCompilerPlugins,
-    libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-test"     % Version.zio % Test,
-      "dev.zio" %% "zio-test-sbt" % Version.zio % Test
-    ),
-    incOptions ~= (_.withLogRecompileOnMacro(false)),
-    autoAPIMappings := true,
-    resolvers := Resolvers,
-    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
-    fork in Test := true,
-    logBuffered in Test := false
-  )
+  def defaultSettings(projectName: String) =
+    Seq(
+      name := projectName,
+      version := CommandCenterVersion,
+      javaOptions in Test += "-Duser.timezone=UTC",
+      scalacOptions := ScalacOptions,
+      scalaVersion in ThisBuild := ScalaVersion,
+      libraryDependencies ++= Plugins.BaseCompilerPlugins,
+      libraryDependencies ++= Seq(
+        "dev.zio" %% "zio-test"     % Version.zio % Test,
+        "dev.zio" %% "zio-test-sbt" % Version.zio % Test
+      ),
+      incOptions ~= (_.withLogRecompileOnMacro(false)),
+      autoAPIMappings := true,
+      resolvers := Resolvers,
+      testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
+      fork in Test := true,
+      logBuffered in Test := false
+    )
 
   lazy val Resolvers = Seq(
     // Order of resolvers affects resolution time. More general purpose repositories should come first.

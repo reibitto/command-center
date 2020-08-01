@@ -20,9 +20,9 @@ final case class LockCommand() extends Command[Unit] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield {
-      List(Preview.unit.onRun(PCommand("pmset", "displaysleepnow").exitCode.unit).score(Scores.high(input.context)))
-    }
+    } yield List(
+      Preview.unit.onRun(PCommand("pmset", "displaysleepnow").exitCode.unit).score(Scores.high(input.context))
+    )
 }
 
 object LockCommand extends CommandPlugin[LockCommand] {

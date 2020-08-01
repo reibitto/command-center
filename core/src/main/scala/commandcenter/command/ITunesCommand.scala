@@ -29,7 +29,7 @@ final case class ITunesCommand() extends Command[Unit] {
   val rewindCommand        = decline.Command("rewind", "Stop the current track")(Opts(Opt.Rewind))
 
   // TODO: Make this word with negative numbers too
-  val seekCommand = decline
+  val seekCommand        = decline
     .Command("seek", "Seek forward/back by specified amount in seconds")(Opts.argument[Int]("seconds"))
     .map(Opt.Seek)
   val rateCommand        = decline.Command("rate", "Rate the current track")(rating)
@@ -62,50 +62,51 @@ final case class ITunesCommand() extends Command[Unit] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      parsed = itunesCommand.parse(input.args)
+      input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      parsed   = itunesCommand.parse(input.args)
       message <- ZIO
-                  .fromEither(parsed)
-                  .foldM(
-                    help => UIO(HelpMessage.formatted(help)), {
-                      case Some(Opt.Play)          => UIO(fansi.Str(playCommand.header))
-                      case Some(Opt.Pause)         => UIO(fansi.Str(pauseCommand.header))
-                      case Some(Opt.Stop)          => UIO(fansi.Str(stopCommand.header))
-                      case Some(Opt.NextTrack)     => UIO(fansi.Str(nextTrackCommand.header))
-                      case Some(Opt.PreviousTrack) => UIO(fansi.Str(previousTrackCommand.header))
-                      case Some(Opt.Rewind)        => UIO(fansi.Str("Rewind current track to the beginning"))
-                      case Some(Opt.Seek(seconds)) if seconds >= 0 =>
-                        UIO(fansi.Str(s"Skip forward by $seconds seconds"))
-                      case Some(Opt.Seek(seconds)) => UIO(fansi.Str(s"Skip backward by $seconds seconds"))
-                      case Some(Opt.Rate(rating))  => UIO(fansi.Str(s"Rate track ${rating} stars"))
-                      case Some(Opt.DeleteTrack)   => UIO(fansi.Str(deleteTrackCommand.header))
-                      case Some(Opt.Help)          => UIO(fansi.Str(itunesCommand.showHelp))
-                      case None =>
-                        (for {
-                          details                                 <- trackDetailsFn
-                          Array(trackName, artist, album, rating) = details.trim.split("\t")
-                        } yield fansi.Color.Magenta(trackName) ++ " " ++ artist ++ " " ++ fansi.Color
-                          .Cyan(album) ++ " " ++ fansi.Color.Yellow(rating))
-                          .mapError(
-                            CommandError.UnexpectedException
-                          ) // TODO: Always show track details at top for every command. May want to also cache this?
-                    }
-                  )
+                   .fromEither(parsed)
+                   .foldM(
+                     help => UIO(HelpMessage.formatted(help)),
+                     {
+                       case Some(Opt.Play)                          => UIO(fansi.Str(playCommand.header))
+                       case Some(Opt.Pause)                         => UIO(fansi.Str(pauseCommand.header))
+                       case Some(Opt.Stop)                          => UIO(fansi.Str(stopCommand.header))
+                       case Some(Opt.NextTrack)                     => UIO(fansi.Str(nextTrackCommand.header))
+                       case Some(Opt.PreviousTrack)                 => UIO(fansi.Str(previousTrackCommand.header))
+                       case Some(Opt.Rewind)                        => UIO(fansi.Str("Rewind current track to the beginning"))
+                       case Some(Opt.Seek(seconds)) if seconds >= 0 =>
+                         UIO(fansi.Str(s"Skip forward by $seconds seconds"))
+                       case Some(Opt.Seek(seconds))                 => UIO(fansi.Str(s"Skip backward by $seconds seconds"))
+                       case Some(Opt.Rate(rating))                  => UIO(fansi.Str(s"Rate track ${rating} stars"))
+                       case Some(Opt.DeleteTrack)                   => UIO(fansi.Str(deleteTrackCommand.header))
+                       case Some(Opt.Help)                          => UIO(fansi.Str(itunesCommand.showHelp))
+                       case None                                    =>
+                         (for {
+                           details                                <- trackDetailsFn
+                           Array(trackName, artist, album, rating) = details.trim.split("\t")
+                         } yield fansi.Color.Magenta(trackName) ++ " " ++ artist ++ " " ++ fansi.Color
+                           .Cyan(album) ++ " " ++ fansi.Color.Yellow(rating))
+                           .mapError(
+                             CommandError.UnexpectedException
+                           ) // TODO: Always show track details at top for every command. May want to also cache this?
+                     }
+                   )
     } yield {
       val run = for {
-        opt <- ZIO.fromEither(parsed).some
+        opt    <- ZIO.fromEither(parsed).some
         result <- opt match {
-                   case Opt.Play          => playFn
-                   case Opt.Pause         => pauseFn
-                   case Opt.Stop          => stopFn
-                   case Opt.NextTrack     => nextTrackFn
-                   case Opt.PreviousTrack => previousTrackFn
-                   case Opt.Rewind        => seekFn(-100000) // TODO: Is there a nicer way to do this?
-                   case Opt.Seek(seconds) => TTS.say(seconds.toString) *> seekFn(seconds)
-                   case Opt.Rate(n)       => rateTrackFn(n)
-                   case Opt.DeleteTrack   => deleteTrackFn
-                   case Opt.Help          => ZIO.unit
-                 }
+                    case Opt.Play          => playFn
+                    case Opt.Pause         => pauseFn
+                    case Opt.Stop          => stopFn
+                    case Opt.NextTrack     => nextTrackFn
+                    case Opt.PreviousTrack => previousTrackFn
+                    case Opt.Rewind        => seekFn(-100000) // TODO: Is there a nicer way to do this?
+                    case Opt.Seek(seconds) => TTS.say(seconds.toString) *> seekFn(seconds)
+                    case Opt.Rate(n)       => rateTrackFn(n)
+                    case Opt.DeleteTrack   => deleteTrackFn
+                    case Opt.Help          => ZIO.unit
+                  }
       } yield result
 
       List(
