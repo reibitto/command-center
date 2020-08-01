@@ -21,20 +21,20 @@ lazy val core = module("core")
   .settings(
     resolvers := Resolvers,
     libraryDependencies ++= Seq(
-      "dev.zio"                      %% "zio"                           % Version.zio,
-      "dev.zio"                      %% "zio-streams"                   % Version.zio,
-      "dev.zio"                      %% "zio-process"                   % "0.0.6",
-      "dev.zio"                      %% "zio-logging"                   % "0.3.2",
-      "io.circe"                     %% "circe-config"                  % "0.8.0",
-      "org.scala-lang"               % "scala-reflect"                  % "2.13.3",
-      "io.circe"                     %% "circe-core"                    % Version.circe,
-      "io.circe"                     %% "circe-parser"                  % Version.circe,
-      "com.monovore"                 %% "decline"                       % "1.2.0",
-      "com.lihaoyi"                  %% "fansi"                         % "0.2.9",
-      "com.beachape"                 %% "enumeratum"                    % "1.6.1",
-      "com.softwaremill.sttp.client" %% "core"                          % Version.sttp,
-      "com.softwaremill.sttp.client" %% "circe"                         % Version.sttp,
-      "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % Version.sttp
+      "dev.zio"                      %% "zio"                    % Version.zio,
+      "dev.zio"                      %% "zio-streams"            % Version.zio,
+      "dev.zio"                      %% "zio-process"            % "0.0.6",
+      "dev.zio"                      %% "zio-logging"            % "0.3.2",
+      "io.circe"                     %% "circe-config"           % "0.8.0",
+      "org.scala-lang"               % "scala-reflect"           % "2.13.3",
+      "io.circe"                     %% "circe-core"             % Version.circe,
+      "io.circe"                     %% "circe-parser"           % Version.circe,
+      "com.monovore"                 %% "decline"                % "1.2.0",
+      "com.lihaoyi"                  %% "fansi"                  % "0.2.9",
+      "com.beachape"                 %% "enumeratum"             % "1.6.1",
+      "com.softwaremill.sttp.client" %% "core"                   % Version.sttp,
+      "com.softwaremill.sttp.client" %% "circe"                  % Version.sttp,
+      "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp
     )
   )
 
@@ -63,7 +63,8 @@ lazy val cliClient = module("cli-client")
       "-H:+TraceClassInitialization",
       "-H:IncludeResources=core/src/main/resources/*",
       "--initialize-at-build-time",
-      "--no-fallback"
+      "--no-fallback",
+      "--enable-https"
     )
   )
   .enablePlugins(GraalVMNativeImagePlugin, JavaServerAppPackaging)

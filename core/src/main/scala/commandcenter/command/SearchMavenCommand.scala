@@ -7,7 +7,7 @@ import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView
 import io.circe.{ Decoder, Json }
 import sttp.client._
-import sttp.client.asynchttpclient.zio._
+import sttp.client.httpclient.zio._
 import sttp.client.circe._
 import zio.{ IO, ZIO }
 

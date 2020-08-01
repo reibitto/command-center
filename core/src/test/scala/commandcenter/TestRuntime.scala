@@ -1,6 +1,6 @@
 package commandcenter
 
-import sttp.client.asynchttpclient.zio.SttpClient
+import sttp.client.httpclient.zio.SttpClient
 import zio.ZEnv
 import zio.logging.Logging
 import zio.test.environment._
