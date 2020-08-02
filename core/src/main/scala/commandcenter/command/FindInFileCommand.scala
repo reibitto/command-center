@@ -7,7 +7,7 @@ import commandcenter.command.CommandError._
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.{ UIO, ZIO }
+import zio.ZIO
 import zio.process.{ Command => PCommand }
 
 final case class FindInFileCommand() extends Command[File] {

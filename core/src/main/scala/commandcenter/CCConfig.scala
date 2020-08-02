@@ -62,8 +62,9 @@ object DisplayConfig {
     Decoder.forProduct4("width", "maxHeight", "opacity", "fonts")(DisplayConfig.apply)
 }
 
-final case class KeyboardConfig(openShortcut: String)
+final case class KeyboardConfig(openShortcut: String, suspendShortcut: Option[String])
 
 object KeyboardConfig {
-  implicit val decoder: Decoder[KeyboardConfig] = Decoder.forProduct1("openShortcut")(KeyboardConfig.apply)
+  implicit val decoder: Decoder[KeyboardConfig] =
+    Decoder.forProduct2("openShortcut", "suspendShortcut")(KeyboardConfig.apply)
 }
