@@ -27,10 +27,11 @@ object CCConfig {
 
   def loadFrom(config: Config): Task[CCConfig] =
     for {
-      commands      <- CommandPlugin.load(config, "commands")
-      aliases       <- Task.fromEither(config.as[Map[String, List[String]]]("aliases"))
-      displayConfig <- Task.fromEither(config.as[DisplayConfig]("display"))
-    } yield CCConfig(commands.toVector, aliases, displayConfig)
+      commands       <- CommandPlugin.load(config, "commands")
+      aliases        <- Task.fromEither(config.as[Map[String, List[String]]]("aliases"))
+      displayConfig  <- Task.fromEither(config.as[DisplayConfig]("display"))
+      keyboardConfig <- Task.fromEither(config.as[KeyboardConfig]("keyboard"))
+    } yield CCConfig(commands.toVector, aliases, displayConfig, keyboardConfig)
 
   private def envConfigFile: Option[File] =
     sys.env
@@ -50,7 +51,8 @@ object CCConfig {
 final case class CCConfig(
   commands: Vector[Command[Any]],
   aliases: Map[String, List[String]],
-  display: DisplayConfig
+  display: DisplayConfig,
+  keyboard: KeyboardConfig
 )
 
 final case class DisplayConfig(width: Int, maxHeight: Int, opacity: Float, fonts: List[Font])
@@ -60,4 +62,8 @@ object DisplayConfig {
     Decoder.forProduct4("width", "maxHeight", "opacity", "fonts")(DisplayConfig.apply)
 }
 
-final case class KeyboardConfig()
+final case class KeyboardConfig(openShortcut: String)
+
+object KeyboardConfig {
+  implicit val decoder: Decoder[KeyboardConfig] = Decoder.forProduct1("openShortcut")(KeyboardConfig.apply)
+}

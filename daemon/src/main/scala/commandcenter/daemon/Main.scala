@@ -14,7 +14,7 @@ object Main extends CCApp {
       config   <- CCConfig.load.toManaged_
       terminal <- SwingTerminal.create(config, this)
       _        <- (for {
-                      _ <- provider.registerHotKey(JKeyStroke.getKeyStroke("meta SPACE"))(_ =>
+                      _ <- provider.registerHotKey(JKeyStroke.getKeyStroke(config.keyboard.openShortcut))(_ =>
                              (for {
                                _ <- log.debug("Opening emulated terminal...")
                                _ <- terminal.open
