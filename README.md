@@ -52,6 +52,16 @@ If you want to start a simple countdown timer:
 
 This will pop up a notification after 15 minutes. Specifying a message is optional.
 
+#### Suspend/resume process
+
+You can suspend (toggle) a process by it's PID with:
+
+`suspend 321`
+
+The suspend command is special in that you can also configure it as a global shortcut in `application.conf`. This is
+useful if you want to be able to pause applications that don't have a built-in pause feature, such as games. The idea
+for this feature came from [Universal Pause Button](https://github.com/ryanries/UniversalPauseButton).
+
 ## Installation
 
 At the moment there is no simple "1-step install". You need to compile and generate an executable yourself (or run

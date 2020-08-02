@@ -8,7 +8,6 @@ import commandcenter.util.GraphicsUtil
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.ZIO
-import zio.blocking._
 
 final case class OpacityCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.OpacityCommand

@@ -8,6 +8,7 @@ import com.monovore.decline.Opts
 import scala.util.Try
 
 object CommonOpts {
+  // TODO: Remove this or make it a def with metavar for better usage details
   val stringArg: Opts[String] = Opts.argument[String]()
 
   val encodingOpt: Opts[Charset] = Opts

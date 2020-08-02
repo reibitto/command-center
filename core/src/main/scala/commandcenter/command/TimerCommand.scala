@@ -23,7 +23,7 @@ final case class TimerCommand() extends Command[Unit] {
   val messageOpt  = Opts.option[String]("message", "Message to display when timer is done", "m").orNone
   val durationArg = Opts.argument[Duration]("duration")
 
-  val timerCommand = decline.Command("opacity", title)((durationArg, messageOpt).tupled)
+  val timerCommand = decline.Command("timer", title)((durationArg, messageOpt).tupled)
 
   val notifyFn = AppleScript.loadFunction2[String, String]("applescript/system/notify.applescript")
 
