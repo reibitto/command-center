@@ -26,7 +26,7 @@ tools already work great. Command Center aims to fill a slightly different niche
 
 ## Example usage
 
-![recording](assets/recording.gif?raw=true "Optional Title")
+![recording](assets/recording.gif?raw=true "Command Center screenshot")
 
 #### Finding files
 
@@ -54,7 +54,7 @@ This will pop up a notification after 15 minutes. Specifying a message is option
 
 #### Suspend/resume process
 
-You can suspend (toggle) a process by it's PID with:
+You can suspend (toggle) a process by its PID with:
 
 `suspend 321`
 
