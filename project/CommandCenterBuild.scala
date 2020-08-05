@@ -8,7 +8,7 @@ object CommandCenterBuild {
   val CommandCenterVersion = "0.0.1"
 
   object Version {
-    val zio   = "1.0.0-RC21-2"
+    val zio   = "1.0.0"
     val circe = "0.13.0"
     val sttp  = "2.2.3"
 
