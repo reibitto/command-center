@@ -9,7 +9,7 @@ import commandcenter.util.{ AppleScript, OS }
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.ZIO
-import zio.duration.Duration
+import zio.duration._
 
 final case class TimerCommand() extends Command[Unit] {
   // TODO: Add option to list active timers and also one for canceling them

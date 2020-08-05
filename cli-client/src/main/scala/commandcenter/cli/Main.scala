@@ -29,7 +29,7 @@ object Main extends CCApp {
                                .forkDaemon
                         _ <- terminal
                                .processEvent(config.commands, config.aliases)
-                               .doWhile {
+                               .repeatWhile {
                                  case EventResult.Exit               => false
                                  case EventResult.UnexpectedError(t) =>
                                    // TODO: Log error
