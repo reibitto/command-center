@@ -10,7 +10,7 @@ import zio.logging.Logging
 import zio.test.environment.testEnvironment
 import zio.test.{ RunnableSpec, TestAspect, TestExecutor, TestRunner }
 
-trait CommandSpec extends RunnableSpec[TestEnv, Any] {
+trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
   val testEnv: Layer[Throwable, TestEnv] =
     testEnvironment >>> (
       testEnvironment
