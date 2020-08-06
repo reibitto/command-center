@@ -70,6 +70,7 @@ object Command {
     for {
       typeName <- Try(config.getString("type")).toEither
       command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
+                    case CommandType.CalculatorCommand         => config.as[CalculatorCommand]
                     case CommandType.DecodeBase64Command       => config.as[DecodeBase64Command]
                     case CommandType.DecodeUrlCommand          => config.as[DecodeUrlCommand]
                     case CommandType.EncodeBase64Command       => config.as[EncodeBase64Command]
