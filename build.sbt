@@ -34,7 +34,8 @@ lazy val core = module("core")
       "com.beachape"                 %% "enumeratum"             % "1.6.1",
       "com.softwaremill.sttp.client" %% "core"                   % Version.sttp,
       "com.softwaremill.sttp.client" %% "circe"                  % Version.sttp,
-      "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp
+      "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
+      "com.lihaoyi"                  %% "fastparse"              % "2.3.0"
     )
   )
 

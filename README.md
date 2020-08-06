@@ -62,6 +62,37 @@ The suspend command is special in that you can also configure it as a global sho
 useful if you want to be able to pause applications that don't have a built-in pause feature, such as games. The idea
 for this feature came from [Universal Pause Button](https://github.com/ryanries/UniversalPauseButton).
 
+#### Calculator
+
+You can use some built-in constructions and functions to quickly evaluate mathematical expressions:
+
+- `numbers`, e. g. `5`, `-2.`, `+2.6`
+- `constants` (case-insensitive):
+    - `pi`
+- `()` (parentheses for grouping)
+- *symbolic operators*:
+    - `+`, `-`, `*`, `/`, `%` (modulo), `^` (power), e. g. `5 * (3 - 4/2) ^ 2 % 3`
+    - `^` has a higher precedence than any other symbolic operators, all of which has equal precedence
+- *functions* (case-sensitive; have a higher precedence than symbolic operators):
+    - with 1 parameter: `acos`, `asin`, `atan`, `cos`, `exp`, `log`, `sin`, `sqrt`, `tan`, `toDeg` (radians -> degrees),
+    `toRad` (degrees -> radians), `!` (factorial)
+    - with 2 parameters: `atan2`, `choose` (Newton's binomial), `gcd` (greatest common divisor)
+
+Whitespaces between parts of an expression are ignored.
+
+One-parametric functions can be written in two forms:
+- separated by spaces for simple parameters (number/constant): `sin PI`, `sqrt 16`
+- with parameters enclosed in parentheses for both simple and more complex expressions: `sin(PI / 2)`, `sqrt(9)`
+
+The same applies to `choose`: `5 choose 3`, `(6-1) choose (2 + 1)`
+
+Other two-parametric functions have to be written as follows: `atan2(1, 3)`, `gcd(20, 16)`
+
+**Constraints:**
+- for `n choose r`, both `n` and `r` have to be whole and non-negative, `n >= r`
+- for `n!`, `n` has to be whole and non-negative
+- for `gcd(a, b)`, both `a` and `b` have to be whole
+
 ## Installation
 
 At the moment there is no simple "1-step install". You need to compile and generate an executable yourself (or run
