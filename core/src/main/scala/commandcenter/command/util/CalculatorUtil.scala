@@ -52,10 +52,10 @@ object CalculatorUtil {
       for {
         value1 <- term
         value2 <- P("choose" ~/ term)
-          .filter(d => isWholeNonNegative(value1) && isWholeNonNegative(d) && value1 >= d)
-          .map(binomial(value1, _)) |
-          P("!").filter(_ => isWholeNonNegative(value1)).map(_ => factorial(value1)) |
-          P(Pass).map(_ => value1)
+                    .filter(d => isWholeNonNegative(value1) && isWholeNonNegative(d) && value1 >= d)
+                    .map(binomial(value1, _)) |
+                    P("!").filter(_ => isWholeNonNegative(value1)).map(_ => factorial(value1)) |
+                    P(Pass).map(_ => value1)
       } yield value2
     )
 
