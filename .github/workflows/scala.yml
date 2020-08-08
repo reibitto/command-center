@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -18,4 +17,4 @@ jobs:
       with:
         java-version: 11
     - name: Run tests
-      run: sbt test
+      run: sbt -Dscalac.unused.enabled=true fmtCheck test
