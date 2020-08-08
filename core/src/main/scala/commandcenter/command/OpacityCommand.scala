@@ -32,11 +32,14 @@ final case class OpacityCommand() extends Command[Unit] {
                           .fold(HelpMessage.formatted, o => fansi.Str(s"Set opacity to ${o}"))
       currentOpacity <- input.context.terminal.opacity.mapError(CommandError.UnexpectedException)
     } yield {
-      val run = ZIO.fromEither(parsed).flatMap(o => input.context.terminal.setOpacity(o))
+      val run = for {
+        opacity <- ZIO.fromEither(parsed).mapError(RunError.CliError)
+        _       <- input.context.terminal.setOpacity(opacity)
+      } yield ()
 
       List(
         Preview.unit
-          .onRun(run.ignore)
+          .onRun(run)
           .score(Scores.high(input.context))
           .view(DefaultView(s"$title (current: $currentOpacity)", message))
       )

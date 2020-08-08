@@ -177,12 +177,17 @@ final case class CliTerminal[T <: Terminal](
       _             <- swapBuffer
     } yield ()
 
-  def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
+  def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] = {
+    val previewResult = results.previews.lift(cursorIndex)
+
     for {
-      previewResult <- ZIO.fromOption(results.previews.lift(cursorIndex)).option
-      _             <- ZIO.fromOption(previewResult).flatMap(_.onRun).either.forkDaemon
-      _             <- reset()
+      _ <- ZIO.foreach(previewResult) { preview =>
+             // TODO: Log defects
+             preview.onRun.absorb.forkDaemon
+           }
+      _ <- reset()
     } yield previewResult
+  }
 
   def processEvent(commands: Vector[Command[Any]], aliases: Map[String, List[String]]): URIO[Env, EventResult] =
     (for {

@@ -30,14 +30,14 @@ final case class SuspendProcessCommand() extends Command[Unit] {
                         .fold(HelpMessage.formatted, p => fansi.Str("PID: ") ++ fansi.Color.Magenta(p.toString))
     } yield {
       val run = for {
-        pid         <- ZIO.fromEither(parsedCommand)
+        pid         <- ZIO.fromEither(parsedCommand).mapError(RunError.CliError)
         isSuspended <- SuspendProcessCommand.isProcessSuspended(pid)
         _           <- SuspendProcessCommand.setProcessState(!isSuspended, pid)
       } yield ()
 
       List(
         Preview.unit
-          .onRun(run.ignore)
+          .onRun(run.orDie)
           .score(Scores.high(input.context))
           .view(DefaultView(title, message))
       )
