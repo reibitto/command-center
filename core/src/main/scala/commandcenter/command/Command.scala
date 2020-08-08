@@ -55,12 +55,21 @@ object Command {
 
     ZIO
       .foreachParN(8) {
-        commands.map(command => command.preview(SearchInput(input, aliasedInputs, command.commandNames, context)))
+        commands.map(command =>
+          command
+            .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
+            .either
+            .absorb
+            .mapError(t =>
+              CommandError.UnexpectedException(t): CommandError
+            ) // Defects in a single command are isolated and don't fail the entire search
+            .absolve
+        )
       }(_.option) // TODO: Use `.either` here and log errors instead of ignoring them
       .map { r =>
         val results = r.flatten.flatten.sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
 
-        SearchResults(input, results.toVector)
+        SearchResults(input, results)
       }
   }
 
