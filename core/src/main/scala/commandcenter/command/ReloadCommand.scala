@@ -17,7 +17,7 @@ final case class ReloadCommand() extends Command[Unit] {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
     } yield List(
       Preview.unit
-        .onRun(input.context.terminal.reload.ignore)
+        .onRun(input.context.terminal.reload.orDie)
         .score(Scores.high(input.context))
         .view(DefaultView(title, ""))
     )

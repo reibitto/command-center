@@ -55,7 +55,7 @@ final case class LoremIpsumCommand() extends Command[Unit] {
                    )
     } yield {
       val run = for {
-        (i, chunkType) <- ZIO.fromEither(parsed)
+        (i, chunkType) <- ZIO.fromEither(parsed).mapError(RunError.CliError)
         text            = chunkType match {
                             case Word      => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
                             case Sentence  => Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
@@ -65,7 +65,7 @@ final case class LoremIpsumCommand() extends Command[Unit] {
       } yield ()
       List(
         Preview.unit
-          .onRun(run.ignore)
+          .onRun(run)
           .score(Scores.high(input.context))
           .view(DefaultView("Lorem Ipsum", message))
       )

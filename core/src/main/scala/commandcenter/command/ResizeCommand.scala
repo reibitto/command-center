@@ -33,11 +33,14 @@ final case class ResizeCommand() extends Command[Unit] {
                      }
                    )
     } yield {
-      val run = ZIO.fromEither(parsed).flatMap { case (w, h) => input.context.terminal.setSize(w, h) }
+      val run = for {
+        (w, h) <- ZIO.fromEither(parsed).mapError(RunError.CliError)
+        _      <- input.context.terminal.setSize(w, h)
+      } yield ()
 
       List(
         Preview.unit
-          .onRun(run.ignore)
+          .onRun(run.orDie)
           .score(Scores.high(input.context))
           .view(DefaultView(title, message))
       )

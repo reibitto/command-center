@@ -82,36 +82,35 @@ final case class ITunesCommand() extends Command[Unit] {
                        case Some(Opt.DeleteTrack)                   => UIO(fansi.Str(deleteTrackCommand.header))
                        case Some(Opt.Help)                          => UIO(fansi.Str(itunesCommand.showHelp))
                        case None                                    =>
+                         // TODO: Always show track details at top for every command. May want to also cache this?
                          (for {
                            details                                <- trackDetailsFn
                            Array(trackName, artist, album, rating) = details.trim.split("\t")
                          } yield fansi.Color.Magenta(trackName) ++ " " ++ artist ++ " " ++ fansi.Color
                            .Cyan(album) ++ " " ++ fansi.Color.Yellow(rating))
-                           .mapError(
-                             CommandError.UnexpectedException
-                           ) // TODO: Always show track details at top for every command. May want to also cache this?
+                           .mapError(CommandError.UnexpectedException)
                      }
                    )
     } yield {
       val run = for {
-        opt    <- ZIO.fromEither(parsed).some
-        result <- opt match {
-                    case Opt.Play          => playFn
-                    case Opt.Pause         => pauseFn
-                    case Opt.Stop          => stopFn
-                    case Opt.NextTrack     => nextTrackFn
-                    case Opt.PreviousTrack => previousTrackFn
-                    case Opt.Rewind        => seekFn(-100000) // TODO: Is there a nicer way to do this?
-                    case Opt.Seek(seconds) => TTS.say(seconds.toString) *> seekFn(seconds)
-                    case Opt.Rate(n)       => rateTrackFn(n)
-                    case Opt.DeleteTrack   => deleteTrackFn
-                    case Opt.Help          => ZIO.unit
-                  }
-      } yield result
+        opt <- ZIO.fromEither(parsed).mapError(RunError.CliError).someOrFail(RunError.InternalError("No subcommand"))
+        _   <- opt match {
+                 case Opt.Play          => playFn
+                 case Opt.Pause         => pauseFn
+                 case Opt.Stop          => stopFn
+                 case Opt.NextTrack     => nextTrackFn
+                 case Opt.PreviousTrack => previousTrackFn
+                 case Opt.Rewind        => seekFn(-100000) // TODO: Is there a nicer way to do this?
+                 case Opt.Seek(seconds) => TTS.say(seconds.toString) *> seekFn(seconds)
+                 case Opt.Rate(n)       => rateTrackFn(n)
+                 case Opt.DeleteTrack   => deleteTrackFn
+                 case Opt.Help          => ZIO.unit
+               }
+      } yield ()
 
       List(
         Preview.unit
-          .onRun(run.ignore)
+          .onRun(run)
           .score(Scores.high(input.context))
           .view(DefaultView(title, message))
       )
