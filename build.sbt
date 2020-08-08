@@ -13,6 +13,7 @@ lazy val root = project
   )
   .settings(
     addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll"),
+    addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll"),
     shellPrompt := (_ => prompt),
     welcomeMessage
   )
