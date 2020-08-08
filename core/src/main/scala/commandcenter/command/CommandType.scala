@@ -24,6 +24,7 @@ object CommandType extends Enum[CommandType] {
   case object LoremIpsumCommand         extends CommandType
   case object OpacityCommand            extends CommandType
   case object OpenBrowserCommand        extends CommandType
+  case object ProcessIdCommand          extends CommandType
   case object RadixCommand              extends CommandType
   case object ReloadCommand             extends CommandType
   case object ResizeCommand             extends CommandType
