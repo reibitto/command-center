@@ -41,7 +41,7 @@ final case class SearchInput(
     // TODO: Optimize this. Possibly with collectFirst + an extractor
     (input :: aliasedInputs).flatMap { input =>
       val (prefix, rest) = input.split("[ ]+", 2) match {
-        case Array(prefix, rest) => (prefix, s" $rest")
+        case Array(prefix, rest) => (prefix, s"$rest")
         case Array(prefix)       => (prefix, "")
       }
 
