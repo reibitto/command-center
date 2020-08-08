@@ -2,7 +2,6 @@ package commandcenter.command
 
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
-import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.ZIO
