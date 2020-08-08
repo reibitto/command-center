@@ -98,6 +98,7 @@ object Command {
                     case CommandType.LoremIpsumCommand         => config.as[LoremIpsumCommand]
                     case CommandType.OpacityCommand            => config.as[OpacityCommand]
                     case CommandType.OpenBrowserCommand        => config.as[OpenBrowserCommand]
+                    case CommandType.ProcessIdCommand          => config.as[ProcessIdCommand]
                     case CommandType.RadixCommand              => config.as[RadixCommand]
                     case CommandType.ReloadCommand             => config.as[ReloadCommand]
                     case CommandType.ResizeCommand             => config.as[ResizeCommand]
