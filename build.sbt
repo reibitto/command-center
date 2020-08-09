@@ -1,7 +1,7 @@
 import CommandCenterBuild.Version
-import ConsoleHelper._
 import sbt.Keys._
 import sbt._
+import sbtwelcome._
 
 lazy val root = project
   .in(file("."))
@@ -14,8 +14,20 @@ lazy val root = project
   .settings(
     addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll"),
     addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll"),
-    shellPrompt := (_ => prompt),
-    welcomeMessage
+    logo :=
+      """
+        |,---.                           .   ,---.         .
+        ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
+        ||     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
+        |`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '  """.stripMargin,
+    usefulTasks := Seq(
+      UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
+      UsefulTask("b", "fmt", "Run scalafmt on the entire project"),
+      UsefulTask("c", "cli-client/run", "Run Command Center CLI client (interactive mode by default)"),
+      UsefulTask("d", "cli-client/assembly", "Create an executable JAR for running command line utility"),
+      UsefulTask("e", "cli-client/graalvm-native-image:packageBin", "Create a native executable of the CLI client"),
+      UsefulTask("f", "daemon/assembly", "Run the benchmarks")
+    )
   )
 
 lazy val core = module("core")
