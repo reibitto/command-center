@@ -13,7 +13,7 @@ import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResu
 import commandcenter.locale.Language
 import commandcenter.util.{ Debounced, TextUtils }
 import commandcenter.view.{ AnsiRendered, Rendered }
-import commandcenter.{ CCConfig, CCProcess, CCTerminal, CommandContext, TerminalType }
+import commandcenter.{ CCConfig, CCTerminal, CommandContext, TerminalType }
 import zio._
 import zio.blocking._
 import zio.clock.Clock
@@ -21,7 +21,6 @@ import zio.duration._
 
 final case class CliTerminal[T <: Terminal](
   terminal: T,
-  ccProcess: CCProcess,
   screen: TerminalScreen,
   graphics: TextGraphics,
   configRef: Ref[CCConfig],
@@ -121,7 +120,7 @@ final case class CliTerminal[T <: Terminal](
   def search(commands: Vector[Command[Any]], aliases: Map[String, List[String]])(
     searchTerm: String
   ): URIO[Env, Unit] = {
-    val context = CommandContext(Language.detect(searchTerm), this, ccProcess, 1.0)
+    val context = CommandContext(Language.detect(searchTerm), this, 1.0)
 
     Command
       .search(commands, aliases, searchTerm, context)
@@ -287,7 +286,6 @@ object CliTerminal {
   )(managedTerminal: Managed[Throwable, T]): Managed[Throwable, CliTerminal[T]] =
     for {
       terminal           <- managedTerminal
-      process            <- CCProcess.get.toManaged_
       screen             <- ZManaged.fromAutoCloseable(Task(new TerminalScreen(terminal)))
       graphics           <- Task(screen.newTextGraphics()).toManaged_
       configRef          <- Ref.makeManaged(config)
@@ -300,7 +298,6 @@ object CliTerminal {
       lastSearchFiberRef <- Ref.makeManaged(Option.empty[Fiber[Throwable, SearchResults[Any]]])
     } yield CliTerminal(
       terminal,
-      process,
       screen,
       graphics,
       configRef,

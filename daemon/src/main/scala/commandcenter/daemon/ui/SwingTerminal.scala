@@ -7,6 +7,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter._
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
 import commandcenter.locale.Language
+import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
 import commandcenter.util.{ Debounced, GraphicsUtil, OS }
 import commandcenter.view.AnsiRendered
@@ -22,7 +23,6 @@ import scala.annotation.tailrec
 
 final case class SwingTerminal(
   var config: CCConfig, // TODO: Convert to Ref
-  ccProcess: CCProcess,
   commandCursorRef: Ref[Int],
   searchResultsRef: Ref[SearchResults[Any]],
   searchDebounce: URIO[Env, Unit] => URIO[Env with Clock, Fiber[Nothing, Unit]]
@@ -101,7 +101,7 @@ final case class SwingTerminal(
 
   inputTextField.addOnChangeListener { e =>
     val searchTerm = inputTextField.getText
-    val context    = CommandContext(Language.detect(searchTerm), SwingTerminal.this, ccProcess, 1.0)
+    val context    = CommandContext(Language.detect(searchTerm), SwingTerminal.this, 1.0)
 
     searchDebounce(
       Command
@@ -247,15 +247,15 @@ final case class SwingTerminal(
 
   def hide: UIO[Unit] = UIO(frame.setVisible(false))
 
-  def activate: RIO[Blocking, Unit] =
+  def activate: RIO[Tools with Blocking, Unit] =
     OS.os match {
-      case OS.MacOS => ccProcess.activate
+      case OS.MacOS => tools.activate
       case _        => UIO(frame.requestFocus())
     }
 
-  def deactivate: RIO[Blocking, Unit] =
+  def deactivate: RIO[Tools with Blocking, Unit] =
     OS.os match {
-      case OS.MacOS => ccProcess.hide
+      case OS.MacOS => tools.hide
       case _        => UIO.unit
     }
 
@@ -297,8 +297,7 @@ object SwingTerminal {
   def create(config: CCConfig, runtime: CCRuntime): Managed[Throwable, SwingTerminal] =
     for {
       searchDebounce   <- Debounced[Env, Nothing, Unit](250.millis).toManaged_
-      process          <- CCProcess.get.toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-    } yield new SwingTerminal(config, process, commandCursorRef, searchResultsRef, searchDebounce)(runtime)
+    } yield new SwingTerminal(config, commandCursorRef, searchResultsRef, searchDebounce)(runtime)
 }

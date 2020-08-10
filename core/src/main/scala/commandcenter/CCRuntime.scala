@@ -1,6 +1,7 @@
 package commandcenter
 
 import commandcenter.CCRuntime.Env
+import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.{ HttpClientZioBackend, SttpClient }
 import zio.internal.Platform
 import zio.logging.Logging
@@ -11,6 +12,7 @@ trait CCRuntime extends Runtime[Env] {
     ZEnv.live >>> (
       ZEnv.live
         ++ Logging.console((_, logEntry) => logEntry)
+        ++ Tools.live
         ++ HttpClientZioBackend.layer()
     )
   }
@@ -20,7 +22,7 @@ trait CCRuntime extends Runtime[Env] {
 }
 
 object CCRuntime {
-  type Env = ZEnv with Logging with SttpClient
+  type Env = ZEnv with Logging with Tools with SttpClient
 
   lazy val default: CCRuntime = new CCRuntime {}
 }

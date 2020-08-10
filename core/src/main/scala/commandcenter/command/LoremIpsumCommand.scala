@@ -5,6 +5,7 @@ import cats.syntax.apply._
 import com.monovore.decline
 import com.monovore.decline.Opts
 import commandcenter.CCRuntime.Env
+import commandcenter.tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio._
@@ -61,7 +62,7 @@ final case class LoremIpsumCommand() extends Command[Unit] {
                             case Sentence  => Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
                             case Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
                           }
-        _              <- input.context.ccProcess.setClipboard(text)
+        _              <- tools.setClipboard(text)
       } yield ()
       List(
         Preview.unit
