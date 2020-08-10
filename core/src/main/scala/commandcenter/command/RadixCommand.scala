@@ -4,6 +4,7 @@ import cats.syntax.apply._
 import com.monovore.decline
 import com.monovore.decline.Opts
 import commandcenter.CCRuntime.Env
+import commandcenter.tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.ZIO
@@ -42,7 +43,7 @@ final case class RadixCommand() extends Command[Unit] {
     } yield List(
       Preview.unit
         .score(Scores.high(input.context))
-        .onRun(input.context.ccProcess.setClipboard(message.plainText))
+        .onRun(tools.setClipboard(message.plainText))
         .view(DefaultView(title, message))
     )
 

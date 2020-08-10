@@ -2,6 +2,7 @@ package commandcenter.command
 
 import commandcenter.CCRuntime.Env
 import commandcenter.command.util.CalculatorUtil
+import commandcenter.tools
 import io.circe.Decoder
 import zio.ZIO
 
@@ -18,7 +19,7 @@ case class CalculatorCommand() extends Command[Double] {
         ZIO.fromOption(CalculatorUtil.evaluate(searchInput.input)).orElseFail(CommandError.NotApplicable)
     } yield List(
       Preview(evaluatedValue)
-        .onRun(searchInput.context.ccProcess.setClipboard(evaluatedValue.toString))
+        .onRun(tools.setClipboard(evaluatedValue.toString))
         .score(Scores.high(searchInput.context))
     )
 }
