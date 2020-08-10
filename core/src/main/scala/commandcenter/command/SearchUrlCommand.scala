@@ -43,7 +43,7 @@ final case class SearchUrlCommand(
         UIO(
           List(
             Preview.unit
-              .score(Scores.high * 0.8)
+              .score(Scores.high * 0.35)
               .onRun(ProcessUtil.openBrowser(url))
               .view(DefaultView(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(searchInput.input)))
           )
