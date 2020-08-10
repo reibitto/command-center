@@ -68,7 +68,6 @@ object Command {
       }(_.option) // TODO: Use `.either` here and log errors instead of ignoring them
       .map { r =>
         val results = r.flatten.flatten.sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
-
         SearchResults(input, results)
       }
   }
