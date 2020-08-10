@@ -3,6 +3,7 @@ package commandcenter
 import java.util.Locale
 
 import commandcenter.TestRuntime.TestEnv
+import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.HttpClientZioBackend
 import zio.Layer
 import zio.duration._
@@ -15,11 +16,12 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
     testEnvironment >>> (
       testEnvironment
         ++ Logging.console((_, logEntry) => logEntry)
+        ++ Tools.live
         ++ HttpClientZioBackend.layer()
     )
 
   val defaultCommandContext: CommandContext =
-    CommandContext(Locale.ENGLISH, TestTerminal, CCProcess(ProcessHandle.current.pid, None), 1.0)
+    CommandContext(Locale.ENGLISH, TestTerminal, 1.0)
 
   override def aspects: List[TestAspect[Nothing, TestEnv, Nothing, Any]] =
     List(TestAspect.timeoutWarning(60.seconds))

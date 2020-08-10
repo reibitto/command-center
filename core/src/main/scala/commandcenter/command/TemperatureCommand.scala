@@ -2,6 +2,7 @@ package commandcenter.command
 
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
+import commandcenter.tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.ZIO
@@ -40,7 +41,7 @@ final case class TemperatureCommand() extends Command[Double] {
       Preview(temperature)
         .score(Scores.high(searchInput.context))
         .view(DefaultView(title, temperatureFormatted))
-        .onRun(searchInput.context.ccProcess.setClipboard(temperatureFormatted))
+        .onRun(tools.setClipboard(temperatureFormatted))
     )
 }
 

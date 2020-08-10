@@ -1,6 +1,7 @@
 package commandcenter.command
 
 import commandcenter.CCRuntime.Env
+import commandcenter.tools
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
 import io.circe.Decoder
@@ -44,7 +45,7 @@ final case class ProcessIdCommand() extends Command[Unit] {
           pid       <- ZIO
                          .fromOption(pidOutput.split('=').lift(1).map(_.trim))
                          .orElseFail(RunError.InternalError("Parsing PID failed"))
-          _         <- searchInput.context.ccProcess.setClipboard(pid)
+          _         <- tools.setClipboard(pid)
         } yield ()
 
         Preview.unit

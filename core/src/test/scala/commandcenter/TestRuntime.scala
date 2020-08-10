@@ -1,5 +1,6 @@
 package commandcenter
 
+import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.SttpClient
 import zio.ZEnv
 import zio.logging.Logging
@@ -16,5 +17,6 @@ object TestRuntime {
     with Sized
     with TestSystem
     with Logging
+    with Tools
     with SttpClient
 }

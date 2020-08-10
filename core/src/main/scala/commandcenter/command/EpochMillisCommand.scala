@@ -3,6 +3,7 @@ package commandcenter.command
 import java.util.concurrent.TimeUnit
 
 import commandcenter.CCRuntime.Env
+import commandcenter.tools
 import io.circe.Decoder
 import zio.{ clock, ZIO }
 
@@ -20,7 +21,7 @@ final case class EpochMillisCommand() extends Command[Long] {
     } yield List(
       Preview(epochTime)
         .score(Scores.high(input.context))
-        .onRun(input.context.ccProcess.setClipboard(epochTime.toString))
+        .onRun(tools.setClipboard(epochTime.toString))
     )
 }
 

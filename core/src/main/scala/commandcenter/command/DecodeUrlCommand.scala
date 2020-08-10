@@ -6,6 +6,7 @@ import cats.syntax.apply._
 import com.monovore.decline
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
+import commandcenter.tools
 import io.circe.Decoder
 import zio.{ IO, Task, ZIO }
 
@@ -23,7 +24,7 @@ final case class DecodeUrlCommand() extends Command[String] {
       (valueToDecode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       decoded                  <- Task(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
     } yield List(
-      Preview(decoded).onRun(input.context.ccProcess.setClipboard(decoded)).score(Scores.high(input.context))
+      Preview(decoded).onRun(tools.setClipboard(decoded)).score(Scores.high(input.context))
     )
 }
 

@@ -3,6 +3,7 @@ package commandcenter.command
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError.NotApplicable
 import commandcenter.command.SearchMavenCommand.MavenArtifact
+import commandcenter.tools
 import commandcenter.view.DefaultView
 import io.circe.{ Decoder, Json }
 import sttp.client._
@@ -38,7 +39,7 @@ final case class SearchMavenCommand() extends Command[String] {
                                    .mapError(CommandError.UnexpectedException)
                   } yield artifacts.map { artifact =>
                     Preview(artifact.toString)
-                      .onRun(input.context.ccProcess.setClipboard(artifact.version))
+                      .onRun(tools.setClipboard(artifact.version))
                       .score(Scores.high(input.context))
                       .view(
                         DefaultView(
