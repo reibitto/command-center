@@ -4,10 +4,10 @@ import java.awt.event.KeyEvent
 import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment }
 
 import commandcenter.CCRuntime.Env
+import commandcenter._
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
-import commandcenter.{ tools, _ }
 import commandcenter.ui.CCTheme
 import commandcenter.util.{ Debounced, GraphicsUtil, OS }
 import commandcenter.view.AnsiRendered
