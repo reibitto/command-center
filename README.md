@@ -58,7 +58,7 @@ You can suspend (toggle) a process by its PID with:
 
 `suspend 321`
 
-The suspend command is special in that you can also configure it as a global shortcut in `application.conf`. This is
+The suspend command also has a configurable `suspendShortcut` attribute that is a global shortcut. This is
 useful if you want to be able to pause applications that don't have a built-in pause feature, such as games. The idea
 for this feature came from [Universal Pause Button](https://github.com/ryanries/UniversalPauseButton).
 
