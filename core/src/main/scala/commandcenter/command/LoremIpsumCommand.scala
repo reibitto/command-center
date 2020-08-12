@@ -4,10 +4,10 @@ import cats.data.Validated
 import cats.syntax.apply._
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import commandcenter.view.DefaultView
-import io.circe.Decoder
 import zio._
 
 import scala.io.Source
@@ -36,7 +36,7 @@ final case class LoremIpsumCommand() extends Command[Unit] {
       case arg if arg.matches("words?")      => Validated.valid(Word)
       case arg if arg.matches("sentences?")  => Validated.valid(Sentence)
       case arg if arg.matches("paragraphs?") => Validated.valid(Paragraph)
-      case s                                 => Validated.invalidNel(s"${s} is not valid: should be 'words', 'sentences', or 'paragraphs'.")
+      case s                                 => Validated.invalidNel(s"$s is not valid: should be 'words', 'sentences', or 'paragraphs'.")
     }
     .withDefault(Paragraph)
 
@@ -74,5 +74,5 @@ final case class LoremIpsumCommand() extends Command[Unit] {
 }
 
 object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
-  implicit val decoder: Decoder[LoremIpsumCommand] = Decoder.const(LoremIpsumCommand())
+  def make(config: Config): TaskManaged[LoremIpsumCommand] = ZManaged.succeed(LoremIpsumCommand())
 }

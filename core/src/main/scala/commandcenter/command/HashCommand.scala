@@ -2,13 +2,14 @@ package commandcenter.command
 
 import cats.syntax.apply._
 import com.monovore.decline
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
 import commandcenter.command.util.HashUtil
 import commandcenter.tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.{ IO, ZIO }
+import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
 final case class HashCommand(algorithm: String) extends Command[String] {
   val commandType: CommandType   = CommandType.HashCommand
@@ -34,4 +35,6 @@ final case class HashCommand(algorithm: String) extends Command[String] {
 
 object HashCommand extends CommandPlugin[HashCommand] {
   implicit val decoder: Decoder[HashCommand] = Decoder.forProduct1("algorithm")(HashCommand.apply)
+
+  def make(config: Config): TaskManaged[HashCommand] = ZManaged.fromEither(config.as[HashCommand])
 }

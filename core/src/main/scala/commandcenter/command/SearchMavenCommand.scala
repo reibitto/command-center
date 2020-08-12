@@ -1,5 +1,6 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError.NotApplicable
 import commandcenter.command.SearchMavenCommand.MavenArtifact
@@ -9,7 +10,7 @@ import io.circe.{ Decoder, Json }
 import sttp.client._
 import sttp.client.circe._
 import sttp.client.httpclient.zio._
-import zio.{ IO, ZIO }
+import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
 final case class SearchMavenCommand() extends Command[String] {
   val command                    = "mvn"
@@ -65,5 +66,5 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
   implicit val artifactDecoder: Decoder[MavenArtifact] =
     Decoder.forProduct3("g", "a", "latestVersion")(MavenArtifact.apply)
 
-  implicit val decoder: Decoder[SearchMavenCommand] = Decoder.const(SearchMavenCommand())
+  def make(config: Config): TaskManaged[SearchMavenCommand] = ZManaged.succeed(SearchMavenCommand())
 }

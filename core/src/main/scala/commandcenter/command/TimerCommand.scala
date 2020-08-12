@@ -3,13 +3,13 @@ package commandcenter.command
 import cats.syntax.apply._
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonArgs._
 import commandcenter.util.{ AppleScript, OS }
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
 import zio.duration._
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class TimerCommand() extends Command[Unit] {
   // TODO: Add option to list active timers and also one for canceling them
@@ -56,5 +56,5 @@ final case class TimerCommand() extends Command[Unit] {
 }
 
 object TimerCommand extends CommandPlugin[TimerCommand] {
-  implicit val decoder: Decoder[TimerCommand] = Decoder.const(TimerCommand())
+  def make(config: Config): TaskManaged[TimerCommand] = ZManaged.succeed(TimerCommand())
 }

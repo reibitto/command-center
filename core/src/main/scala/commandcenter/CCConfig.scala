@@ -4,33 +4,35 @@ import java.awt.Font
 import java.io.File
 
 import com.typesafe.config.{ Config, ConfigFactory }
+import commandcenter.CCRuntime.Env
 import commandcenter.command.{ Command, CommandPlugin }
+import commandcenter.config.ConfigParserExtensions._
 import commandcenter.config.Decoders._
+import commandcenter.event.KeyboardShortcut
 import io.circe.Decoder
-import io.circe.config.syntax._
 import zio.blocking._
-import zio.{ RIO, Task }
+import zio.{ RManaged, ZManaged }
 
 import scala.util.Try
 
 object CCConfig {
-  def load: RIO[Blocking, CCConfig] = {
+  def load: RManaged[Env, CCConfig] = {
     val configFile = envConfigFile.orElse(homeConfigFile).getOrElse(new File("application.conf"))
     load(configFile)
   }
 
-  def load(file: File): RIO[Blocking, CCConfig] =
+  def load(file: File): RManaged[Env, CCConfig] =
     for {
-      config   <- effectBlocking(ConfigFactory.parseFile(file))
+      config   <- effectBlocking(ConfigFactory.parseFile(file)).toManaged_
       ccConfig <- loadFrom(config)
     } yield ccConfig
 
-  def loadFrom(config: Config): Task[CCConfig] =
+  def loadFrom(config: Config): RManaged[Env, CCConfig] =
     for {
       commands       <- CommandPlugin.load(config, "commands")
-      aliases        <- Task.fromEither(config.as[Map[String, List[String]]]("aliases"))
-      displayConfig  <- Task.fromEither(config.as[DisplayConfig]("display"))
-      keyboardConfig <- Task.fromEither(config.as[KeyboardConfig]("keyboard"))
+      aliases        <- ZManaged.fromEither(config.as[Map[String, List[String]]]("aliases"))
+      displayConfig  <- ZManaged.fromEither(config.as[DisplayConfig]("display"))
+      keyboardConfig <- ZManaged.fromEither(config.as[KeyboardConfig]("keyboard"))
     } yield CCConfig(commands.toVector, aliases, displayConfig, keyboardConfig)
 
   private def envConfigFile: Option[File] =
@@ -62,7 +64,7 @@ object DisplayConfig {
     Decoder.forProduct4("width", "maxHeight", "opacity", "fonts")(DisplayConfig.apply)
 }
 
-final case class KeyboardConfig(openShortcut: String, suspendShortcut: Option[String])
+final case class KeyboardConfig(openShortcut: KeyboardShortcut, suspendShortcut: Option[String])
 
 object KeyboardConfig {
   implicit val decoder: Decoder[KeyboardConfig] =

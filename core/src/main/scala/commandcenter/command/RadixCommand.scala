@@ -3,11 +3,11 @@ package commandcenter.command
 import cats.syntax.apply._
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class RadixCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.RadixCommand
@@ -50,5 +50,5 @@ final case class RadixCommand() extends Command[Unit] {
 }
 
 object RadixCommand extends CommandPlugin[RadixCommand] {
-  implicit val decoder: Decoder[RadixCommand] = Decoder.const(RadixCommand())
+  def make(config: Config): TaskManaged[RadixCommand] = ZManaged.succeed(RadixCommand())
 }

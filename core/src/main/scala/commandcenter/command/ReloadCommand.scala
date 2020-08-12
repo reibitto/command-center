@@ -1,9 +1,9 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class ReloadCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand
@@ -24,5 +24,5 @@ final case class ReloadCommand() extends Command[Unit] {
 }
 
 object ReloadCommand extends CommandPlugin[ReloadCommand] {
-  implicit val decoder: Decoder[ReloadCommand] = Decoder.const(ReloadCommand())
+  def make(config: Config): TaskManaged[ReloadCommand] = ZManaged.succeed(ReloadCommand())
 }

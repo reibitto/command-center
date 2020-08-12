@@ -4,11 +4,11 @@ import java.net.URLDecoder
 
 import cats.syntax.apply._
 import com.monovore.decline
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
 import commandcenter.tools
-import io.circe.Decoder
-import zio.{ IO, Task, ZIO }
+import zio._
 
 final case class DecodeUrlCommand() extends Command[String] {
   val command                    = "decodeurl"
@@ -29,5 +29,5 @@ final case class DecodeUrlCommand() extends Command[String] {
 }
 
 object DecodeUrlCommand extends CommandPlugin[DecodeUrlCommand] {
-  implicit val decoder: Decoder[DecodeUrlCommand] = Decoder.const(DecodeUrlCommand())
+  def make(config: Config): TaskManaged[DecodeUrlCommand] = ZManaged.succeed(DecodeUrlCommand())
 }

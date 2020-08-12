@@ -1,12 +1,12 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
 import zio.process.{ Command => PCommand }
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 import scala.util.matching.Regex
 
@@ -56,7 +56,7 @@ final case class ProcessIdCommand() extends Command[Unit] {
 }
 
 object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {
-  implicit val decoder: Decoder[ProcessIdCommand] = Decoder.const(ProcessIdCommand())
+  def make(config: Config): TaskManaged[ProcessIdCommand] = ZManaged.succeed(ProcessIdCommand())
 
   final case class ProcessInfo(pid: Long, name: String)
 }

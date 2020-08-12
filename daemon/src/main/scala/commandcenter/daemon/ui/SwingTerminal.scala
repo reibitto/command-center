@@ -273,9 +273,11 @@ final case class SwingTerminal(
     }
 
   def reload: RIO[Env, Unit] =
-    for {
-      newConfig <- CCConfig.load
-    } yield config = newConfig
+    CCConfig.load.use { newConfig =>
+      UIO {
+        config = newConfig
+      }
+    }
 
   private def filterMissingFonts(fonts: List[Font]): List[Font] = {
     val installedFontNames = GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet

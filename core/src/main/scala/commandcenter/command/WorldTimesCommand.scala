@@ -3,11 +3,12 @@ package commandcenter.command
 import java.time.format.DateTimeFormatter
 import java.time.{ OffsetDateTime, ZoneId, ZonedDateTime }
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.view.View
 import commandcenter.{ CommandContext, TerminalType }
 import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class WorldTimesCommand(dateTimeFormat: String, zones: List[TimeZone]) extends Command[Unit] {
   val commandType: CommandType = CommandType.WorldTimesCommand
@@ -29,6 +30,8 @@ final case class WorldTimesCommand(dateTimeFormat: String, zones: List[TimeZone]
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
   implicit val decoder: Decoder[WorldTimesCommand] =
     Decoder.forProduct2("dateTimeFormat", "zones")(WorldTimesCommand.apply)
+
+  def make(config: Config): TaskManaged[WorldTimesCommand] = ZManaged.fromEither(config.as[WorldTimesCommand])
 }
 
 final case class WorldTimesResults(dateTimeFormat: String, results: List[WorldTimesResult], context: CommandContext) {

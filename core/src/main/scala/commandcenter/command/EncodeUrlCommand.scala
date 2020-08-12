@@ -4,11 +4,11 @@ import java.net.URLEncoder
 
 import cats.syntax.apply._
 import com.monovore.decline
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
 import commandcenter.tools
-import io.circe.Decoder
-import zio.{ IO, ZIO }
+import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
 final case class EncodeUrlCommand() extends Command[String] {
   val command                  = "encodeurl"
@@ -31,5 +31,5 @@ final case class EncodeUrlCommand() extends Command[String] {
 }
 
 object EncodeUrlCommand extends CommandPlugin[EncodeUrlCommand] {
-  implicit val decoder: Decoder[EncodeUrlCommand] = Decoder.const(EncodeUrlCommand())
+  def make(config: Config): TaskManaged[EncodeUrlCommand] = ZManaged.succeed(EncodeUrlCommand())
 }

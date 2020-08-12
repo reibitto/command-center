@@ -1,10 +1,10 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
-import io.circe.Decoder
-import zio.ZIO
 import zio.process.{ Command => PCommand }
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class ToggleHiddenFilesCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleHiddenFilesCommand
@@ -37,5 +37,5 @@ final case class ToggleHiddenFilesCommand() extends Command[Unit] {
 }
 
 object ToggleHiddenFilesCommand extends CommandPlugin[ToggleHiddenFilesCommand] {
-  implicit val decoder: Decoder[ToggleHiddenFilesCommand] = Decoder.const(ToggleHiddenFilesCommand())
+  def make(config: Config): TaskManaged[ToggleHiddenFilesCommand] = ZManaged.succeed(ToggleHiddenFilesCommand())
 }

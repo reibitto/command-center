@@ -1,12 +1,12 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.util.CalculatorUtil
 import commandcenter.tools
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
-case class CalculatorCommand() extends Command[Double] {
+final case class CalculatorCommand() extends Command[Double] {
   val commandType: CommandType = CommandType.CalculatorCommand
 
   val commandNames: List[String] = List.empty
@@ -25,5 +25,5 @@ case class CalculatorCommand() extends Command[Double] {
 }
 
 object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
-  implicit val decoder: Decoder[CalculatorCommand] = Decoder.const(CalculatorCommand())
+  def make(config: Config): TaskManaged[CalculatorCommand] = ZManaged.succeed(CalculatorCommand())
 }

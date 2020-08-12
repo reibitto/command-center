@@ -1,9 +1,9 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 // TODO: Work in progress
 final case class TerminalCommand() extends Command[Unit] {
@@ -20,5 +20,5 @@ final case class TerminalCommand() extends Command[Unit] {
 }
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {
-  implicit val decoder: Decoder[TerminalCommand] = Decoder.const(TerminalCommand())
+  def make(config: Config): TaskManaged[TerminalCommand] = ZManaged.succeed(TerminalCommand())
 }

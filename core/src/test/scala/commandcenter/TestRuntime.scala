@@ -1,5 +1,6 @@
 package commandcenter
 
+import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.SttpClient
 import zio.ZEnv
@@ -18,5 +19,6 @@ object TestRuntime {
     with TestSystem
     with Logging
     with Tools
+    with Shortcuts
     with SttpClient
 }
