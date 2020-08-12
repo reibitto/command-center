@@ -12,7 +12,7 @@ import commandcenter.view.DefaultView
 import zio.blocking.Blocking
 import zio.logging.log
 import zio.process.{ Command => PCommand }
-import zio.{ RIO, RManaged, TaskManaged, ZIO, ZManaged }
+import zio.{ RIO, RManaged, ZIO, ZManaged }
 
 final case class SuspendProcessCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand

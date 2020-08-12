@@ -5,8 +5,7 @@ import java.io.File
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
-import io.circe.Decoder
-import zio.{ IO, TaskManaged, UIO, ZIO, ZManaged }
+import zio._
 
 import scala.util.Try
 

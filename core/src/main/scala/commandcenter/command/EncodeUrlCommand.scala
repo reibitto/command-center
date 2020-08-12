@@ -8,7 +8,6 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
 import commandcenter.tools
-import io.circe.Decoder
 import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
 final case class EncodeUrlCommand() extends Command[String] {

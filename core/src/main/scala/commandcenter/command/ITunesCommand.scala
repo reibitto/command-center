@@ -7,7 +7,6 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{ AppleScript, OS, TTS }
 import commandcenter.view.DefaultView
-import io.circe.Decoder
 import zio.{ TaskManaged, UIO, ZIO, ZManaged }
 
 final case class ITunesCommand() extends Command[Unit] {

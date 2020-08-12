@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
-import io.circe.Decoder
 import zio.{ clock, TaskManaged, ZIO, ZManaged }
 
 final case class EpochUnixCommand() extends Command[Long] {

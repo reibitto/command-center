@@ -5,7 +5,6 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.tools
 import commandcenter.view.DefaultView
-import io.circe.Decoder
 import zio.{ TaskManaged, ZIO, ZManaged }
 
 import scala.util.matching.Regex
