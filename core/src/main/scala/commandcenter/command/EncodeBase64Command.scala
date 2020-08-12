@@ -4,11 +4,11 @@ import java.util.Base64
 
 import cats.syntax.apply._
 import com.monovore.decline
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
 import commandcenter.tools
-import io.circe.Decoder
-import zio.{ IO, ZIO }
+import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
 final case class EncodeBase64Command() extends Command[String] {
   val command                    = "encodebase64"
@@ -29,5 +29,5 @@ final case class EncodeBase64Command() extends Command[String] {
 }
 
 object EncodeBase64Command extends CommandPlugin[EncodeBase64Command] {
-  implicit val decoder: Decoder[EncodeBase64Command] = Decoder.const(EncodeBase64Command())
+  def make(config: Config): TaskManaged[EncodeBase64Command] = ZManaged.succeed(EncodeBase64Command())
 }

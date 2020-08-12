@@ -2,12 +2,12 @@ package commandcenter.command
 
 import java.net.{ Inet4Address, NetworkInterface }
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
 import zio.blocking._
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 import scala.jdk.CollectionConverters._
 
@@ -41,5 +41,5 @@ final case class LocalIPCommand() extends Command[String] {
 }
 
 object LocalIPCommand extends CommandPlugin[LocalIPCommand] {
-  implicit val decoder: Decoder[LocalIPCommand] = Decoder.const(LocalIPCommand())
+  def make(config: Config): TaskManaged[LocalIPCommand] = ZManaged.succeed(LocalIPCommand())
 }

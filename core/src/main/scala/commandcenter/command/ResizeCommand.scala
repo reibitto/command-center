@@ -3,10 +3,10 @@ package commandcenter.command
 import cats.implicits._
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class ResizeCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand
@@ -48,5 +48,5 @@ final case class ResizeCommand() extends Command[Unit] {
 }
 
 object ResizeCommand extends CommandPlugin[ResizeCommand] {
-  implicit val decoder: Decoder[ResizeCommand] = Decoder.const(ResizeCommand())
+  def make(config: Config): TaskManaged[ResizeCommand] = ZManaged.succeed(ResizeCommand())
 }

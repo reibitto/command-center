@@ -2,10 +2,10 @@ package commandcenter.command
 
 import java.util.concurrent.TimeUnit
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
-import io.circe.Decoder
-import zio.{ clock, ZIO }
+import zio.{ clock, TaskManaged, ZIO, ZManaged }
 
 final case class EpochMillisCommand() extends Command[Long] {
   val commandType: CommandType = CommandType.EpochMillisCommand
@@ -26,5 +26,5 @@ final case class EpochMillisCommand() extends Command[Long] {
 }
 
 object EpochMillisCommand extends CommandPlugin[EpochMillisCommand] {
-  implicit val decoder: Decoder[EpochMillisCommand] = Decoder.const(EpochMillisCommand())
+  def make(config: Config): TaskManaged[EpochMillisCommand] = ZManaged.succeed(EpochMillisCommand())
 }

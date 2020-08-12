@@ -2,12 +2,12 @@ package commandcenter.command
 
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.TerminalType
 import commandcenter.util.GraphicsUtil
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class OpacityCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.OpacityCommand
@@ -48,5 +48,5 @@ final case class OpacityCommand() extends Command[Unit] {
 }
 
 object OpacityCommand extends CommandPlugin[OpacityCommand] {
-  implicit val decoder: Decoder[OpacityCommand] = Decoder.const(OpacityCommand())
+  def make(config: Config): TaskManaged[OpacityCommand] = ZManaged.succeed(OpacityCommand())
 }

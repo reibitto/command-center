@@ -4,13 +4,13 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.codec.Codecs.localeDecoder
 import commandcenter.command.CommandError._
 import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.{ IO, UIO, ZIO }
+import zio._
 
 final case class SearchUrlCommand(
   title: String,
@@ -55,13 +55,13 @@ final case class SearchUrlCommand(
 }
 
 object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
-  implicit val decoder: Decoder[SearchUrlCommand] =
-    Decoder.instance { c =>
+  def make(config: Config): TaskManaged[SearchUrlCommand] =
+    ZManaged.fromEither(
       for {
-        title        <- c.get[String]("title")
-        urlTemplate  <- c.get[String]("urlTemplate")
-        commandNames <- c.get[Option[List[String]]]("commandNames")
-        locales      <- c.get[Option[Set[Locale]]]("locales")
+        title        <- config.get[String]("title")
+        urlTemplate  <- config.get[String]("urlTemplate")
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+        locales      <- config.get[Option[Set[Locale]]]("locales")
       } yield SearchUrlCommand(title, urlTemplate, commandNames.getOrElse(List.empty), locales.getOrElse(Set.empty))
-    }
+    )
 }

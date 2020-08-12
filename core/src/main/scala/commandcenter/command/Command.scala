@@ -8,21 +8,14 @@ import commandcenter.CommandContext
 import commandcenter.util.OS
 import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
-import io.circe
 import zio._
-
-import scala.util.Try
 
 trait Command[+R] extends ViewInstances {
   val commandType: CommandType
 
   def commandNames: List[String]
-
-  // TODO: LocalizedString
   def title: String
-
   def locales: Set[Locale] = Set.empty
-
   def supportedOS: Set[OS] = Set.empty
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[R]]]
@@ -72,55 +65,51 @@ object Command {
       }
   }
 
-  def parse(config: Config): Either[Throwable, Command[_]] = {
-    import io.circe.config.syntax._
-
+  def parse(config: Config): ZManaged[Env, Throwable, Command[_]] =
     for {
-      typeName <- Try(config.getString("type")).toEither
+      typeName <- Task(config.getString("type")).toManaged_
       command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
-                    case CommandType.CalculatorCommand         => config.as[CalculatorCommand]
-                    case CommandType.DecodeBase64Command       => config.as[DecodeBase64Command]
-                    case CommandType.DecodeUrlCommand          => config.as[DecodeUrlCommand]
-                    case CommandType.EncodeBase64Command       => config.as[EncodeBase64Command]
-                    case CommandType.EncodeUrlCommand          => config.as[EncodeUrlCommand]
-                    case CommandType.EpochMillisCommand        => config.as[EpochMillisCommand]
-                    case CommandType.EpochUnixCommand          => config.as[EpochUnixCommand]
-                    case CommandType.ExitCommand               => config.as[ExitCommand]
-                    case CommandType.ExternalIPCommand         => config.as[ExternalIPCommand]
-                    case CommandType.FileNavigationCommand     => config.as[FileNavigationCommand]
-                    case CommandType.FindFileCommand           => config.as[FindFileCommand]
-                    case CommandType.FindInFileCommand         => config.as[FindInFileCommand]
-                    case CommandType.HashCommand               => config.as[HashCommand]
-                    case CommandType.ITunesCommand             => config.as[ITunesCommand]
-                    case CommandType.LocalIPCommand            => config.as[LocalIPCommand]
-                    case CommandType.LockCommand               => config.as[LockCommand]
-                    case CommandType.LoremIpsumCommand         => config.as[LoremIpsumCommand]
-                    case CommandType.OpacityCommand            => config.as[OpacityCommand]
-                    case CommandType.OpenBrowserCommand        => config.as[OpenBrowserCommand]
-                    case CommandType.ProcessIdCommand          => config.as[ProcessIdCommand]
-                    case CommandType.RadixCommand              => config.as[RadixCommand]
-                    case CommandType.ReloadCommand             => config.as[ReloadCommand]
-                    case CommandType.ResizeCommand             => config.as[ResizeCommand]
-                    case CommandType.SearchMavenCommand        => config.as[SearchMavenCommand]
-                    case CommandType.SearchUrlCommand          => config.as[SearchUrlCommand]
-                    case CommandType.SuspendProcessCommand     => config.as[SuspendProcessCommand]
-                    case CommandType.TemperatureCommand        => config.as[TemperatureCommand]
-                    case CommandType.TerminalCommand           => config.as[TerminalCommand]
-                    case CommandType.TimerCommand              => config.as[TimerCommand]
-                    case CommandType.ToggleDesktopIconsCommand => config.as[ToggleDesktopIconsCommand]
-                    case CommandType.ToggleHiddenFilesCommand  => config.as[ToggleHiddenFilesCommand]
-                    case CommandType.UUIDCommand               => config.as[UUIDCommand]
-                    case CommandType.WorldTimesCommand         => config.as[WorldTimesCommand]
+                    case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
+                    case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
+                    case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
+                    case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
+                    case CommandType.EncodeUrlCommand          => EncodeUrlCommand.make(config)
+                    case CommandType.EpochMillisCommand        => EpochMillisCommand.make(config)
+                    case CommandType.EpochUnixCommand          => EpochUnixCommand.make(config)
+                    case CommandType.ExitCommand               => ExitCommand.make(config)
+                    case CommandType.ExternalIPCommand         => ExternalIPCommand.make(config)
+                    case CommandType.FileNavigationCommand     => FileNavigationCommand.make(config)
+                    case CommandType.FindFileCommand           => FindFileCommand.make(config)
+                    case CommandType.FindInFileCommand         => FindInFileCommand.make(config)
+                    case CommandType.HashCommand               => HashCommand.make(config)
+                    case CommandType.ITunesCommand             => ITunesCommand.make(config)
+                    case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
+                    case CommandType.LockCommand               => LockCommand.make(config)
+                    case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
+                    case CommandType.OpacityCommand            => OpacityCommand.make(config)
+                    case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
+                    case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)
+                    case CommandType.RadixCommand              => RadixCommand.make(config)
+                    case CommandType.ReloadCommand             => ReloadCommand.make(config)
+                    case CommandType.ResizeCommand             => ResizeCommand.make(config)
+                    case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
+                    case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
+                    case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
+                    case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
+                    case CommandType.TerminalCommand           => TerminalCommand.make(config)
+                    case CommandType.TimerCommand              => TimerCommand.make(config)
+                    case CommandType.ToggleDesktopIconsCommand => ToggleDesktopIconsCommand.make(config)
+                    case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
+                    case CommandType.UUIDCommand               => UUIDCommand.make(config)
+                    case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
 
                     case CommandType.External(typeName) =>
-                      Left(
-                        circe.DecodingFailure(
-                          s"Failed to load command '$typeName' Loading external plugins not support in this mode.",
-                          List.empty
+                      ZManaged.fail(
+                        new UnsupportedOperationException(
+                          s"Failed to load command '$typeName' Loading external plugins not support in this mode."
                         )
                       )
                   }
     } yield command
-  }
 
 }

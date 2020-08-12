@@ -2,10 +2,10 @@ package commandcenter.command
 
 import java.util.UUID
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class UUIDCommand() extends Command[UUID] {
   val commandType: CommandType = CommandType.UUIDCommand
@@ -24,5 +24,5 @@ final case class UUIDCommand() extends Command[UUID] {
 }
 
 object UUIDCommand extends CommandPlugin[UUIDCommand] {
-  implicit val decoder: Decoder[UUIDCommand] = Decoder.const(UUIDCommand())
+  def make(config: Config): TaskManaged[UUIDCommand] = ZManaged.succeed(UUIDCommand())
 }

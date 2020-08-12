@@ -1,10 +1,10 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.util.ProcessUtil
-import io.circe.Decoder
-import zio.{ IO, UIO, ZIO }
+import zio._
 
 final case class OpenBrowserCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.OpenBrowserCommand
@@ -27,5 +27,5 @@ final case class OpenBrowserCommand() extends Command[Unit] {
 }
 
 object OpenBrowserCommand extends CommandPlugin[OpenBrowserCommand] {
-  implicit val decoder: Decoder[OpenBrowserCommand] = Decoder.const(OpenBrowserCommand())
+  def make(config: Config): TaskManaged[OpenBrowserCommand] = ZManaged.succeed(OpenBrowserCommand())
 }
