@@ -26,7 +26,7 @@ lazy val root = project
       UsefulTask("c", "cli-client/run", "Run Command Center CLI client (interactive mode by default)"),
       UsefulTask("d", "cli-client/assembly", "Create an executable JAR for running command line utility"),
       UsefulTask("e", "cli-client/graalvm-native-image:packageBin", "Create a native executable of the CLI client"),
-      UsefulTask("f", "daemon/assembly", "Run the benchmarks")
+      UsefulTask("f", "daemon/assembly", "Create an executable JAR for running in daemon mode")
     )
   )
 
