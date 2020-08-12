@@ -2,14 +2,14 @@ package commandcenter.command
 
 import java.io.File
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.command.util.PathUtil
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
 import zio.process.{ Command => PCommand }
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class FindFileCommand() extends Command[File] {
   val commandType: CommandType = CommandType.FindFileCommand
@@ -46,5 +46,5 @@ final case class FindFileCommand() extends Command[File] {
 }
 
 object FindFileCommand extends CommandPlugin[FindFileCommand] {
-  implicit val decoder: Decoder[FindFileCommand] = Decoder.const(FindFileCommand())
+  def make(config: Config): TaskManaged[FindFileCommand] = ZManaged.succeed(FindFileCommand())
 }

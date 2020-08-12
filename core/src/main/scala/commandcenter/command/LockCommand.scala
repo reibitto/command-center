@@ -1,10 +1,10 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
-import io.circe.Decoder
-import zio.ZIO
 import zio.process.{ Command => PCommand }
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class LockCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.LockCommand
@@ -26,5 +26,5 @@ final case class LockCommand() extends Command[Unit] {
 }
 
 object LockCommand extends CommandPlugin[LockCommand] {
-  implicit val decoder: Decoder[LockCommand] = Decoder.const(LockCommand())
+  def make(config: Config): TaskManaged[LockCommand] = ZManaged.succeed(LockCommand())
 }

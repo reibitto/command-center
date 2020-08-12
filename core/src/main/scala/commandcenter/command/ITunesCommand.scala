@@ -2,12 +2,13 @@ package commandcenter.command
 
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{ AppleScript, OS, TTS }
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.{ UIO, ZIO }
+import zio.{ TaskManaged, UIO, ZIO, ZManaged }
 
 final case class ITunesCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.ITunesCommand
@@ -118,12 +119,10 @@ final case class ITunesCommand() extends Command[Unit] {
 }
 
 object ITunesCommand extends CommandPlugin[ITunesCommand] {
-  implicit val decoder: Decoder[ITunesCommand] = Decoder.const(ITunesCommand())
+  def make(config: Config): TaskManaged[ITunesCommand] = ZManaged.succeed(ITunesCommand())
 
   sealed trait Opt
-
   case object Opt {
-
     case object Play                    extends Opt
     case object Pause                   extends Opt
     case object Stop                    extends Opt
@@ -134,6 +133,5 @@ object ITunesCommand extends CommandPlugin[ITunesCommand] {
     final case class Rate(rating: Int)  extends Opt
     case object DeleteTrack             extends Opt
     case object Help                    extends Opt
-
   }
 }

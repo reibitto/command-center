@@ -46,10 +46,9 @@ final case class CliTerminal[T <: Terminal](
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit
 
   def reload: RIO[Env, Unit] =
-    for {
-      newConfig <- CCConfig.load
-      _         <- configRef.set(newConfig)
-    } yield ()
+    CCConfig.load.use { newConfig =>
+      configRef.set(newConfig)
+    }
 
   def defaultKeyHandlers: Map[KeyStroke, URIO[Env, EventResult]] =
     Map(

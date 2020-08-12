@@ -1,11 +1,12 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 import scala.util.matching.Regex
 
@@ -46,5 +47,5 @@ final case class TemperatureCommand() extends Command[Double] {
 }
 
 object TemperatureCommand extends CommandPlugin[TemperatureCommand] {
-  implicit val decoder: Decoder[TemperatureCommand] = Decoder.const(TemperatureCommand())
+  def make(config: Config): TaskManaged[TemperatureCommand] = ZManaged.succeed(TemperatureCommand())
 }

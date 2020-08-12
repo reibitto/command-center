@@ -1,9 +1,9 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
-import io.circe.Decoder
-import zio.ZIO
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class ExitCommand() extends Command[CommandResult] {
   val commandType: CommandType = CommandType.ExitCommand
@@ -19,5 +19,5 @@ final case class ExitCommand() extends Command[CommandResult] {
 }
 
 object ExitCommand extends CommandPlugin[ExitCommand] {
-  implicit val decoder: Decoder[ExitCommand] = Decoder.const(ExitCommand())
+  def make(config: Config): TaskManaged[ExitCommand] = ZManaged.succeed(ExitCommand())
 }

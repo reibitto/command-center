@@ -39,7 +39,7 @@ object CommandType extends Enum[CommandType] {
   case object UUIDCommand               extends CommandType
   case object WorldTimesCommand         extends CommandType
 
-  case class External(typeName: String) extends CommandType
+  final case class External(typeName: String) extends CommandType
 
   override def values: IndexedSeq[CommandType] = findValues
 }

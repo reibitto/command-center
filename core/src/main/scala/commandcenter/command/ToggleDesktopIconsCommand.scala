@@ -1,10 +1,10 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
-import io.circe.Decoder
-import zio.ZIO
 import zio.process.{ Command => PCommand }
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class ToggleDesktopIconsCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleDesktopIconsCommand
@@ -31,5 +31,5 @@ final case class ToggleDesktopIconsCommand() extends Command[Unit] {
 }
 
 object ToggleDesktopIconsCommand extends CommandPlugin[ToggleDesktopIconsCommand] {
-  implicit val decoder: Decoder[ToggleDesktopIconsCommand] = Decoder.const(ToggleDesktopIconsCommand())
+  def make(config: Config): TaskManaged[ToggleDesktopIconsCommand] = ZManaged.succeed(ToggleDesktopIconsCommand())
 }

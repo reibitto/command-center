@@ -2,10 +2,11 @@ package commandcenter.command
 
 import java.io.File
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import io.circe.Decoder
-import zio.{ IO, UIO, ZIO }
+import zio.{ IO, TaskManaged, UIO, ZIO, ZManaged }
 
 import scala.util.Try
 
@@ -59,5 +60,5 @@ final case class FileNavigationCommand() extends Command[File] {
 }
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
-  implicit val decoder: Decoder[FileNavigationCommand] = Decoder.const(FileNavigationCommand())
+  def make(config: Config): TaskManaged[FileNavigationCommand] = ZManaged.succeed(FileNavigationCommand())
 }

@@ -2,13 +2,17 @@ package commandcenter.command
 
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
+import commandcenter.config.Decoders.keyboardShortcutDecoder
+import commandcenter.event.KeyboardShortcut
+import commandcenter.shortcuts
 import commandcenter.util.{ OS, ProcessUtil }
 import commandcenter.view.DefaultView
-import io.circe.Decoder
 import zio.blocking.Blocking
+import zio.logging.log
 import zio.process.{ Command => PCommand }
-import zio.{ RIO, ZIO }
+import zio.{ RIO, RManaged, TaskManaged, ZIO, ZManaged }
 
 final case class SuspendProcessCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
@@ -45,7 +49,21 @@ final case class SuspendProcessCommand() extends Command[Unit] {
 }
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
-  implicit val decoder: Decoder[SuspendProcessCommand] = Decoder.const(SuspendProcessCommand())
+  def make(config: Config): RManaged[Env, SuspendProcessCommand] =
+    for {
+      suspendShortcut <- ZManaged.fromEither(config.get[Option[KeyboardShortcut]]("suspendShortcut"))
+      _               <- ZIO
+                           .foreach(suspendShortcut) { suspendShortcut =>
+                             shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
+                               (for {
+                                 _   <- log.debug("Toggling suspend for frontmost process...")
+                                 pid <- SuspendProcessCommand.toggleSuspendFrontProcess
+                                 _   <- log.debug(s"Toggled suspend for process $pid")
+                               } yield ()).ignore
+                             )
+                           }
+                           .toManaged_
+    } yield SuspendProcessCommand()
 
   def isProcessSuspended(processId: Long): RIO[Blocking, Boolean] = {
     val stateParam = if (OS.os == OS.MacOS) "state=" else "s="

@@ -3,6 +3,7 @@ package commandcenter
 import java.util.Locale
 
 import commandcenter.TestRuntime.TestEnv
+import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.HttpClientZioBackend
 import zio.Layer
@@ -17,6 +18,7 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
       testEnvironment
         ++ Logging.console((_, logEntry) => logEntry)
         ++ Tools.live
+        ++ Shortcuts.unsupported
         ++ HttpClientZioBackend.layer()
     )
 

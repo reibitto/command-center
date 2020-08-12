@@ -1,11 +1,11 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import commandcenter.util.OS
-import io.circe.Decoder
-import zio.ZIO
 import zio.process.{ Command => PCommand }
+import zio.{ TaskManaged, ZIO, ZManaged }
 
 final case class ExternalIPCommand() extends Command[String] {
   val commandType: CommandType = CommandType.ExternalIPCommand
@@ -30,5 +30,5 @@ final case class ExternalIPCommand() extends Command[String] {
 }
 
 object ExternalIPCommand extends CommandPlugin[ExternalIPCommand] {
-  implicit val decoder: Decoder[ExternalIPCommand] = Decoder.const(ExternalIPCommand())
+  def make(config: Config): TaskManaged[ExternalIPCommand] = ZManaged.succeed(ExternalIPCommand())
 }
