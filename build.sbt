@@ -1,4 +1,4 @@
-import CommandCenterBuild.Version
+import Build.Version
 import sbt.Keys._
 import sbt._
 import sbtwelcome._
@@ -58,13 +58,15 @@ lazy val coreUI = module("core-ui")
   .settings(
     resolvers := Resolvers,
     libraryDependencies ++= Seq(
-      "com.googlecode.lanterna" % "lanterna" % "3.1.0-beta2"
+      "com.googlecode.lanterna" % "lanterna" % "3.2.0-alpha1"
     )
   )
 
 lazy val cliClient = module("cli-client")
   .dependsOn(coreUI)
   .settings(
+    // Windows native terminal requires JNA.
+    libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % "5.6.0").filter(_ => OS.os == OS.Windows),
     mainClass in assembly := Some("commandcenter.cli.Main"),
     assemblyJarName in assembly := "ccc.jar",
     assemblyMergeStrategy in assembly := {
@@ -88,6 +90,7 @@ lazy val daemon = module("daemon")
   .dependsOn(coreUI)
   .settings(
     fork := true,
+    baseDirectory in run := file("."),
     mainClass in assembly := Some("commandcenter.daemon.Main"),
     assemblyJarName in assembly := "ccd.jar",
     assemblyMergeStrategy in assembly := {
@@ -110,4 +113,4 @@ lazy val Resolvers = Seq(
 
 def module(projectId: String): Project =
   Project(id = projectId, base = file(projectId))
-    .settings(CommandCenterBuild.defaultSettings(projectId))
+    .settings(Build.defaultSettings(projectId))
