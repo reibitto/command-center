@@ -36,6 +36,9 @@ final case class SwingTerminal(
   val frame    = new JFrame("Command Center")
   val font     = filterMissingFonts(config.display.fonts).headOption.getOrElse(new Font("Monospaced", Font.PLAIN, 18))
 
+  val preferredFrameWidth: Int =
+    config.display.width min GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
+
   frame.setBackground(theme.background)
   frame.setUndecorated(true)
   if (runtime.unsafeRun(GraphicsUtil.isOpacitySupported))
@@ -70,7 +73,7 @@ final case class SwingTerminal(
         else
           outputTextPane.getPreferredSize.height min config.display.maxHeight
 
-      new Dimension(config.display.width, height)
+      new Dimension(preferredFrameWidth, height)
     }
   }
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
@@ -225,8 +228,7 @@ final case class SwingTerminal(
   })
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  frame.setLocation(1000, 100)
-  frame.setMinimumSize(new Dimension(config.display.width, 20))
+  frame.setMinimumSize(new Dimension(preferredFrameWidth, 20))
   frame.pack()
 
   def clearScreen: UIO[Unit] =
@@ -250,7 +252,12 @@ final case class SwingTerminal(
   def activate: RIO[Tools with Blocking, Unit] =
     OS.os match {
       case OS.MacOS => tools.activate
-      case _        => UIO(frame.requestFocus())
+      case _        =>
+        UIO {
+          frame.toFront()
+          frame.requestFocus()
+          inputTextField.requestFocusInWindow()
+        }
     }
 
   def deactivate: RIO[Tools with Blocking, Unit] =

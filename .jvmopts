@@ -1,0 +1,4 @@
+-Dfile.encoding=UTF-8
+-Xmx4g
+-XX:MaxMetaspaceSize=1g
+-XX:MaxInlineLevel=20

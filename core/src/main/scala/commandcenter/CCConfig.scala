@@ -9,6 +9,7 @@ import commandcenter.command.{ Command, CommandPlugin }
 import commandcenter.config.ConfigParserExtensions._
 import commandcenter.config.Decoders._
 import commandcenter.event.KeyboardShortcut
+import commandcenter.util.OS
 import io.circe.Decoder
 import zio.blocking._
 import zio.{ RManaged, ZManaged }
@@ -67,6 +68,11 @@ object DisplayConfig {
 final case class KeyboardConfig(openShortcut: KeyboardShortcut, suspendShortcut: Option[String])
 
 object KeyboardConfig {
-  implicit val decoder: Decoder[KeyboardConfig] =
-    Decoder.forProduct2("openShortcut", "suspendShortcut")(KeyboardConfig.apply)
+  implicit val decoder: Decoder[KeyboardConfig] = Decoder.instance { c =>
+    for {
+      openShortcut    <-
+        c.get[KeyboardShortcut](s"openShortcut_${OS.os.entryName}").orElse(c.get[KeyboardShortcut]("openShortcut"))
+      suspendShortcut <- c.get[Option[String]]("suspendShortcut")
+    } yield KeyboardConfig(openShortcut, suspendShortcut)
+  }
 }

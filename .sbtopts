@@ -1,4 +1,0 @@
--J-Dfile.encoding=UTF-8
--J-Xmx4g
--J-XX:MaxMetaspaceSize=1g
--J-XX:MaxInlineLevel=20

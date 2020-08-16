@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 import scala.Console
 
-object CommandCenterBuild {
+object Build {
   val ScalaVersion = "2.13.3"
 
   val CommandCenterVersion = "0.0.1"

@@ -1,13 +1,8 @@
-package commandcenter.util
-
 import java.util.Locale
 
-import enumeratum.EnumEntry.LowerCamelcase
-import enumeratum._
+sealed trait OS
 
-sealed trait OS extends EnumEntry with LowerCamelcase
-
-object OS extends Enum[OS] {
+object OS {
   case object MacOS   extends OS
   case object Windows extends OS
   case object Linux   extends OS
@@ -25,7 +20,5 @@ object OS extends Enum[OS] {
     else
       OS.Other
   }
-
-  override def values: IndexedSeq[OS] = findValues
 
 }
