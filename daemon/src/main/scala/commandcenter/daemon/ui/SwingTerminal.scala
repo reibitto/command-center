@@ -252,11 +252,12 @@ final case class SwingTerminal(
   def activate: RIO[Tools with Blocking, Unit] =
     OS.os match {
       case OS.MacOS => tools.activate
-      case _        => UIO {
-        frame.toFront()
-        frame.requestFocus()
-        inputTextField.requestFocusInWindow()
-      }
+      case _        =>
+        UIO {
+          frame.toFront()
+          frame.requestFocus()
+          inputTextField.requestFocusInWindow()
+        }
     }
 
   def deactivate: RIO[Tools with Blocking, Unit] =
