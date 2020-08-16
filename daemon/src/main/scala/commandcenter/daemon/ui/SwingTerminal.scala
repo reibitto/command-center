@@ -37,7 +37,7 @@ final case class SwingTerminal(
   val font     = filterMissingFonts(config.display.fonts).headOption.getOrElse(new Font("Monospaced", Font.PLAIN, 18))
 
   val preferredFrameWidth: Int =
-    config.display.width min GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDisplayMode.getWidth
+    config.display.width min GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
 
   frame.setBackground(theme.background)
   frame.setUndecorated(true)
@@ -253,7 +253,10 @@ final case class SwingTerminal(
   def activate: RIO[Tools with Blocking, Unit] =
     OS.os match {
       case OS.MacOS => tools.activate
-      case _        => UIO(frame.requestFocus())
+      case _        => UIO {
+        frame.toFront()
+        frame.requestFocus()
+      }
     }
 
   def deactivate: RIO[Tools with Blocking, Unit] =
