@@ -228,7 +228,6 @@ final case class SwingTerminal(
   })
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  frame.setLocation(1000, 100)
   frame.setMinimumSize(new Dimension(preferredFrameWidth, 20))
   frame.pack()
 
@@ -256,6 +255,7 @@ final case class SwingTerminal(
       case _        => UIO {
         frame.toFront()
         frame.requestFocus()
+        inputTextField.requestFocusInWindow()
       }
     }
 
