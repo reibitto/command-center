@@ -2,10 +2,9 @@ package commandcenter.util
 
 import java.util.Locale
 
-import enumeratum.EnumEntry.LowerCamelcase
 import enumeratum._
 
-sealed trait OS extends EnumEntry with LowerCamelcase
+sealed trait OS extends EnumEntry
 
 object OS extends Enum[OS] {
   case object MacOS   extends OS
