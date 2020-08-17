@@ -33,7 +33,6 @@ lazy val root = project
 
 lazy val core = module("core")
   .settings(
-    resolvers := Resolvers,
     libraryDependencies ++= Seq(
       "dev.zio"                      %% "zio"                    % Version.zio,
       "dev.zio"                      %% "zio-streams"            % Version.zio,
@@ -56,7 +55,6 @@ lazy val core = module("core")
 lazy val coreUI = module("core-ui")
   .dependsOn(core)
   .settings(
-    resolvers := Resolvers,
     libraryDependencies ++= Seq(
       "com.googlecode.lanterna" % "lanterna" % "3.2.0-alpha1"
     )
@@ -73,7 +71,6 @@ lazy val cliClient = module("cli-client")
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
     },
-    resolvers := Resolvers,
     graalVMNativeImageGraalVersion := Version.imageGraal,
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
@@ -97,19 +94,11 @@ lazy val daemon = module("daemon")
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
     },
-    resolvers := Resolvers,
     libraryDependencies ++= Seq(
       "com.github.tulskiy" % "jkeymaster" % "1.3",
       "org.slf4j"          % "slf4j-api"  % "1.7.30" // Seems to be required for jkeymaster on Linux
     )
   )
-
-lazy val Resolvers = Seq(
-  // Order of resolvers affects resolution time. More general purpose repositories should come first.
-  Resolver.sonatypeRepo("releases"),
-  Resolver.typesafeRepo("releases"),
-  Resolver.mavenLocal
-)
 
 def module(projectId: String): Project =
   Project(id = projectId, base = file(projectId))
