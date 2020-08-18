@@ -74,24 +74,61 @@ You can use some built-in constructions and functions to quickly evaluate mathem
     - `+`, `-`, `*`, `/`, `%` (modulo), `^` (power), e. g. `5 * (3 - 4/2) ^ 2 % 3`
     - `^` has a higher precedence than any other symbolic operators, all of which has equal precedence
 - *functions* (case-sensitive; have a higher precedence than symbolic operators):
-    - with 1 parameter: `acos`, `asin`, `atan`, `cos`, `exp`, `log`, `sin`, `sqrt`, `tan`, `toDeg` (radians -> degrees),
-    `toRad` (degrees -> radians), `!` (factorial)
-    - with 2 parameters: `atan2`, `choose` (Newton's binomial), `gcd` (greatest common divisor)
+    - one-parametric: `!` (factorial), `acos`, `asin`, `atan`, `ceil`, `cos`, `cosh`, `exp`, `floor`, `ln`,
+    `round`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `toDeg` (radians -> degrees), `toRad` (degrees -> radians)
+    - two-parametric: `atan2`, `choose` (Newton's binomial), `gcd` (greatest common divisor), `hypot` (square root of `x^2 + y^2`), `log`, `random`
+    - multi-parametric: `max`, `min`
 
 Whitespaces between parts of an expression are ignored.
 
 One-parametric functions can be written in two forms:
 - separated by spaces for simple parameters (number/constant): `sin PI`, `sqrt 16`
-- with parameters enclosed in parentheses for both simple and more complex expressions: `sin(PI / 2)`, `sqrt(9)`
+- with parameters enclosed in parentheses for both simple and more complex expressions: `sin(PI / 2)`, `sqrt(9)`.
 
-The same applies to `choose`: `5 choose 3`, `(6-1) choose (2 + 1)`
+Two- or multi-parametric functions can be written in three forms: `gcd 20 16`, or `gcd 20; 16`, or `gcd(20; 16)`
+(`;` is here the configurable *parameterSeparator*).
 
-Other two-parametric functions have to be written as follows: `atan2(1, 3)`, `gcd(20, 16)`
+`choose` has also an infix form: `6 choose 3`.
+
+`max/min` can have more than two parameters: `max 0 5 (-6/4)`.
+
+`random` has 3 flavours:
+- `random` (zero-parametric): a random number from \[0, 1\]
+- `random a b` (two-parametric): a random number from \[a, b\]
+- `random int a b` (two-parametric): a whole random number from \[a, b\]
 
 **Constraints:**
 - for `n choose r`, both `n` and `r` have to be whole and non-negative, `n >= r`
 - for `n!`, `n` has to be whole and non-negative
 - for `gcd(a, b)`, both `a` and `b` have to be whole
+
+**Parameters**
+
+As different countries may have their own traditions for writing numbers (one of the obvious differences being the decimal separator &mdash; 
+dot vs. comma), some of the most important parameters are determined locale-specifically or can be overriden in `application.conf` if needed:
+
+```hocon
+{
+  type: "CalculatorCommand"
+  decimalSeparator: ","
+  groupingSeparator: "_"
+  parameterSeparator: ";"
+  groupingSize: 3
+  groupingUsed: true
+  maximumFractionDigits: 10
+}
+```
+These settings apply both for parsing and displaying. `parameterSeparator` can be used with a multi-parametric function.
+All other parameters correspond to properties of `DecimalFormat`/`DecimalFormatSymbols` of the same name.
+Any of them can be omitted, their default values are then locale-specific. For the `parameterSeparator` the default is `;`. 
+
+**List available operators/functions**
+
+Type in `calculator functions` to see the full list of available operators and functions.
+
+**List available configuration parameters**
+
+Type in `calculator parameters` to see the full list of available configuration parameters for `application.conf`.
 
 ## Installation
 
