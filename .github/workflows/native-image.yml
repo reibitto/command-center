@@ -18,8 +18,9 @@ jobs:
         java-version: "java11"
         native-image: "true"
 
+    - uses: actions/checkout@v2
+
     - name: Build native image
-      uses: actions/checkout@v2
       run: |
         java -version
         native-image --version
