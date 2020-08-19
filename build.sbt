@@ -76,10 +76,15 @@ lazy val cliClient = module("cli-client")
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
       "-H:+TraceClassInitialization",
-      "-H:IncludeResources=core/src/main/resources/*",
+      "-H:IncludeResources=lipsum",
+      "-H:IncludeResources=applescript/.*",
+      "--initialize-at-run-time=com.googlecode.lanterna.terminal.win32.WindowsTerminal",
       "--initialize-at-build-time",
       "--no-fallback",
-      "--enable-https"
+      "--enable-https",
+      // The following unsafe flags are not ideal, but are currently needed until a solution for WindowsTerminal breaking the build is found
+      "--allow-incomplete-classpath",
+      "--report-unsupported-elements-at-runtime"
     )
   )
   .enablePlugins(GraalVMNativeImagePlugin, JavaServerAppPackaging)
