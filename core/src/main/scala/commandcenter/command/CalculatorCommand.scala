@@ -8,23 +8,12 @@ import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
+import commandcenter.command.CalculatorCommand.{ FunctionsList, Parameters, ParametersList }
 import commandcenter.command.util.CalculatorUtil
 import commandcenter.tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.{ TaskManaged, ZIO, ZManaged }
-
-sealed trait HelpType extends Product {
-  val title: String
-}
-
-case object FunctionsList extends HelpType {
-  override val title: String = "List of all operators/functions"
-}
-
-case object ParametersList extends HelpType {
-  override val title: String = "List of all configuration parameters"
-}
 
 final case class CalculatorCommand(parameters: Parameters) extends Command[BigDecimal] {
   val commandType: CommandType = CommandType.CalculatorCommand
@@ -99,31 +88,43 @@ object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
       case FunctionsList  => CalculatorUtil.helpMessageFunctionsList
       case ParametersList => CalculatorUtil.helpMessageParametersList
     }
-}
 
-final case class Parameters(
-  decimalSeparator: Char,
-  groupingSeparator: Char,
-  parameterSeparator: Char,
-  groupingSize: Int,
-  groupingUsed: Boolean,
-  maximumFractionDigits: Int
-) {
-  def decimalFormat: DecimalFormat =
-    new DecimalFormat() {
-      setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.getDefault) {
-        setDecimalSeparator(decimalSeparator)
-        setGroupingSeparator(groupingSeparator)
-      })
-      setGroupingSize(groupingSize)
-      setGroupingUsed(groupingUsed)
-      setMaximumFractionDigits(maximumFractionDigits)
-      setParseBigDecimal(true)
+  sealed trait HelpType extends Product {
+    val title: String
+  }
+
+  case object FunctionsList extends HelpType {
+    override val title: String = "List of all operators/functions"
+  }
+
+  case object ParametersList extends HelpType {
+    override val title: String = "List of all configuration parameters"
+  }
+
+  final case class Parameters(
+    decimalSeparator: Char,
+    groupingSeparator: Char,
+    parameterSeparator: Char,
+    groupingSize: Int,
+    groupingUsed: Boolean,
+    maximumFractionDigits: Int
+  ) {
+    def decimalFormat: DecimalFormat =
+      new DecimalFormat() {
+        setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.getDefault) {
+          setDecimalSeparator(decimalSeparator)
+          setGroupingSeparator(groupingSeparator)
+        })
+        setGroupingSize(groupingSize)
+        setGroupingUsed(groupingUsed)
+        setMaximumFractionDigits(maximumFractionDigits)
+        setParseBigDecimal(true)
+      }
+
+    def format(value: BigDecimal): String = {
+      val format = decimalFormat
+      if (value.isWhole) format.setMaximumFractionDigits(0)
+      format.format(value.bigDecimal)
     }
-
-  def format(value: BigDecimal): String = {
-    val format = decimalFormat
-    if (value.isWhole) format.setMaximumFractionDigits(0)
-    format.format(value)
   }
 }

@@ -1,6 +1,6 @@
 package commandcenter.command.util
 
-import commandcenter.command.Parameters
+import commandcenter.command.CalculatorCommand.Parameters
 import fastparse.Parsed.Success
 import fastparse.ScalaWhitespace._
 import fastparse._
