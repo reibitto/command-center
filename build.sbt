@@ -24,12 +24,12 @@ lazy val root = project
       UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
       UsefulTask("b", "fmt", "Run scalafmt on the entire project"),
       UsefulTask("c", "cli-client/run", "Run the Command Center CLI client (interactive mode by default)"),
+      UsefulTask("d", "cli-client/assembly", "Create an executable JAR for running command line utility"),
       UsefulTask(
-        "d",
-        "cli-client/assembly",
-        s"Create an executable JAR for running command line utility ${scala.Console.RED}(Windows not yet supported)"
+        "e",
+        "cli-client/graalvm-native-image:packageBin",
+        s"Create a native executable of the CLI client ${scala.Console.RED}(Windows not yet supported)"
       ),
-      UsefulTask("e", "cli-client/graalvm-native-image:packageBin", "Create a native executable of the CLI client"),
       UsefulTask("f", "daemon/run", "Run the Command Center daemon (emulated terminal)"),
       UsefulTask("g", "daemon/assembly", "Create an executable JAR for running in daemon mode")
     )
