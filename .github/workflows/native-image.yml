@@ -19,6 +19,7 @@ jobs:
         native-image: "true"
 
     - name: Build native image
+      uses: actions/checkout@v2
       run: |
         java -version
         native-image --version
