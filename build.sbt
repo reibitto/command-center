@@ -24,7 +24,11 @@ lazy val root = project
       UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
       UsefulTask("b", "fmt", "Run scalafmt on the entire project"),
       UsefulTask("c", "cli-client/run", "Run the Command Center CLI client (interactive mode by default)"),
-      UsefulTask("d", "cli-client/assembly", "Create an executable JAR for running command line utility"),
+      UsefulTask(
+        "d",
+        "cli-client/assembly",
+        s"Create an executable JAR for running command line utility ${scala.Console.RED}(Windows not yet supported)"
+      ),
       UsefulTask("e", "cli-client/graalvm-native-image:packageBin", "Create a native executable of the CLI client"),
       UsefulTask("f", "daemon/run", "Run the Command Center daemon (emulated terminal)"),
       UsefulTask("g", "daemon/assembly", "Create an executable JAR for running in daemon mode")
@@ -76,10 +80,15 @@ lazy val cliClient = module("cli-client")
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
       "-H:+TraceClassInitialization",
-      "-H:IncludeResources=core/src/main/resources/*",
+      "-H:IncludeResources=lipsum",
+      "-H:IncludeResources=applescript/.*",
+      "--initialize-at-run-time=com.googlecode.lanterna.terminal.win32.WindowsTerminal",
       "--initialize-at-build-time",
       "--no-fallback",
-      "--enable-https"
+      "--enable-https",
+      // The following unsafe flags are not ideal, but are currently needed until a solution for WindowsTerminal breaking the build is found
+      "--allow-incomplete-classpath",
+      "--report-unsupported-elements-at-runtime"
     )
   )
   .enablePlugins(GraalVMNativeImagePlugin, JavaServerAppPackaging)

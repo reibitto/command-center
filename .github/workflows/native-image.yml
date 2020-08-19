@@ -1,0 +1,27 @@
+name: Graal Native Image
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup GraalVM CE
+      uses: rinx/setup-graalvm-ce@v0.0.4
+      with:
+        graalvm-version: "20.1.0"
+        java-version: "java11"
+        native-image: "true"
+
+    - uses: actions/checkout@v2
+
+    - name: Build native image
+      run: |
+        java -version
+        native-image --version
+        sbt cli-client/graalvm-native-image:packageBin
