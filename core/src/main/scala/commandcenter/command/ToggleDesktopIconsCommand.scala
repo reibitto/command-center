@@ -6,12 +6,9 @@ import commandcenter.util.OS
 import zio.process.{ Command => PCommand }
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class ToggleDesktopIconsCommand() extends Command[Unit] {
+final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleDesktopIconsCommand
-
-  val commandNames: List[String] = List("icons")
-
-  val title: String = "Toggle Desktop Icons"
+  val title: String            = "Toggle Desktop Icons"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
@@ -31,5 +28,10 @@ final case class ToggleDesktopIconsCommand() extends Command[Unit] {
 }
 
 object ToggleDesktopIconsCommand extends CommandPlugin[ToggleDesktopIconsCommand] {
-  def make(config: Config): TaskManaged[ToggleDesktopIconsCommand] = ZManaged.succeed(ToggleDesktopIconsCommand())
+  def make(config: Config): TaskManaged[ToggleDesktopIconsCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield ToggleDesktopIconsCommand(commandNames.getOrElse(List("icons")))
+    )
 }

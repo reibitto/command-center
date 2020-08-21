@@ -11,14 +11,11 @@ import commandcenter.view.DefaultView
 import zio.duration._
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class TimerCommand() extends Command[Unit] {
+final case class TimerCommand(commandNames: List[String]) extends Command[Unit] {
   // TODO: Add option to list active timers and also one for canceling them
 
   val commandType: CommandType = CommandType.OpacityCommand
-
-  val commandNames: List[String] = List("timer", "remind")
-
-  val title: String = "Timer"
+  val title: String            = "Timer"
 
   val messageOpt  = Opts.option[String]("message", "Message to display when timer is done", "m").orNone
   val durationArg = Opts.argument[Duration]("duration")
@@ -56,5 +53,10 @@ final case class TimerCommand() extends Command[Unit] {
 }
 
 object TimerCommand extends CommandPlugin[TimerCommand] {
-  def make(config: Config): TaskManaged[TimerCommand] = ZManaged.succeed(TimerCommand())
+  def make(config: Config): TaskManaged[TimerCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")))
+    )
 }

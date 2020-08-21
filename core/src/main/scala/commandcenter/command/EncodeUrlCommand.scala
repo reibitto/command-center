@@ -10,11 +10,8 @@ import commandcenter.command.CommonOpts._
 import commandcenter.tools
 import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
-final case class EncodeUrlCommand() extends Command[String] {
-  val command                  = "encodeurl"
+final case class EncodeUrlCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.EncodeUrlCommand
-
-  val commandNames: List[String] = List(command)
 
   val title: String = "Encode (URL)"
 
@@ -22,7 +19,7 @@ final case class EncodeUrlCommand() extends Command[String] {
     for {
       input                    <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all                       = (stringArg, encodingOpt).tupled
-      parsedCommand             = decline.Command(command, s"URL encodes the given string")(all).parse(input.args)
+      parsedCommand             = decline.Command("", s"URL encodes the given string")(all).parse(input.args)
       (valueToEncode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       encoded                   = URLEncoder.encode(valueToEncode, charset)
     } yield List(
@@ -31,5 +28,10 @@ final case class EncodeUrlCommand() extends Command[String] {
 }
 
 object EncodeUrlCommand extends CommandPlugin[EncodeUrlCommand] {
-  def make(config: Config): TaskManaged[EncodeUrlCommand] = ZManaged.succeed(EncodeUrlCommand())
+  def make(config: Config): TaskManaged[EncodeUrlCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield EncodeUrlCommand(commandNames.getOrElse(List("encodeurl")))
+    )
 }

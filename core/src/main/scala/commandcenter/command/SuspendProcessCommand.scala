@@ -14,12 +14,9 @@ import zio.logging.log
 import zio.process.{ Command => PCommand }
 import zio.{ RIO, RManaged, ZIO, ZManaged }
 
-final case class SuspendProcessCommand() extends Command[Unit] {
+final case class SuspendProcessCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
-
-  val commandNames: List[String] = List("suspend")
-
-  val title: String = "Suspend/Resume Process"
+  val title: String            = "Suspend/Resume Process"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
 
@@ -51,6 +48,7 @@ final case class SuspendProcessCommand() extends Command[Unit] {
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
   def make(config: Config): RManaged[Env, SuspendProcessCommand] =
     for {
+      commandNames    <- ZManaged.fromEither(config.get[Option[List[String]]]("commandNames"))
       suspendShortcut <- ZManaged.fromEither(config.get[Option[KeyboardShortcut]]("suspendShortcut"))
       _               <- ZIO
                            .foreach(suspendShortcut) { suspendShortcut =>
@@ -63,7 +61,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                              )
                            }
                            .toManaged_
-    } yield SuspendProcessCommand()
+    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")))
 
   def isProcessSuspended(processId: Long): RIO[Blocking, Boolean] = {
     val stateParam = if (OS.os == OS.MacOS) "state=" else "s="

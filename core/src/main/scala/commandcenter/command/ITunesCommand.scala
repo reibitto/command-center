@@ -9,12 +9,9 @@ import commandcenter.util.{ AppleScript, OS, TTS }
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, UIO, ZIO, ZManaged }
 
-final case class ITunesCommand() extends Command[Unit] {
+final case class ITunesCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ITunesCommand
-
-  val commandNames: List[String] = List("itunes")
-
-  val title: String = "iTunes"
+  val title: String            = "iTunes"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
@@ -118,7 +115,12 @@ final case class ITunesCommand() extends Command[Unit] {
 }
 
 object ITunesCommand extends CommandPlugin[ITunesCommand] {
-  def make(config: Config): TaskManaged[ITunesCommand] = ZManaged.succeed(ITunesCommand())
+  def make(config: Config): TaskManaged[ITunesCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield ITunesCommand(commandNames.getOrElse(List("itunes")))
+    )
 
   sealed trait Opt
   case object Opt {

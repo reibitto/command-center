@@ -5,12 +5,9 @@ import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class ExitCommand() extends Command[CommandResult] {
+final case class ExitCommand(commandNames: List[String]) extends Command[CommandResult] {
   val commandType: CommandType = CommandType.ExitCommand
-
-  val commandNames: List[String] = List("exit", "quit")
-
-  val title: String = "Exit Command Center"
+  val title: String            = "Exit Command Center"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[CommandResult]]] =
     for {
@@ -19,5 +16,10 @@ final case class ExitCommand() extends Command[CommandResult] {
 }
 
 object ExitCommand extends CommandPlugin[ExitCommand] {
-  def make(config: Config): TaskManaged[ExitCommand] = ZManaged.succeed(ExitCommand())
+  def make(config: Config): TaskManaged[ExitCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield ExitCommand(commandNames.getOrElse(List("exit", "quit")))
+    )
 }

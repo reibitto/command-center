@@ -10,13 +10,9 @@ import zio.{ TaskManaged, ZIO, ZManaged }
 
 import scala.util.matching.Regex
 
-final case class ProcessIdCommand() extends Command[Unit] {
-  val commandType: CommandType = CommandType.ProcessIdCommand
-
-  val commandNames: List[String] = List("pid", "process")
-
-  val title: String = "Process ID"
-
+final case class ProcessIdCommand(commandNames: List[String]) extends Command[Unit] {
+  val commandType: CommandType   = CommandType.ProcessIdCommand
+  val title: String              = "Process ID"
   val visibleProcessRegex: Regex = "(ASN:.+?)-\"(.+?)\"".r
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
@@ -56,7 +52,12 @@ final case class ProcessIdCommand() extends Command[Unit] {
 }
 
 object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {
-  def make(config: Config): TaskManaged[ProcessIdCommand] = ZManaged.succeed(ProcessIdCommand())
+  def make(config: Config): TaskManaged[ProcessIdCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield ProcessIdCommand(commandNames.getOrElse(List("pid", "process")))
+    )
 
   final case class ProcessInfo(pid: Long, name: String)
 }

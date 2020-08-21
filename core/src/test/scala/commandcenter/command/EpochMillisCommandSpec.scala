@@ -7,7 +7,7 @@ import zio.test._
 import zio.test.environment.TestClock
 
 object EpochMillisCommandSpec extends CommandBaseSpec {
-  val command: EpochMillisCommand = EpochMillisCommand()
+  val command: EpochMillisCommand = EpochMillisCommand(List("epochmillis"))
 
   def spec =
     suite("EpochMillisCommandSpec")(

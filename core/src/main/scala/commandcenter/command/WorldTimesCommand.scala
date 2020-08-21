@@ -10,12 +10,10 @@ import commandcenter.{ CommandContext, TerminalType }
 import io.circe.Decoder
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class WorldTimesCommand(dateTimeFormat: String, zones: List[TimeZone]) extends Command[Unit] {
+final case class WorldTimesCommand(commandNames: List[String], dateTimeFormat: String, zones: List[TimeZone])
+    extends Command[Unit] {
   val commandType: CommandType = CommandType.WorldTimesCommand
-
-  val commandNames: List[String] = List("time", "times")
-
-  val title: String = "World Times"
+  val title: String            = "World Times"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
@@ -28,10 +26,14 @@ final case class WorldTimesCommand(dateTimeFormat: String, zones: List[TimeZone]
 }
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
-  implicit val decoder: Decoder[WorldTimesCommand] =
-    Decoder.forProduct2("dateTimeFormat", "zones")(WorldTimesCommand.apply)
-
-  def make(config: Config): TaskManaged[WorldTimesCommand] = ZManaged.fromEither(config.as[WorldTimesCommand])
+  def make(config: Config): TaskManaged[WorldTimesCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames   <- config.get[Option[List[String]]]("commandNames")
+        dateTimeFormat <- config.get[String]("dateTimeFormat")
+        zones          <- config.get[List[TimeZone]]("zones")
+      } yield WorldTimesCommand(commandNames.getOrElse(List("time", "times")), dateTimeFormat, zones)
+    )
 }
 
 final case class WorldTimesResults(dateTimeFormat: String, results: List[WorldTimesResult], context: CommandContext) {

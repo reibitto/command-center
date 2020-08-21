@@ -10,12 +10,9 @@ import commandcenter.view.DefaultView
 import zio.process.{ Command => PCommand }
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class FindInFileCommand() extends Command[File] {
+final case class FindInFileCommand(commandNames: List[String]) extends Command[File] {
   val commandType: CommandType = CommandType.FindInFileCommand
-
-  val commandNames: List[String] = List("in")
-
-  val title: String = "Find in files"
+  val title: String            = "Find in files"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
@@ -43,5 +40,10 @@ final case class FindInFileCommand() extends Command[File] {
 }
 
 object FindInFileCommand extends CommandPlugin[FindInFileCommand] {
-  def make(config: Config): TaskManaged[FindInFileCommand] = ZManaged.succeed(FindInFileCommand())
+  def make(config: Config): TaskManaged[FindInFileCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield FindInFileCommand(commandNames.getOrElse(List("in")))
+    )
 }

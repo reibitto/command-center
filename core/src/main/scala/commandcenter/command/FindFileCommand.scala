@@ -11,12 +11,9 @@ import commandcenter.view.DefaultView
 import zio.process.{ Command => PCommand }
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class FindFileCommand() extends Command[File] {
+final case class FindFileCommand(commandNames: List[String]) extends Command[File] {
   val commandType: CommandType = CommandType.FindFileCommand
-
-  val commandNames: List[String] = List("find")
-
-  val title: String = "Find files"
+  val title: String            = "Find files"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
@@ -46,5 +43,10 @@ final case class FindFileCommand() extends Command[File] {
 }
 
 object FindFileCommand extends CommandPlugin[FindFileCommand] {
-  def make(config: Config): TaskManaged[FindFileCommand] = ZManaged.succeed(FindFileCommand())
+  def make(config: Config): TaskManaged[FindFileCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield FindFileCommand(commandNames.getOrElse(List("find")))
+    )
 }

@@ -5,12 +5,9 @@ import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class ReloadCommand() extends Command[Unit] {
+final case class ReloadCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand
-
-  val commandNames: List[String] = List("reload")
-
-  val title: String = "Reload Config"
+  val title: String            = "Reload Config"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
@@ -24,5 +21,10 @@ final case class ReloadCommand() extends Command[Unit] {
 }
 
 object ReloadCommand extends CommandPlugin[ReloadCommand] {
-  def make(config: Config): TaskManaged[ReloadCommand] = ZManaged.succeed(ReloadCommand())
+  def make(config: Config): TaskManaged[ReloadCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield ReloadCommand(commandNames.getOrElse(List("reload")))
+    )
 }

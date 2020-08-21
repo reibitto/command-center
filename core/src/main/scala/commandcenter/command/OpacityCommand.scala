@@ -9,12 +9,9 @@ import commandcenter.util.GraphicsUtil
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class OpacityCommand() extends Command[Unit] {
+final case class OpacityCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.OpacityCommand
-
-  val commandNames: List[String] = List("opacity")
-
-  val title: String = "Set Opacity"
+  val title: String            = "Set Opacity"
 
   val opacity = Opts.argument[Float]("opacity").validate("Opacity must be between 0.0-1.0")(o => o >= 0.0f && o <= 1.0f)
 
@@ -48,5 +45,10 @@ final case class OpacityCommand() extends Command[Unit] {
 }
 
 object OpacityCommand extends CommandPlugin[OpacityCommand] {
-  def make(config: Config): TaskManaged[OpacityCommand] = ZManaged.succeed(OpacityCommand())
+  def make(config: Config): TaskManaged[OpacityCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield OpacityCommand(commandNames.getOrElse(List("opacity")))
+    )
 }

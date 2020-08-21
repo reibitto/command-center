@@ -7,12 +7,9 @@ import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import zio.{ clock, TaskManaged, ZIO, ZManaged }
 
-final case class EpochUnixCommand() extends Command[Long] {
+final case class EpochUnixCommand(commandNames: List[String]) extends Command[Long] {
   val commandType: CommandType = CommandType.EpochUnixCommand
-
-  val commandNames: List[String] = List("epochunix")
-
-  val title: String = "Epoch (Unix time)"
+  val title: String            = "Epoch (Unix time)"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Long]]] =
     for {
@@ -26,5 +23,10 @@ final case class EpochUnixCommand() extends Command[Long] {
 }
 
 object EpochUnixCommand extends CommandPlugin[EpochUnixCommand] {
-  def make(config: Config): TaskManaged[EpochUnixCommand] = ZManaged.succeed(EpochUnixCommand())
+  def make(config: Config): TaskManaged[EpochUnixCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield EpochUnixCommand(commandNames.getOrElse(List("epochunix")))
+    )
 }

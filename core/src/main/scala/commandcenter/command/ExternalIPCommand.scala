@@ -7,12 +7,9 @@ import commandcenter.util.OS
 import zio.process.{ Command => PCommand }
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class ExternalIPCommand() extends Command[String] {
+final case class ExternalIPCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.ExternalIPCommand
-
-  val commandNames: List[String] = List("externalip")
-
-  val title: String = "External IP"
+  val title: String            = "External IP"
 
   // TODO: Also support Windows (nslookup?). If there's no good solution, making an api.ipify.org request could work too.
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
@@ -30,5 +27,10 @@ final case class ExternalIPCommand() extends Command[String] {
 }
 
 object ExternalIPCommand extends CommandPlugin[ExternalIPCommand] {
-  def make(config: Config): TaskManaged[ExternalIPCommand] = ZManaged.succeed(ExternalIPCommand())
+  def make(config: Config): TaskManaged[ExternalIPCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield ExternalIPCommand(commandNames.getOrElse(List("externalip")))
+    )
 }
