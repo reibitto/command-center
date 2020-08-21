@@ -6,12 +6,9 @@ import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
 // TODO: Work in progress
-final case class TerminalCommand() extends Command[Unit] {
+final case class TerminalCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.TerminalCommand
-
-  val commandNames: List[String] = List("$", ">")
-
-  val title: String = "Terminal"
+  val title: String            = "Terminal"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
@@ -20,5 +17,10 @@ final case class TerminalCommand() extends Command[Unit] {
 }
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {
-  def make(config: Config): TaskManaged[TerminalCommand] = ZManaged.succeed(TerminalCommand())
+  def make(config: Config): TaskManaged[TerminalCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield TerminalCommand(commandNames.getOrElse(List("$", ">")))
+    )
 }

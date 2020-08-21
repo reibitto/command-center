@@ -7,12 +7,9 @@ import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class UUIDCommand() extends Command[UUID] {
+final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
   val commandType: CommandType = CommandType.UUIDCommand
-
-  val commandNames: List[String] = List("uuid")
-
-  val title: String = "UUID"
+  val title: String            = "UUID"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[UUID]]] =
     for {
@@ -24,5 +21,10 @@ final case class UUIDCommand() extends Command[UUID] {
 }
 
 object UUIDCommand extends CommandPlugin[UUIDCommand] {
-  def make(config: Config): TaskManaged[UUIDCommand] = ZManaged.succeed(UUIDCommand())
+  def make(config: Config): TaskManaged[UUIDCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield UUIDCommand(commandNames.getOrElse(List("uuid", "guuid")))
+    )
 }

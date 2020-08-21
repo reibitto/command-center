@@ -23,7 +23,7 @@ object SearchSpec extends CommandBaseSpec {
   def spec =
     suite("SearchSpec")(
       testM("defect in one command should not fail entire search") {
-        val commands = Vector(defectCommand, EpochMillisCommand())
+        val commands = Vector(defectCommand, EpochMillisCommand(List("epochmillis")))
         val results  = Command.search(commands, Map.empty, "e", defaultCommandContext)
 
         for {

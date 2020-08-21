@@ -8,12 +8,9 @@ import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class ResizeCommand() extends Command[Unit] {
+final case class ResizeCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand
-
-  val commandNames: List[String] = List("resize", "size")
-
-  val title: String = "Resize Window"
+  val title: String            = "Resize Window"
 
   val width  = Opts.argument[Int]("width").validate("Width must be greater than 0")(_ > 0)
   val height = Opts.argument[Int]("height").validate("Height must be greater than 0")(_ > 0)
@@ -48,5 +45,10 @@ final case class ResizeCommand() extends Command[Unit] {
 }
 
 object ResizeCommand extends CommandPlugin[ResizeCommand] {
-  def make(config: Config): TaskManaged[ResizeCommand] = ZManaged.succeed(ResizeCommand())
+  def make(config: Config): TaskManaged[ResizeCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield ResizeCommand(commandNames.getOrElse(List("resize", "size")))
+    )
 }

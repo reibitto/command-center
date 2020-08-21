@@ -6,39 +6,27 @@ import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
+import commandcenter.command.LoremIpsumCommand.ChunkType
 import commandcenter.tools
 import commandcenter.view.DefaultView
 import zio._
 
 import scala.io.Source
 
-sealed trait ChunkType
-
-case object Word extends ChunkType
-
-case object Sentence extends ChunkType
-
-case object Paragraph extends ChunkType
-
-final case class LoremIpsumCommand() extends Command[Unit] {
+final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) extends Command[Unit] {
   val commandType: CommandType = CommandType.LoremIpsumCommand
-
-  val commandNames: List[String] = List("lipsum", "lorem", "ipsum")
-
-  val title: String = "Lorem Ipsum"
-
-  val lipsum = Source.fromResource("lipsum").getLines().mkString("\n")
+  val title: String            = "Lorem Ipsum"
 
   val numOpt  = Opts.argument[Int]("number").withDefault(1)
   val typeOpt = Opts
     .argument[String]("words, sentences, or paragraphs")
     .mapValidated {
-      case arg if arg.matches("words?")      => Validated.valid(Word)
-      case arg if arg.matches("sentences?")  => Validated.valid(Sentence)
-      case arg if arg.matches("paragraphs?") => Validated.valid(Paragraph)
+      case arg if arg.matches("words?")      => Validated.valid(ChunkType.Word)
+      case arg if arg.matches("sentences?")  => Validated.valid(ChunkType.Sentence)
+      case arg if arg.matches("paragraphs?") => Validated.valid(ChunkType.Paragraph)
       case s                                 => Validated.invalidNel(s"$s is not valid: should be 'words', 'sentences', or 'paragraphs'.")
     }
-    .withDefault(Paragraph)
+    .withDefault(ChunkType.Paragraph)
 
   val lipsumCommand = decline.Command(title, title)((numOpt, typeOpt).tupled)
 
@@ -58,9 +46,10 @@ final case class LoremIpsumCommand() extends Command[Unit] {
       val run = for {
         (i, chunkType) <- ZIO.fromEither(parsed).mapError(RunError.CliError)
         text            = chunkType match {
-                            case Word      => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
-                            case Sentence  => Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
-                            case Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
+                            case ChunkType.Word      => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
+                            case ChunkType.Sentence  =>
+                              Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
+                            case ChunkType.Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
                           }
         _              <- tools.setClipboard(text)
       } yield ()
@@ -74,5 +63,18 @@ final case class LoremIpsumCommand() extends Command[Unit] {
 }
 
 object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
-  def make(config: Config): TaskManaged[LoremIpsumCommand] = ZManaged.succeed(LoremIpsumCommand())
+  sealed trait ChunkType
+
+  object ChunkType {
+    case object Word      extends ChunkType
+    case object Sentence  extends ChunkType
+    case object Paragraph extends ChunkType
+  }
+
+  def make(config: Config): TaskManaged[LoremIpsumCommand] =
+    for {
+      commandNames <- ZManaged.fromEither(config.get[Option[List[String]]]("commandNames"))
+      lipsum       <- Task(Source.fromResource("lipsum").getLines().mkString("\n")).toManaged_
+    } yield LoremIpsumCommand(commandNames.getOrElse(List("lipsum", "lorem", "ipsum")), lipsum)
+
 }

@@ -9,12 +9,9 @@ import commandcenter.tools
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
-final case class RadixCommand() extends Command[Unit] {
+final case class RadixCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.RadixCommand
-
-  val commandNames: List[String] = List("radix", "base")
-
-  val title: String = "Convert base"
+  val title: String            = "Convert base"
 
   val fromRadixOpt = Opts.option[Int]("from", "Radix to convert from", "f").orNone
   val toRadixOpt   = Opts.option[Int]("to", "Radix to convert to", "t").orNone
@@ -50,5 +47,10 @@ final case class RadixCommand() extends Command[Unit] {
 }
 
 object RadixCommand extends CommandPlugin[RadixCommand] {
-  def make(config: Config): TaskManaged[RadixCommand] = ZManaged.succeed(RadixCommand())
+  def make(config: Config): TaskManaged[RadixCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield RadixCommand(commandNames.getOrElse(List("radix", "base")))
+    )
 }

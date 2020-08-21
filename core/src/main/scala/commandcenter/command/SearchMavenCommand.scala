@@ -12,11 +12,9 @@ import sttp.client.circe._
 import sttp.client.httpclient.zio._
 import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
-final case class SearchMavenCommand() extends Command[String] {
-  val command                    = "mvn"
-  val commandType: CommandType   = CommandType.SearchMavenCommand
-  val commandNames: List[String] = List(command)
-  val title: String              = "Maven"
+final case class SearchMavenCommand(commandNames: List[String]) extends Command[String] {
+  val commandType: CommandType = CommandType.SearchMavenCommand
+  val title: String            = "Maven"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
@@ -66,5 +64,10 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
   implicit val artifactDecoder: Decoder[MavenArtifact] =
     Decoder.forProduct3("g", "a", "latestVersion")(MavenArtifact.apply)
 
-  def make(config: Config): TaskManaged[SearchMavenCommand] = ZManaged.succeed(SearchMavenCommand())
+  def make(config: Config): TaskManaged[SearchMavenCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield SearchMavenCommand(commandNames.getOrElse(List("maven", "mvn")))
+    )
 }

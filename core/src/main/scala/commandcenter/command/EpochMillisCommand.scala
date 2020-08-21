@@ -7,12 +7,9 @@ import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import zio.{ clock, TaskManaged, ZIO, ZManaged }
 
-final case class EpochMillisCommand() extends Command[Long] {
+final case class EpochMillisCommand(commandNames: List[String]) extends Command[Long] {
   val commandType: CommandType = CommandType.EpochMillisCommand
-
-  val commandNames: List[String] = List("epochmillis")
-
-  val title: String = "Epoch (milliseconds)"
+  val title: String            = "Epoch (milliseconds)"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Long]]] =
     for {
@@ -26,5 +23,10 @@ final case class EpochMillisCommand() extends Command[Long] {
 }
 
 object EpochMillisCommand extends CommandPlugin[EpochMillisCommand] {
-  def make(config: Config): TaskManaged[EpochMillisCommand] = ZManaged.succeed(EpochMillisCommand())
+  def make(config: Config): TaskManaged[EpochMillisCommand] =
+    ZManaged.fromEither(
+      for {
+        commandNames <- config.get[Option[List[String]]]("commandNames")
+      } yield EpochMillisCommand(commandNames.getOrElse(List("epochmillis")))
+    )
 }
