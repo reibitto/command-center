@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.4.1
+        with:
+          access_token: ${{ github.token }}
 
       - name: Setup GraalVM CE
         uses: rinx/setup-graalvm-ce@v0.0.4
