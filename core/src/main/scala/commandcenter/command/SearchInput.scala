@@ -1,6 +1,7 @@
 package commandcenter.command
 
 import commandcenter.CommandContext
+import commandcenter.scorers.LengthScorer
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -66,22 +67,8 @@ final case class SearchInput(
   private def scoreInput(text: String): Option[Double] =
     aliasedInputs.flatMap { aliasedInput =>
       commandNames.map { commandName =>
-        val matchScore =
-          if (commandName.startsWith(text))
-            1.0 - (commandName.length - text.length) / commandName.length.toDouble
-          else if (commandName.contains(text))
-            (1.0 - (commandName.length - text.length) / commandName.length.toDouble) * 0.5
-          else
-            0
-
-        val aliasMatchScore =
-          if (commandName.startsWith(aliasedInput))
-            1.0 - (commandName.length - aliasedInput.length) / commandName.length.toDouble
-          else if (commandName.contains(aliasedInput))
-            (1.0 - (commandName.length - aliasedInput.length) / commandName.length.toDouble) * 0.5
-          else
-            0
-
+        val matchScore      = LengthScorer.score(commandName, text)
+        val aliasMatchScore = LengthScorer.score(commandName, aliasedInput)
         matchScore max aliasMatchScore
       }
     }.maxOption

@@ -94,6 +94,7 @@ object Command {
                     case CommandType.ResizeCommand             => ResizeCommand.make(config)
                     case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
                     case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
+                    case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
                     case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
                     case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
                     case CommandType.TerminalCommand           => TerminalCommand.make(config)
