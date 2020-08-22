@@ -137,7 +137,7 @@ directly from SBT).
 
 `application.conf` is needed to run Command Center. The following locations are searched (in order):
 1. `COMMAND_CENTER_CONFIG_PATH` (if defined)
-2. `~/.commandcenter/application.conf`
+2. `~/.command-center/application.conf`
 3. `./application.conf`
 
 **Important note**: For the pop-up emulator window to activate and come to the front properly on macOS you need to make sure you
