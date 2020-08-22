@@ -47,7 +47,7 @@ object CCConfig {
   private def homeConfigFile: Option[File] = {
     val userHome = Try(System.getProperty("user.home")).toOption.getOrElse("")
 
-    Option(new File(userHome, "/.commandcenter/application.conf")).filter(_.exists)
+    Option(new File(userHome, "/.command-center/application.conf")).filter(_.exists)
   }
 }
 
