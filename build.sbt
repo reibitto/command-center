@@ -106,7 +106,7 @@ lazy val daemon = module("daemon")
     },
     libraryDependencies ++= Seq(
       "com.github.tulskiy" % "jkeymaster" % "1.3",
-      "org.slf4j"          % "slf4j-api"  % "1.7.30" // Seems to be required for jkeymaster on Linux
+      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
     )
   )
 

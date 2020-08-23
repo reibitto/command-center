@@ -14,5 +14,7 @@ object Decoders {
       } yield new Font(name, Font.PLAIN, size) // TODO: Also support style
     }
 
-  implicit val keyboardShortcutDecoder: Decoder[KeyboardShortcut] = Decoder.decodeString.map(KeyboardShortcut)
+  implicit val keyboardShortcutDecoder: Decoder[KeyboardShortcut] = Decoder.decodeString.emap { s =>
+    KeyboardShortcut.fromString(s).toEither.left.map(_.toList.mkString("; "))
+  }
 }

@@ -1,11 +1,12 @@
 package commandcenter.daemon.ui
 
 import java.awt.event.KeyEvent
-import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment }
+import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment, KeyboardFocusManager }
 
 import commandcenter.CCRuntime.Env
 import commandcenter._
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
+import commandcenter.daemon.event.KeyboardShortcutUtil
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
@@ -40,6 +41,7 @@ final case class SwingTerminal(
     config.display.width min GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
 
   frame.setBackground(theme.background)
+  frame.setFocusable(false)
   frame.setUndecorated(true)
   if (runtime.unsafeRun(GraphicsUtil.isOpacitySupported))
     frame.setOpacity(config.display.opacity)
@@ -51,9 +53,12 @@ final case class SwingTerminal(
   inputTextField.setBackground(theme.background)
   inputTextField.setForeground(theme.foreground)
   inputTextField.setCaretColor(theme.foreground)
+  // Enable ability to detect Tab key presses
+  inputTextField.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, java.util.Collections.emptySet())
   frame.getContentPane.add(inputTextField, BorderLayout.NORTH)
 
   val outputTextPane = new JTextPane(document)
+  outputTextPane.setFocusable(false)
   outputTextPane.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 10))
   outputTextPane.setFont(font)
   outputTextPane.setBackground(theme.background)
@@ -223,7 +228,22 @@ final case class SwingTerminal(
             _               <- render(previousResults)
           } yield ()
 
-        case _                  => ZIO.unit
+        case _                  =>
+          for {
+            previousResults <- searchResultsRef.get
+            shortcutPressed  = KeyboardShortcutUtil.fromKeyEvent(e)
+            eligibleResults  = previousResults.previews.filter { p =>
+                                 p.source.shortcuts.contains(shortcutPressed)
+                               }
+            bestMatch        = eligibleResults.maxByOption(_.score)
+            _               <- ZIO.foreach(bestMatch) { preview =>
+                                 for {
+                                   _ <- UIO(frame.setVisible(false))
+                                   _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
+                                   _ <- reset()
+                                 } yield ()
+                               }
+          } yield ()
       }
   })
 

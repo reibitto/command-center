@@ -8,6 +8,8 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.codec.Codecs.localeDecoder
 import commandcenter.command.CommandError._
+import commandcenter.config.Decoders.keyboardShortcutDecoder
+import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView
 import zio._
@@ -16,7 +18,8 @@ final case class SearchUrlCommand(
   title: String,
   urlTemplate: String,
   override val commandNames: List[String] = List.empty,
-  override val locales: Set[Locale] = Set.empty
+  override val locales: Set[Locale] = Set.empty,
+  override val shortcuts: Set[KeyboardShortcut] = Set.empty
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchUrlCommand
 
@@ -62,6 +65,13 @@ object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
         urlTemplate  <- config.get[String]("urlTemplate")
         commandNames <- config.get[Option[List[String]]]("commandNames")
         locales      <- config.get[Option[Set[Locale]]]("locales")
-      } yield SearchUrlCommand(title, urlTemplate, commandNames.getOrElse(List.empty), locales.getOrElse(Set.empty))
+        shortcuts    <- config.get[Option[Set[KeyboardShortcut]]]("shortcuts")
+      } yield SearchUrlCommand(
+        title,
+        urlTemplate,
+        commandNames.getOrElse(List.empty),
+        locales.getOrElse(Set.empty),
+        shortcuts.getOrElse(Set.empty)
+      )
     )
 }
