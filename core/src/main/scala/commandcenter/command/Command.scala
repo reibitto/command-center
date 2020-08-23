@@ -5,6 +5,7 @@ import java.util.Locale
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
+import commandcenter.event.KeyboardShortcut
 import commandcenter.util.OS
 import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
@@ -15,8 +16,9 @@ trait Command[+R] extends ViewInstances {
 
   def commandNames: List[String]
   def title: String
-  def locales: Set[Locale] = Set.empty
-  def supportedOS: Set[OS] = Set.empty
+  def locales: Set[Locale]             = Set.empty
+  def supportedOS: Set[OS]             = Set.empty
+  def shortcuts: Set[KeyboardShortcut] = Set.empty
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[R]]]
 
@@ -24,7 +26,6 @@ trait Command[+R] extends ViewInstances {
     def apply[A >: R](a: A): PreviewResult[A] =
       new PreviewResult(Command.this, a, UIO.unit, 1.0, () => DefaultView(title, a.toString).render)
 
-    // TODO: Can this be simplified?
     def unit[A >: R](implicit ev: Command[A] =:= Command[Unit]): PreviewResult[Unit] =
       new PreviewResult(ev(Command.this), (), UIO.unit, 1.0, () => DefaultView(title, "").render)
   }
