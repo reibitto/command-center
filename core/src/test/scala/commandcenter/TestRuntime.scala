@@ -1,5 +1,6 @@
 package commandcenter
 
+import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.SttpClient
@@ -21,4 +22,5 @@ object TestRuntime {
     with Tools
     with Shortcuts
     with SttpClient
+    with InMemoryCache
 }

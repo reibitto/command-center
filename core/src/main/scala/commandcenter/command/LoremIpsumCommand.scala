@@ -74,7 +74,7 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
   def make(config: Config): TaskManaged[LoremIpsumCommand] =
     for {
       commandNames <- ZManaged.fromEither(config.get[Option[List[String]]]("commandNames"))
-      lipsum       <- Task(Source.fromResource("lipsum").getLines().mkString("\n")).toManaged_
+      lipsum       <- ZManaged.fromAutoCloseable(Task(Source.fromResource("lipsum"))).mapEffect(_.getLines().mkString("\n"))
     } yield LoremIpsumCommand(commandNames.getOrElse(List("lipsum", "lorem", "ipsum")), lipsum)
 
 }
