@@ -3,6 +3,7 @@ package commandcenter
 import java.util.Locale
 
 import commandcenter.TestRuntime.TestEnv
+import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.HttpClientZioBackend
@@ -20,6 +21,7 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
         ++ Tools.live
         ++ Shortcuts.unsupported
         ++ HttpClientZioBackend.layer()
+        ++ InMemoryCache.make(5.minutes)
     )
 
   val defaultCommandContext: CommandContext =
