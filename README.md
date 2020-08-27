@@ -176,7 +176,8 @@ to get the command into Command Center's core commands. If not (or if you'd pref
 create your own separate repository to host it. If you let me know, I can add it to a list of external plugins.
 
 Eventually the goal is to make installing external plugins as simple as running a single install command. See this issue [here](https://github.com/reibitto/command-center/issues/24).
-Until then, it's a matter of dropping your jar file in the `plugins` folder and restarting the app.
+Until then, it's a matter of dropping your jar file in the `plugins` folder and restarting the app. For more details on
+external plugins, refer to the [plugins readme](daemon/plugins/PLUGINS.md).
 
 ## Contributing
 
