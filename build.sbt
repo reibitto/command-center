@@ -56,8 +56,11 @@ lazy val core = module("core")
       "org.typelevel"                %% "spire"                  % "0.17.0-RC1",
       "org.cache2k"                   % "cache2k-api"            % "1.2.4.Final",
       "org.cache2k"                   % "cache2k-core"           % "1.2.4.Final"
-    )
+    ),
+    buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
+    buildInfoPackage := "commandcenter"
   )
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val coreUI = module("core-ui")
   .dependsOn(core)

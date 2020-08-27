@@ -13,7 +13,7 @@ import zio.stream.ZStream
 object Main extends CCApp {
   // TODO: Get version from build info
   def printVersion: URManaged[Console, ExitCode] =
-    putStrLn("Command Center CLI v0.0.1").exitCode.toManaged_
+    putStrLn(s"Command Center CLI v${commandcenter.BuildInfo.version}").exitCode.toManaged_
 
   def uiLoop: RManaged[Env, ExitCode] =
     for {
