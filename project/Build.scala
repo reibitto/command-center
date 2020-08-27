@@ -10,7 +10,7 @@ object Build {
   object Version {
     val zio   = "1.0.1"
     val circe = "0.13.0"
-    val sttp  = "2.2.5"
+    val sttp  = "2.2.6"
 
     // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
     // and build a Linux image (e.g. setting it to "20.1.0-java11").
