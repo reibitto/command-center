@@ -11,7 +11,6 @@ import zio.console._
 import zio.stream.ZStream
 
 object Main extends CCApp {
-  // TODO: Get version from build info
   def printVersion: URManaged[Console, ExitCode] =
     putStrLn(s"Command Center CLI v${commandcenter.BuildInfo.version}").exitCode.toManaged_
 
