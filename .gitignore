@@ -24,3 +24,4 @@ server.pid
 /reference
 local.conf
 /logs
+**/plugins/*.jar

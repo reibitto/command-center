@@ -12,7 +12,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
 import commandcenter.locale.Language
 import commandcenter.util.{ Debounced, TextUtils }
-import commandcenter.view.{ AnsiRendered, Rendered }
+import commandcenter.view.Rendered
 import commandcenter.{ CCConfig, CCTerminal, CommandContext, TerminalType }
 import zio._
 import zio.blocking._
@@ -146,20 +146,22 @@ final case class CliTerminal[T <: Terminal](
 
                            results.rendered.foldLeft((1, 1)) {
                              case ((ci, di), d) =>
-                               d match {
-                                 case AnsiRendered(ansiStr) =>
-                                   val lines = ansiStr.plainText.linesIterator.toList
-
-                                   val renderedLine =
-                                     if (ci == cursorRow)
-                                       fansi.Back.Green(" ").render
-                                     else
-                                       fansi.Back.Black(" ").render
-
-                                   lines.indices.foreach(offset => graphics.putCSIStyledString(0, di + offset, renderedLine))
-
-                                   (ci + 1, di + ansiStr.plainText.linesIterator.length)
+                               val plainText = d match {
+                                 case styled: Rendered.Styled => styled.plainText
+                                 case Rendered.Ansi(ansiStr)  => ansiStr.plainText
                                }
+
+                               val lines = plainText.linesIterator.toList
+
+                               val renderedLine =
+                                 if (ci == cursorRow)
+                                   fansi.Back.Green(" ").render
+                                 else
+                                   fansi.Back.Black(" ").render
+
+                               lines.indices.foreach(offset => graphics.putCSIStyledString(0, di + offset, renderedLine))
+
+                               (ci + 1, di + plainText.linesIterator.length)
                            }
                          }
                        }
@@ -261,7 +263,9 @@ final case class CliTerminal[T <: Terminal](
 
   def printRendered(rendered: Rendered, cursor: Cursor): UIO[Cursor] =
     rendered match {
-      case AnsiRendered(ansiStr) => printAnsiStr(ansiStr, cursor)
+      case Rendered.Ansi(ansiStr)  => printAnsiStr(ansiStr, cursor)
+      // TODO: Do a best effort conversion (i.e. preserve colors, but ignore font settings)
+      case styled: Rendered.Styled => printAnsiStr(styled.plainText, cursor)
     }
 
   // TODO: Will probably also need to clear on resize size Delta rendering is used

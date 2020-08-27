@@ -112,6 +112,14 @@ lazy val daemon = module("daemon")
     )
   )
 
-def module(projectId: String): Project =
-  Project(id = projectId, base = file(projectId))
+lazy val strokeOrder = module("stroke-order", Some("extras/stroke-order"))
+  .dependsOn(core)
+  .settings()
+
+lazy val extras = project
+  .in(file("extras"))
+  .aggregate(strokeOrder)
+
+def module(projectId: String, moduleFile: Option[String] = None): Project =
+  Project(id = projectId, base = file(moduleFile.getOrElse(projectId)))
     .settings(Build.defaultSettings(projectId))

@@ -11,10 +11,10 @@ import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
 import commandcenter.util.{ Debounced, GraphicsUtil, OS }
-import commandcenter.view.AnsiRendered
+import commandcenter.view.{ Rendered, Style }
 import javax.swing._
 import javax.swing.plaf.basic.BasicScrollBarUI
-import javax.swing.text.{ DefaultStyledDocument, StyleConstants, StyleContext }
+import javax.swing.text.{ DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext }
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -129,40 +129,74 @@ final case class SwingTerminal(
 
       var scrollToPosition: Int = 0
 
-      val str = searchResults.rendered.zipWithIndex.map {
-        case (r, i) =>
-          r match {
-            case ar: AnsiRendered =>
-              val bar =
-                if (i == commandCursor)
-                  fansi.Back.Green(" ")
-                else
-                  fansi.Back.DarkGray(" ")
+      def renderBar(rowIndex: Int): Unit = {
+        val barStyle = new SimpleAttributeSet()
 
-              if (i < commandCursor)
+        if (rowIndex == commandCursor)
+          StyleConstants.setBackground(barStyle, CCTheme.default.green)
+        else
+          StyleConstants.setBackground(barStyle, CCTheme.default.darkGray)
+
+        document.insertString(document.getLength, " ", barStyle)
+        document.insertString(document.getLength, " ", null)
+      }
+
+      searchResults.rendered.zipWithIndex.foreach {
+        case (r, row) =>
+          r match {
+            case Rendered.Styled(segments) =>
+              renderBar(row)
+
+              segments.foreach { styledText =>
+                val style = new SimpleAttributeSet()
+
+                styledText.styles.foreach {
+                  case Style.Bold                   => StyleConstants.setBold(style, true)
+                  case Style.Underline              => StyleConstants.setUnderline(style, true)
+                  case Style.Italic                 => StyleConstants.setItalic(style, true)
+                  case Style.ForegroundColor(color) => StyleConstants.setForeground(style, color)
+                  case Style.BackgroundColor(color) => StyleConstants.setForeground(style, color)
+                  case Style.FontFamily(fontFamily) => StyleConstants.setFontFamily(style, fontFamily)
+                  case Style.FontSize(fontSize)     => StyleConstants.setFontSize(style, fontSize)
+                }
+
+                if (row < commandCursor)
+                  scrollToPosition += styledText.text.length + 3
+
+                document.insertString(document.getLength, styledText.text, style)
+              }
+
+              document.insertString(document.getLength, "\n", null)
+
+            case ar: Rendered.Ansi         =>
+              renderBar(row)
+
+              if (row < commandCursor)
                 scrollToPosition += ar.ansiStr.length + 3
 
-              bar ++ fansi.Str(" ") ++ ar.ansiStr
+              val renderStr = ar.ansiStr ++ "\n"
+
+              var i: Int = 0
+              groupConsecutive(renderStr.getColors.toList).foreach { c =>
+                val s = renderStr.plainText.substring(i, i + c.length)
+
+                i += c.length
+
+                val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
+                val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
+
+                val awtForeground = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
+                val awtBackground = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
+
+                val style = new SimpleAttributeSet()
+
+                awtForeground.foreach(StyleConstants.setForeground(style, _))
+                awtBackground.foreach(StyleConstants.setBackground(style, _))
+
+                document.insertString(document.getLength, s, style)
+              }
+
           }
-      }.reduceOption(_ ++ fansi.Str("\n") ++ _).getOrElse(fansi.Str(""))
-
-      var i: Int = 0
-      groupConsecutive(str.getColors.toList).foreach { c =>
-        val s = str.plainText.substring(i, i + c.length)
-
-        i += c.length
-
-        val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
-        val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
-
-        val awtForeground = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
-        val awtBackground = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
-
-        val style = context.addStyle(ansiForeground.toString, null)
-        awtForeground.foreach(StyleConstants.setForeground(style, _))
-        awtBackground.foreach(StyleConstants.setBackground(style, _))
-
-        document.insertString(document.getLength, s, style)
       }
 
       outputTextPane.setCaretPosition(scrollToPosition)
