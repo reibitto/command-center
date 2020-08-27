@@ -62,7 +62,7 @@ class InMemoryCacheImpl[K, V](cache: Cache[K, V]) extends InMemoryCache.Service[
     get[V2](key).someOrElseM {
       for {
         rawValue <- orElse
-        _        <- set(key, rawValue, ttl) // TODO:: ttl
+        _        <- set(key, rawValue, ttl)
       } yield rawValue
     }
 

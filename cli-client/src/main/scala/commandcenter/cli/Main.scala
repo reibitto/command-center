@@ -43,7 +43,7 @@ object Main extends CCApp {
     } yield exitCode
 
   def run(args: List[String]): URIO[Env, ExitCode] = {
-    // TODO: Add proper parsing with Decline. Add `--help`, `--verison`, `--numberic-version`, etc.
+    // TODO: Add proper parsing with Decline. Add `--help`, `--version`, `--numeric-version`, etc.
     val main = if (args.isEmpty) uiLoop else printVersion
 
     main.useNow.catchAll { t =>
