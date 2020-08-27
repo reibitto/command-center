@@ -26,8 +26,7 @@ final case class SearchUrlCommand(
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
     def prefixPreview: ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
       for {
-        input      <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-        _          <- ZIO.fail(NotApplicable).when(input.rest.isEmpty)
+        input      <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
         url         = urlTemplate.replace("{query}", URLEncoder.encode(input.rest, StandardCharsets.UTF_8))
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
       } yield List(

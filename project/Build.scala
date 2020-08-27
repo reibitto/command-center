@@ -58,6 +58,7 @@ object Build {
       javaOptions in Test += "-Duser.timezone=UTC",
       scalacOptions := ScalacOptions,
       scalaVersion in ThisBuild := ScalaVersion,
+      unmanagedBase := baseDirectory.value / "plugins",
       libraryDependencies ++= Plugins.BaseCompilerPlugins,
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-test"     % Version.zio % Test,

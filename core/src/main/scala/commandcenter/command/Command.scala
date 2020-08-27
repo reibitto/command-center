@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import commandcenter.event.KeyboardShortcut
-import commandcenter.util.OS
+import commandcenter.util.{ JavaVM, OS }
 import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
 import zio._
@@ -105,12 +105,11 @@ object Command {
                     case CommandType.UUIDCommand               => UUIDCommand.make(config)
                     case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
 
-                    case CommandType.External(typeName) =>
-                      ZManaged.fail(
-                        new UnsupportedOperationException(
-                          s"Failed to load command '$typeName' Loading external plugins not support in this mode."
-                        )
-                      )
+                    case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
+                      ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))
+
+                    case CommandType.External(typeName)                         =>
+                      CommandPlugin.loadDynamically(config, typeName)
                   }
     } yield command
 

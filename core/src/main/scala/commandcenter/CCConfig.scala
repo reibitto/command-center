@@ -30,7 +30,7 @@ object CCConfig {
 
   def loadFrom(config: Config): RManaged[Env, CCConfig] =
     for {
-      commands       <- CommandPlugin.load(config, "commands")
+      commands       <- CommandPlugin.loadAll(config, "commands")
       aliases        <- ZManaged.fromEither(config.as[Map[String, List[String]]]("aliases"))
       displayConfig  <- ZManaged.fromEither(config.as[DisplayConfig]("display"))
       keyboardConfig <- ZManaged.fromEither(config.as[KeyboardConfig]("keyboard"))
