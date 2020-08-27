@@ -25,3 +25,4 @@ jobs:
           java -version
           native-image --version
           sbt cli-client/graalvm-native-image:packageBin
+          cli-client/target/graalvm-native-image/cli-client --version
