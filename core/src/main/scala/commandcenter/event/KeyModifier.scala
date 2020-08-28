@@ -11,5 +11,5 @@ object KeyModifier extends Enum[KeyModifier] {
   case object AltGraph extends KeyModifier
   case object Meta     extends KeyModifier
 
-  override def values: IndexedSeq[KeyModifier] = findValues
+  lazy val values: IndexedSeq[KeyModifier] = findValues
 }

@@ -9,5 +9,5 @@ object TerminalType extends Enum[TerminalType] {
   case object Swing extends TerminalType
   case object Test  extends TerminalType
 
-  override def values: IndexedSeq[TerminalType] = findValues
+  lazy val values: IndexedSeq[TerminalType] = findValues
 }

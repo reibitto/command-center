@@ -201,7 +201,7 @@ object KeyCode extends Enum[KeyCode] {
   case object Cut                     extends KeyCode(0xffd1)
   case object CharUndefined           extends KeyCode(0xffff)
 
-  val values: IndexedSeq[KeyCode] = findValues
+  lazy val values: IndexedSeq[KeyCode] = findValues
 
   def fromCode(code: Int): KeyCode = valuesByCode.getOrElse(code, KeyCode.CharUndefined)
 
