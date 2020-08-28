@@ -16,10 +16,10 @@ lazy val root = project
     addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll"),
     logo :=
       s"""
-        |,---.                           .   ,---.         .
-        ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
-        ||     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
-        |`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '   ${version.value}""".stripMargin,
+         |,---.                           .   ,---.         .
+         ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
+         ||     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
+         |`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '   ${version.value}""".stripMargin,
     usefulTasks := Seq(
       UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
       UsefulTask("b", "fmt", "Run scalafmt on the entire project"),
