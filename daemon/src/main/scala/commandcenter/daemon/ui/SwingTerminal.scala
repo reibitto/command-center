@@ -166,7 +166,8 @@ final case class SwingTerminal(
                 document.insertString(document.getLength, styledText.text, style)
               }
 
-              document.insertString(document.getLength, "\n", null)
+              if (row < searchResults.rendered.length - 1)
+                document.insertString(document.getLength, "\n", null)
 
             case ar: Rendered.Ansi         =>
               renderBar(row)
@@ -174,7 +175,7 @@ final case class SwingTerminal(
               if (row < commandCursor)
                 scrollToPosition += ar.ansiStr.length + 3
 
-              val renderStr = ar.ansiStr ++ "\n"
+              val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
               var i: Int = 0
               groupConsecutive(renderStr.getColors.toList).foreach { c =>
