@@ -201,7 +201,7 @@ final case class CliTerminal[T <: Terminal](
                               UIO.when(!TerminalTextUtils.isControlCharacter(c)) {
                                 for {
                                   cursor <- textCursorRef.getAndUpdate(_.offsetColumnBy(1, TextUtils.charWidth(c)))
-                                  _      <- UIO(buffer.insert(cursor.actual.column, c))
+                                  _      <- UIO(buffer.insert(cursor.logical.column, c))
                                 } yield ()
                               }
                             }
