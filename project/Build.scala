@@ -11,9 +11,10 @@ object Build {
     val zio   = "1.0.1"
     val circe = "0.13.0"
     val sttp  = "2.2.6"
+    val graal = "20.2.0"
 
     // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
-    // and build a Linux image (e.g. setting it to "20.1.0-java11").
+    // and build a Linux image (e.g. setting it to s"$graal-java11").
     val imageGraal: Option[String] = None
   }
 
@@ -88,7 +89,7 @@ object Build {
 
     val flagValue = flag.map(_.toBoolean).getOrElse(default)
 
-    println(s"${Console.MAGENTA}$key:${Console.RESET} $flagValue")
+    println(s"${scala.Console.MAGENTA}$key:${scala.Console.RESET} $flagValue")
 
     flagValue
   }
