@@ -25,6 +25,6 @@ object OS extends Enum[OS] {
       OS.Other
   }
 
-  override def values: IndexedSeq[OS] = findValues
+  lazy val values: IndexedSeq[OS] = findValues
 
 }

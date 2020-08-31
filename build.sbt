@@ -15,11 +15,11 @@ lazy val root = project
     addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll"),
     addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll"),
     logo :=
-      """
-        |,---.                           .   ,---.         .
-        ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
-        ||     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
-        |`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '  """.stripMargin,
+      s"""
+         |,---.                           .   ,---.         .
+         ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
+         ||     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
+         |`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '   ${version.value}""".stripMargin,
     usefulTasks := Seq(
       UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
       UsefulTask("b", "fmt", "Run scalafmt on the entire project"),
@@ -41,12 +41,12 @@ lazy val core = module("core")
       "dev.zio"                      %% "zio"                    % Version.zio,
       "dev.zio"                      %% "zio-streams"            % Version.zio,
       "dev.zio"                      %% "zio-process"            % "0.1.0",
-      "dev.zio"                      %% "zio-logging"            % "0.4.0",
+      "dev.zio"                      %% "zio-logging"            % "0.5.0",
       "io.circe"                     %% "circe-config"           % "0.8.0",
       "org.scala-lang"                % "scala-reflect"          % "2.13.3",
       "io.circe"                     %% "circe-core"             % Version.circe,
       "io.circe"                     %% "circe-parser"           % Version.circe,
-      "com.monovore"                 %% "decline"                % "1.2.0",
+      "com.monovore"                 %% "decline"                % "1.3.0",
       "com.lihaoyi"                  %% "fansi"                  % "0.2.9",
       "com.beachape"                 %% "enumeratum"             % "1.6.1",
       "com.softwaremill.sttp.client" %% "core"                   % Version.sttp,
@@ -54,10 +54,12 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                  %% "fastparse"              % "2.3.0",
       "org.typelevel"                %% "spire"                  % "0.17.0-RC1",
-      "org.cache2k"                   % "cache2k-api"            % "1.2.4.Final",
-      "org.cache2k"                   % "cache2k-core"           % "1.2.4.Final"
-    )
+      "org.cache2k"                   % "cache2k-core"           % "1.3.7.Beta"
+    ),
+    buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
+    buildInfoPackage := "commandcenter"
   )
+  .enablePlugins(BuildInfoPlugin)
 
 lazy val coreUI = module("core-ui")
   .dependsOn(core)
@@ -72,6 +74,7 @@ lazy val cliClient = module("cli-client")
   .settings(
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % "5.6.0").filter(_ => OS.os == OS.Windows),
+    libraryDependencies ++= Seq("org.scalameta" %% "svm-subs" % Version.graal),
     mainClass in assembly := Some("commandcenter.cli.Main"),
     assemblyJarName in assembly := "ccc.jar",
     assemblyMergeStrategy in assembly := {

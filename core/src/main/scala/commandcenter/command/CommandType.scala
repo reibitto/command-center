@@ -42,5 +42,5 @@ object CommandType extends Enum[CommandType] {
 
   final case class External(typeName: String) extends CommandType
 
-  override def values: IndexedSeq[CommandType] = findValues
+  lazy val values: IndexedSeq[CommandType] = findValues
 }

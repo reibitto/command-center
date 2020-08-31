@@ -17,7 +17,7 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
   val testEnv: Layer[Throwable, TestEnv] =
     testEnvironment >>> (
       testEnvironment
-        ++ Logging.console((_, logEntry) => logEntry)
+        ++ Logging.console()
         ++ Tools.live
         ++ Shortcuts.unsupported
         ++ HttpClientZioBackend.layer()
