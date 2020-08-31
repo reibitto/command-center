@@ -6,7 +6,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonArgs._
-import commandcenter.util.{ AppleScript, OS }
+import commandcenter.util.{ AppleScript, OS, PowerShellScript }
 import commandcenter.view.DefaultView
 import zio.duration._
 import zio.{ TaskManaged, ZIO, ZManaged }
@@ -22,10 +22,14 @@ final case class TimerCommand(commandNames: List[String]) extends Command[Unit] 
 
   val timerCommand = decline.Command("timer", title)((durationArg, messageOpt).tupled)
 
-  val notifyFn = AppleScript.loadFunction2[String, String]("applescript/system/notify.applescript")
+  val notifyFn =
+    if (OS.os == OS.MacOS)
+      AppleScript.loadFunction2[String, String]("applescript/system/notify.applescript")
+    else
+      PowerShellScript.loadFunction2[String, String]("powershell/system/notify.ps1")
 
   // TODO: Support all OSes
-  override val supportedOS: Set[OS] = Set(OS.MacOS)
+  override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
