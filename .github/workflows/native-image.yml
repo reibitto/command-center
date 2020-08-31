@@ -14,7 +14,7 @@ jobs:
       - name: Setup GraalVM CE
         uses: rinx/setup-graalvm-ce@v0.0.4
         with:
-          graalvm-version: "20.1.0"
+          graalvm-version: "20.2.0"
           java-version: "java11"
           native-image: "true"
 
@@ -25,3 +25,4 @@ jobs:
           java -version
           native-image --version
           sbt cli-client/graalvm-native-image:packageBin
+          cli-client/target/graalvm-native-image/cli-client --version
