@@ -41,7 +41,7 @@ lazy val core = module("core")
       "dev.zio"                      %% "zio"                    % Version.zio,
       "dev.zio"                      %% "zio-streams"            % Version.zio,
       "dev.zio"                      %% "zio-process"            % "0.1.0",
-      "dev.zio"                      %% "zio-logging"            % "0.4.0",
+      "dev.zio"                      %% "zio-logging"            % "0.5.0",
       "io.circe"                     %% "circe-config"           % "0.8.0",
       "org.scala-lang"                % "scala-reflect"          % "2.13.3",
       "io.circe"                     %% "circe-core"             % Version.circe,
@@ -54,8 +54,7 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                  %% "fastparse"              % "2.3.0",
       "org.typelevel"                %% "spire"                  % "0.17.0-RC1",
-      "org.cache2k"                   % "cache2k-api"            % "1.2.4.Final",
-      "org.cache2k"                   % "cache2k-core"           % "1.2.4.Final"
+      "org.cache2k"                   % "cache2k-core"           % "1.3.7.Beta"
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"

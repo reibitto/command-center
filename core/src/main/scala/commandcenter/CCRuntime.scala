@@ -14,7 +14,7 @@ trait CCRuntime extends Runtime[Env] {
   lazy val runtime: Runtime.Managed[Env] = Runtime.unsafeFromLayer {
     ZEnv.live >>> (
       ZEnv.live
-        ++ Logging.console((_, logEntry) => logEntry)
+        ++ Logging.console()
         ++ Tools.live
         ++ shortcutsLayer
         ++ HttpClientZioBackend.layer()
