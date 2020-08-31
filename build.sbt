@@ -46,7 +46,7 @@ lazy val core = module("core")
       "org.scala-lang"                % "scala-reflect"          % "2.13.3",
       "io.circe"                     %% "circe-core"             % Version.circe,
       "io.circe"                     %% "circe-parser"           % Version.circe,
-      "com.monovore"                 %% "decline"                % "1.2.0",
+      "com.monovore"                 %% "decline"                % "1.3.0",
       "com.lihaoyi"                  %% "fansi"                  % "0.2.9",
       "com.beachape"                 %% "enumeratum"             % "1.6.1",
       "com.softwaremill.sttp.client" %% "core"                   % Version.sttp,
