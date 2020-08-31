@@ -74,6 +74,7 @@ lazy val cliClient = module("cli-client")
   .settings(
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % "5.6.0").filter(_ => OS.os == OS.Windows),
+    libraryDependencies ++= Seq("org.scalameta" %% "svm-subs" % Version.graal),
     mainClass in assembly := Some("commandcenter.cli.Main"),
     assemblyJarName in assembly := "ccc.jar",
     assemblyMergeStrategy in assembly := {
