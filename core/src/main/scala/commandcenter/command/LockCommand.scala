@@ -12,14 +12,20 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.LockCommand
   val title: String            = "Lock Computer"
 
-  override val supportedOS: Set[OS] = Set(OS.MacOS)
+  override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
     } yield List(
-      Preview.unit.onRun(PCommand("pmset", "displaysleepnow").exitCode.unit).score(Scores.high(input.context))
+      Preview.unit.onRun(pCommand.exitCode.unit).score(Scores.high(input.context))
     )
+
+  private def pCommand: PCommand =
+    OS.os match {
+      case OS.MacOS => PCommand("pmset", "displaysleepnow")
+      case _        => PCommand("rundll32", "user32.dll,LockWorkStation")
+    }
 }
 
 object LockCommand extends CommandPlugin[LockCommand] {
