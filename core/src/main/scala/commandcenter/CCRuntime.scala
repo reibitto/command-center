@@ -14,7 +14,7 @@ trait CCRuntime extends Runtime[Env] {
   lazy val runtime: Runtime.Managed[Env] = Runtime.unsafeFromLayer {
     ZEnv.live >>> (
       ZEnv.live
-        ++ Logging.console(LogLevel.Trace)
+        ++ CCLogging.make(terminalType)
         ++ Tools.live
         ++ shortcutsLayer
         ++ HttpClientZioBackend.layer()
@@ -23,6 +23,7 @@ trait CCRuntime extends Runtime[Env] {
   }
 
   def shortcutsLayer: ULayer[Shortcuts]
+  def terminalType: TerminalType
 
   lazy val environment: Env   = runtime.environment
   lazy val platform: Platform = runtime.platform
