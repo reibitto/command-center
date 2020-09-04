@@ -9,7 +9,6 @@ import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.HttpClientZioBackend
 import zio.Layer
 import zio.duration._
-import zio.logging.{ LogLevel, Logging }
 import zio.test.environment.testEnvironment
 import zio.test.{ RunnableSpec, TestAspect, TestExecutor, TestRunner }
 
