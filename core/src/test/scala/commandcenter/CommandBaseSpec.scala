@@ -9,7 +9,7 @@ import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.HttpClientZioBackend
 import zio.Layer
 import zio.duration._
-import zio.logging.Logging
+import zio.logging.{ LogLevel, Logging }
 import zio.test.environment.testEnvironment
 import zio.test.{ RunnableSpec, TestAspect, TestExecutor, TestRunner }
 
@@ -17,7 +17,7 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
   val testEnv: Layer[Throwable, TestEnv] =
     testEnvironment >>> (
       testEnvironment
-        ++ Logging.console()
+        ++ Logging.console(LogLevel.Trace)
         ++ Tools.live
         ++ Shortcuts.unsupported
         ++ HttpClientZioBackend.layer()

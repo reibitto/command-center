@@ -81,13 +81,14 @@ object Build {
     Resolver.sonatypeRepo("snapshots")
   )
 
-  def compilerFlag(key: String, default: Boolean): Boolean = {
-    val flag = sys.props.get(key).orElse {
-      val envVarName = key.replace('.', '_').toUpperCase
+  def compilerOption(key: String): Option[String] =
+    sys.props.get(key).orElse {
+      val envVarName = key.replace('.', '_').replace('-', '_').toUpperCase
       sys.env.get(envVarName)
     }
 
-    val flagValue = flag.map(_.toBoolean).getOrElse(default)
+  def compilerFlag(key: String, default: Boolean): Boolean = {
+    val flagValue = compilerOption(key).map(_.toBoolean).getOrElse(default)
 
     println(s"${scala.Console.MAGENTA}$key:${scala.Console.RESET} $flagValue")
 

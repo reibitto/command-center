@@ -144,6 +144,45 @@ directly from SBT).
 place the `cc-tools` executable in the proper location. Either place it in `~/.command-center/cc-tools` or define the
 `COMMAND_CENTER_TOOLS_PATH` environment variable if you want to specify a custom location.
 
+### Installing built-in optional plugins
+
+Command Center comes with some optional plugins. These plugins are optional because they're either too niche or bring in
+heavier dependencies that normal users wouldn't need. Currently there are:
+
+#### `ject-plugin`
+A real-time, offline dictionary plugin (currently only supports Japanese). This is based on [Ject](https://github.com/reibitto/ject).
+You'll need to build the Lucene index first as described in the README. Then specify the command in `application.conf` like this:
+
+```hocon
+{
+  type: "commandcenter.ject.JectCommand$",
+  dictionaryPath: "/path/to/ject/data/lucene"
+}
+```
+
+#### `stroke-order-plugin` 
+Used to bring up the stroke order of kanji. This relies on having [Kanji stroke order font](https://www.nihilist.org.uk/)
+installed. Also it requires using the terminal emulator as native CLI clients rarely allow changing the default font. Usage is `stroke 漢字`. The config
+looks like this:
+
+```hocon
+{type: "commandcenter.strokeorder.StrokeOrderCommand$"}
+```
+
+#### Enabling the plugins
+
+You can either set an SBT option or environment variable to enable the above plugins:
+
+```bash
+export COMMAND_CENTER_PLUGINS="stroke-order-plugin, ject-plugin"
+```
+
+or start up sbt like this:
+
+sbt -Dcommand-center-plugins="ject-plugin, stroke-order-plugin"
+
+To enable all plugins, you can also use `*`.
+
 ## Development
 
 Command Center mainly uses Scala with a strong focus on typed functional programming (via [ZIO](https://github.com/zio/zio)).
