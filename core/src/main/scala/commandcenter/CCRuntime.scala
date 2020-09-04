@@ -7,7 +7,7 @@ import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.{ HttpClientZioBackend, SttpClient }
 import zio.duration._
 import zio.internal.Platform
-import zio.logging.{ LogLevel, Logging }
+import zio.logging.Logging
 import zio.{ Runtime, ULayer, ZEnv }
 
 trait CCRuntime extends Runtime[Env] {
