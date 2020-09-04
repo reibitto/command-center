@@ -5,16 +5,16 @@ import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.{ HttpClientZioBackend, SttpClient }
-import zio.internal.Platform
-import zio.logging.Logging
-import zio.{ Runtime, ULayer, ZEnv }
 import zio.duration._
+import zio.internal.Platform
+import zio.logging.{ LogLevel, Logging }
+import zio.{ Runtime, ULayer, ZEnv }
 
 trait CCRuntime extends Runtime[Env] {
   lazy val runtime: Runtime.Managed[Env] = Runtime.unsafeFromLayer {
     ZEnv.live >>> (
       ZEnv.live
-        ++ Logging.console()
+        ++ Logging.console(LogLevel.Trace)
         ++ Tools.live
         ++ shortcutsLayer
         ++ HttpClientZioBackend.layer()

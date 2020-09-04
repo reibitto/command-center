@@ -98,16 +98,31 @@ lazy val cliClient = module("cli-client")
   )
   .enablePlugins(GraalVMNativeImagePlugin, JavaServerAppPackaging)
 
+lazy val enabledPlugins: Set[String] =
+  Build.compilerOption("command-center-plugins").map(_.split(',').map(_.trim).toSet).getOrElse(Set.empty)
+
+def optionalPlugin(project: Project): Option[ClasspathDependency] = {
+  val cp =
+    if (enabledPlugins.contains(project.id) || enabledPlugins.contains("*")) Some(project: ClasspathDependency)
+    else None
+  println(s"${scala.Console.CYAN}${project.id} enabled?${scala.Console.RESET} ${cp.isDefined}")
+  cp
+}
+
 lazy val daemon = module("daemon")
   .dependsOn(coreUI)
+  .dependsOn(
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+  )
   .settings(
     fork := true,
     baseDirectory in run := file("."),
     mainClass in assembly := Some("commandcenter.daemon.Main"),
     assemblyJarName in assembly := "ccd.jar",
     assemblyMergeStrategy in assembly := {
-      case PathList("META-INF", _ @_*) => MergeStrategy.discard
-      case _                           => MergeStrategy.first
+      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
+      case _                                       => MergeStrategy.first
     },
     libraryDependencies ++= Seq(
       "com.github.tulskiy" % "jkeymaster" % "1.3",
@@ -115,13 +130,16 @@ lazy val daemon = module("daemon")
     )
   )
 
-lazy val strokeOrder = module("stroke-order", Some("extras/stroke-order"))
+lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
   .dependsOn(core)
-  .settings()
 
-lazy val extras = project
+lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
+  .dependsOn(core)
+  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.0.1"))
+
+lazy val extras     = project
   .in(file("extras"))
-  .aggregate(strokeOrder)
+  .aggregate(strokeOrderPlugin, jectPlugin)
 
 def module(projectId: String, moduleFile: Option[String] = None): Project =
   Project(id = projectId, base = file(moduleFile.getOrElse(projectId)))
