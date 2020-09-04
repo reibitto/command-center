@@ -171,7 +171,7 @@ looks like this:
 
 #### Enabling the plugins
 
-You can either set an SBT option or environment variable to enable the above plugins:
+You can either set an sbt option or environment variable to enable the above plugins:
 
 ```bash
 export COMMAND_CENTER_PLUGINS="stroke-order-plugin, ject-plugin"
@@ -179,7 +179,9 @@ export COMMAND_CENTER_PLUGINS="stroke-order-plugin, ject-plugin"
 
 or start up sbt like this:
 
+```
 sbt -Dcommand-center-plugins="ject-plugin, stroke-order-plugin"
+```
 
 To enable all plugins, you can also use `*`.
 
