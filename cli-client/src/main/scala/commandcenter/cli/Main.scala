@@ -5,12 +5,15 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command._
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.ui.{ CliTerminal, EventResult }
-import commandcenter.{ CCApp, CCConfig }
+import commandcenter.{ CCApp, CCConfig, TerminalType }
 import zio._
 import zio.console._
 import zio.stream.ZStream
 
 object Main extends CCApp {
+  val terminalType: TerminalType        = TerminalType.Cli
+  val shortcutsLayer: ULayer[Shortcuts] = Shortcuts.unsupported
+
   def printVersion: URManaged[Console, ExitCode] =
     putStrLn(s"Command Center CLI v${commandcenter.BuildInfo.version}").exitCode.toManaged_
 
@@ -51,6 +54,4 @@ object Main extends CCApp {
       UIO(ExitCode.failure)
     }
   }
-
-  val shortcutsLayer: ULayer[Shortcuts] = Shortcuts.unsupported
 }

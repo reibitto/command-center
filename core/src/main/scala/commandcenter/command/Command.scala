@@ -10,6 +10,7 @@ import commandcenter.util.{ JavaVM, OS }
 import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
 import zio._
+import zio.logging._
 
 trait Command[+R] extends ViewInstances {
   val commandType: CommandType
@@ -52,14 +53,19 @@ object Command {
         commands.map(command =>
           command
             .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
+            .tapCause { cause =>
+              log
+                .error(s"${command.getClass.getSimpleName} encountered a defect with input: $input", cause)
+                .when(cause.died)
+            }
             .either
             .absorb
-            .mapError(t =>
+            .mapError { t =>
               CommandError.UnexpectedException(t): CommandError
-            ) // Defects in a single command are isolated and don't fail the entire search
+            } // Defects in a single command are isolated and don't fail the entire search
             .absolve
         )
-      }(_.option) // TODO: Use `.either` here and log errors instead of ignoring them
+      }(_.option)
       .map { r =>
         val results = r.flatten.flatten.sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
         SearchResults(input, results)

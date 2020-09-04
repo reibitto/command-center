@@ -4,11 +4,14 @@ import commandcenter.CCRuntime.Env
 import commandcenter.daemon.shortcuts.LiveShortcuts
 import commandcenter.daemon.ui.SwingTerminal
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.{ shortcuts, CCApp, CCConfig }
+import commandcenter.{ shortcuts, CCApp, CCConfig, TerminalType }
 import zio._
 import zio.logging.log
 
 object Main extends CCApp {
+  val terminalType: TerminalType        = TerminalType.Swing
+  val shortcutsLayer: ULayer[Shortcuts] = LiveShortcuts.layer.orDie
+
   def run(args: List[String]): URIO[Env, ExitCode] =
     (for {
       config   <- CCConfig.load
@@ -24,6 +27,4 @@ object Main extends CCApp {
                       _ <- log.debug("Ready to accept input")
                     } yield ()).toManaged_
     } yield ()).useForever.exitCode
-
-  val shortcutsLayer: ULayer[Shortcuts] = LiveShortcuts.layer.orDie
 }
