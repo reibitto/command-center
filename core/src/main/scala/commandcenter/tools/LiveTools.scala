@@ -28,7 +28,7 @@ class LiveTools(pid: Long, toolsPath: Option[File]) extends Tools.Service {
 
   def hide: RIO[Blocking, Unit] =
     toolsPath match {
-      case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", processId.toString).exitCode.unit
+      case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", pid.toString).exitCode.unit
       // TODO: Fallback to AppleScript if macOS
       case None          => UIO.unit
     }
