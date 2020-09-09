@@ -38,8 +38,8 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
                    .fromEither(parsed)
                    .fold(
                      HelpMessage.formatted,
-                     {
-                       case (i, chunkType) => fansi.Str(s"Will generate ${i} ${chunkType.toString}s to the clipboard")
+                     { case (i, chunkType) =>
+                       fansi.Str(s"Will generate ${i} ${chunkType.toString}s to the clipboard")
                      }
                    )
     } yield {

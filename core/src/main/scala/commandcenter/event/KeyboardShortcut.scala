@@ -23,7 +23,7 @@ object KeyboardShortcut {
           case None          => Invalid(NonEmptyList.one(s"$keyName is not a valid key code"))
         }
 
-      case parts          =>
+      case parts =>
         val (errors, keyModifiers) = parts.init
           .map(s => KeyModifier.withNameInsensitiveOption(s).toRight(s"$s not a valid key modifier"))
           .partitionMap(identity)

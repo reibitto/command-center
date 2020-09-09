@@ -21,19 +21,18 @@ final case class TemperatureCommand() extends Command[Double] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Double]]] =
     for {
       (temperature, unit) <- ZIO.fromOption {
-                               temperatureRegex.unapplySeq(searchInput.input.trim).map {
-                                 case List(value, sourceUnit) =>
-                                   val v = value.toDouble
+                               temperatureRegex.unapplySeq(searchInput.input.trim).map { case List(value, sourceUnit) =>
+                                 val v = value.toDouble
 
-                                   val targetUnit = if (sourceUnit.equalsIgnoreCase("f")) "C" else "F"
+                                 val targetUnit = if (sourceUnit.equalsIgnoreCase("f")) "C" else "F"
 
-                                   val temp =
-                                     if (sourceUnit.equalsIgnoreCase("f"))
-                                       (v - 32) * (5 / 9.0)
-                                     else
-                                       v * (9.0 / 5) + 32
+                                 val temp =
+                                   if (sourceUnit.equalsIgnoreCase("f"))
+                                     (v - 32) * (5 / 9.0)
+                                   else
+                                     v * (9.0 / 5) + 32
 
-                                   (temp, targetUnit)
+                                 (temp, targetUnit)
                                }
                              }.orElseFail(NotApplicable)
       temperatureFormatted = f"$temperature%.1f $unit"

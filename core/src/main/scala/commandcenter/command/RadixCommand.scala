@@ -27,14 +27,13 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
                    .fromEither(parsed)
                    .fold(
                      HelpMessage.formatted,
-                     {
-                       case (fromRadixOpt, toRadixOpt, number) =>
-                         val fromRadix = fromRadixOpt.getOrElse(10)
-                         val toRadix   = toRadixOpt.getOrElse(10)
-                         val n         = java.lang.Long.valueOf(number, fromRadix)
-                         val formatted = java.lang.Long.toString(n, toRadix)
+                     { case (fromRadixOpt, toRadixOpt, number) =>
+                       val fromRadix = fromRadixOpt.getOrElse(10)
+                       val toRadix   = toRadixOpt.getOrElse(10)
+                       val n         = java.lang.Long.valueOf(number, fromRadix)
+                       val formatted = java.lang.Long.toString(n, toRadix)
 
-                         fansi.Str(s"$formatted")
+                       fansi.Str(s"$formatted")
                      }
                    )
     } yield List(

@@ -140,63 +140,62 @@ final case class SwingTerminal(
         document.insertString(document.getLength, " ", null)
       }
 
-      searchResults.rendered.zipWithIndex.foreach {
-        case (r, row) =>
-          r match {
-            case Rendered.Styled(segments) =>
-              renderBar(row)
+      searchResults.rendered.zipWithIndex.foreach { case (r, row) =>
+        r match {
+          case Rendered.Styled(segments) =>
+            renderBar(row)
 
-              segments.foreach { styledText =>
-                val style = new SimpleAttributeSet()
+            segments.foreach { styledText =>
+              val style = new SimpleAttributeSet()
 
-                styledText.styles.foreach {
-                  case Style.Bold                   => StyleConstants.setBold(style, true)
-                  case Style.Underline              => StyleConstants.setUnderline(style, true)
-                  case Style.Italic                 => StyleConstants.setItalic(style, true)
-                  case Style.ForegroundColor(color) => StyleConstants.setForeground(style, color)
-                  case Style.BackgroundColor(color) => StyleConstants.setForeground(style, color)
-                  case Style.FontFamily(fontFamily) => StyleConstants.setFontFamily(style, fontFamily)
-                  case Style.FontSize(fontSize)     => StyleConstants.setFontSize(style, fontSize)
-                }
-
-                if (row < commandCursor)
-                  scrollToPosition += styledText.text.length + 3
-
-                document.insertString(document.getLength, styledText.text, style)
+              styledText.styles.foreach {
+                case Style.Bold                   => StyleConstants.setBold(style, true)
+                case Style.Underline              => StyleConstants.setUnderline(style, true)
+                case Style.Italic                 => StyleConstants.setItalic(style, true)
+                case Style.ForegroundColor(color) => StyleConstants.setForeground(style, color)
+                case Style.BackgroundColor(color) => StyleConstants.setForeground(style, color)
+                case Style.FontFamily(fontFamily) => StyleConstants.setFontFamily(style, fontFamily)
+                case Style.FontSize(fontSize)     => StyleConstants.setFontSize(style, fontSize)
               }
-
-              if (row < searchResults.rendered.length - 1)
-                document.insertString(document.getLength, "\n", null)
-
-            case ar: Rendered.Ansi         =>
-              renderBar(row)
 
               if (row < commandCursor)
-                scrollToPosition += ar.ansiStr.length + 3
+                scrollToPosition += styledText.text.length + 3
 
-              val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
+              document.insertString(document.getLength, styledText.text, style)
+            }
 
-              var i: Int = 0
-              groupConsecutive(renderStr.getColors.toList).foreach { c =>
-                val s = renderStr.plainText.substring(i, i + c.length)
+            if (row < searchResults.rendered.length - 1)
+              document.insertString(document.getLength, "\n", null)
 
-                i += c.length
+          case ar: Rendered.Ansi =>
+            renderBar(row)
 
-                val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
-                val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
+            if (row < commandCursor)
+              scrollToPosition += ar.ansiStr.length + 3
 
-                val awtForeground = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
-                val awtBackground = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
+            val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
-                val style = new SimpleAttributeSet()
+            var i: Int = 0
+            groupConsecutive(renderStr.getColors.toList).foreach { c =>
+              val s = renderStr.plainText.substring(i, i + c.length)
 
-                awtForeground.foreach(StyleConstants.setForeground(style, _))
-                awtBackground.foreach(StyleConstants.setBackground(style, _))
+              i += c.length
 
-                document.insertString(document.getLength, s, style)
-              }
+              val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
+              val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
 
-          }
+              val awtForeground = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
+              val awtBackground = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
+
+              val style = new SimpleAttributeSet()
+
+              awtForeground.foreach(StyleConstants.setForeground(style, _))
+              awtBackground.foreach(StyleConstants.setBackground(style, _))
+
+              document.insertString(document.getLength, s, style)
+            }
+
+        }
       }
 
       outputTextPane.setCaretPosition(scrollToPosition)
@@ -227,7 +226,7 @@ final case class SwingTerminal(
   inputTextField.addZKeyListener(new ZKeyAdapter {
     override def keyPressed(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
-        case KeyEvent.VK_ENTER  =>
+        case KeyEvent.VK_ENTER =>
           for {
             _               <- UIO(frame.setVisible(false))
             previousResults <- searchResultsRef.get
@@ -246,7 +245,7 @@ final case class SwingTerminal(
             _ <- reset()
           } yield ()
 
-        case KeyEvent.VK_DOWN   =>
+        case KeyEvent.VK_DOWN =>
           for {
             _               <- UIO(e.consume())
             previousResults <- searchResultsRef.get
@@ -254,7 +253,7 @@ final case class SwingTerminal(
             _               <- render(previousResults)
           } yield ()
 
-        case KeyEvent.VK_UP     =>
+        case KeyEvent.VK_UP =>
           for {
             _               <- UIO(e.consume())
             previousResults <- searchResultsRef.get
@@ -262,7 +261,7 @@ final case class SwingTerminal(
             _               <- render(previousResults)
           } yield ()
 
-        case _                  =>
+        case _ =>
           for {
             previousResults <- searchResultsRef.get
             shortcutPressed  = KeyboardShortcutUtil.fromKeyEvent(e)

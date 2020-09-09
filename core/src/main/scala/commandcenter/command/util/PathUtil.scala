@@ -11,6 +11,6 @@ object PathUtil {
       case Some(userHome) if path.startsWith(userHome) =>
         s"~${path.substring(userHome.length)}"
 
-      case _                                           => path
+      case _ => path
     }
 }

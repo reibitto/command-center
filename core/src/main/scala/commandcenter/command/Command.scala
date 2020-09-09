@@ -114,7 +114,7 @@ object Command {
                     case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
                       ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))
 
-                    case CommandType.External(typeName)                         =>
+                    case CommandType.External(typeName) =>
                       CommandPlugin.loadDynamically(config, typeName)
                   }
     } yield command

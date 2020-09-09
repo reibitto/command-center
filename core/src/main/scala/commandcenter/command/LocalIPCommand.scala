@@ -23,17 +23,16 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
                     interfaces
                       .filter(interface => !interface.isLoopback && !interface.isVirtual && interface.isUp)
                       .flatMap { interface =>
-                        interface.getInetAddresses.asScala.collect {
-                          case address: Inet4Address => interface.getDisplayName -> address.getHostAddress
+                        interface.getInetAddresses.asScala.collect { case address: Inet4Address =>
+                          interface.getDisplayName -> address.getHostAddress
                         }
                       }
                   }.mapError(CommandError.UnexpectedException)
-    } yield localIps.map {
-      case (interfaceName, localIp) =>
-        Preview(localIp)
-          .onRun(tools.setClipboard(localIp))
-          .score(Scores.high(input.context))
-          .view(DefaultView(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp)))
+    } yield localIps.map { case (interfaceName, localIp) =>
+      Preview(localIp)
+        .onRun(tools.setClipboard(localIp))
+        .score(Scores.high(input.context))
+        .view(DefaultView(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp)))
     }
 }
 

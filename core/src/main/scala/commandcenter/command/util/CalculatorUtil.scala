@@ -75,17 +75,17 @@ final class CalculatorUtil(parameters: Parameters) {
   private def atan[_: P]: P[BigDecimal] = P("atan" ~/ term).map(spire.math.atan(_))
 
   private def atan2[_: P]: P[BigDecimal] =
-    P("atan2" ~/ multipleParametersParser(2)).map {
-      case Seq(y, x) => spire.math.atan2(y, x)
+    P("atan2" ~/ multipleParametersParser(2)).map { case Seq(y, x) =>
+      spire.math.atan2(y, x)
     }
 
   private def ceil[_: P]: P[BigDecimal] = P("ceil" ~/ term).map(spire.math.ceil)
 
   private def choosePrefixed[_: P]: P[BigDecimal] =
-    P("choose" ~/ multipleParametersParser(2)).filter {
-      case Seq(n, r) => isWholeNonNegative(n) && isWholeNonNegative(r) && n >= r
-    }.map {
-      case Seq(n, r) => binomial(n, r)
+    P("choose" ~/ multipleParametersParser(2)).filter { case Seq(n, r) =>
+      isWholeNonNegative(n) && isWholeNonNegative(r) && n >= r
+    }.map { case Seq(n, r) =>
+      binomial(n, r)
     }
 
   private def cos[_: P]: P[BigDecimal] = P("cos" ~/ term).map(spire.math.cos(_))
@@ -97,23 +97,23 @@ final class CalculatorUtil(parameters: Parameters) {
   private def floor[_: P]: P[BigDecimal] = P("floor" ~/ term).map(spire.math.floor)
 
   private def gcd[_: P]: P[BigDecimal] =
-    P("gcd" ~/ multipleParametersParser(2)).filter {
-      case Seq(a, b) => a.isWhole && b.isWhole
-    }.map {
-      case Seq(a, b) => BigDecimal(a.toBigInt.gcd(b.toBigInt))
+    P("gcd" ~/ multipleParametersParser(2)).filter { case Seq(a, b) =>
+      a.isWhole && b.isWhole
+    }.map { case Seq(a, b) =>
+      BigDecimal(a.toBigInt.gcd(b.toBigInt))
     }
 
   private def hypot[_: P]: P[BigDecimal] =
-    P("hypot" ~/ multipleParametersParser(2)).map {
-      case Seq(x, y) => spire.math.hypot(x, y)
+    P("hypot" ~/ multipleParametersParser(2)).map { case Seq(x, y) =>
+      spire.math.hypot(x, y)
     }
 
   // FIXME evaluating over double, because with log(BigDecimal) spire can go into infinite loop
   private def ln[_: P]: P[BigDecimal] = P("ln" ~/ term).map(d => math.log(d.doubleValue))
 
   private def log[_: P]: P[BigDecimal] =
-    P("log" ~/ multipleParametersParser(2)).map {
-      case Seq(base, number) => math.log(number.doubleValue) / math.log(base.doubleValue)
+    P("log" ~/ multipleParametersParser(2)).map { case Seq(base, number) =>
+      math.log(number.doubleValue) / math.log(base.doubleValue)
     }
 
   private def max[_: P]: P[BigDecimal] = P("max" ~/ multipleParametersParser(1)).map(_.max)
@@ -189,15 +189,14 @@ object CalculatorUtil {
 
   private def evaluateOperatorSequence(tree: (BigDecimal, Seq[(String, BigDecimal)])): BigDecimal = {
     val (base, ops) = tree
-    ops.foldLeft(base) {
-      case (left, (op, right)) =>
-        op match {
-          case "+" => left + right
-          case "-" => left - right
-          case "*" => left * right
-          case "/" => left / right
-          case "%" => left % right
-        }
+    ops.foldLeft(base) { case (left, (op, right)) =>
+      op match {
+        case "+" => left + right
+        case "-" => left - right
+        case "*" => left * right
+        case "/" => left / right
+        case "%" => left % right
+      }
     }
   }
 

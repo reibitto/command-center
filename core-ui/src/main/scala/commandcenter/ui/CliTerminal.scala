@@ -144,24 +144,23 @@ final case class CliTerminal[T <: Terminal](
                          Task {
                            val cursorRow = commandCursor + 1
 
-                           results.rendered.foldLeft((1, 1)) {
-                             case ((ci, di), d) =>
-                               val plainText = d match {
-                                 case styled: Rendered.Styled => styled.plainText
-                                 case Rendered.Ansi(ansiStr)  => ansiStr.plainText
-                               }
+                           results.rendered.foldLeft((1, 1)) { case ((ci, di), d) =>
+                             val plainText = d match {
+                               case styled: Rendered.Styled => styled.plainText
+                               case Rendered.Ansi(ansiStr)  => ansiStr.plainText
+                             }
 
-                               val lines = plainText.linesIterator.toList
+                             val lines = plainText.linesIterator.toList
 
-                               val renderedLine =
-                                 if (ci == cursorRow)
-                                   fansi.Back.Green(" ").render
-                                 else
-                                   fansi.Back.Black(" ").render
+                             val renderedLine =
+                               if (ci == cursorRow)
+                                 fansi.Back.Green(" ").render
+                               else
+                                 fansi.Back.Black(" ").render
 
-                               lines.indices.foreach(offset => graphics.putCSIStyledString(0, di + offset, renderedLine))
+                             lines.indices.foreach(offset => graphics.putCSIStyledString(0, di + offset, renderedLine))
 
-                               (ci + 1, di + plainText.linesIterator.length)
+                             (ci + 1, di + plainText.linesIterator.length)
                            }
                          }
                        }
@@ -254,9 +253,8 @@ final case class CliTerminal[T <: Terminal](
   def printAnsiStr(string: fansi.Str, cursor: Cursor): UIO[Cursor] = {
     val lines = string.render.linesIterator.toVector
     for {
-      _ <- IO.foreach(lines.zipWithIndex) {
-             case (s, i) =>
-               putAnsiStrRaw(s, cursor + Cursor(0, i))
+      _ <- IO.foreach(lines.zipWithIndex) { case (s, i) =>
+             putAnsiStrRaw(s, cursor + Cursor(0, i))
            }
     } yield cursor + Cursor(0, lines.length)
   }

@@ -13,10 +13,10 @@ trait ConfigParserExtensions {
         case obj: ConfigObject =>
           Json.fromFields(obj.asScala.view.mapValues(convertValueUnsafe).toMap)
 
-        case list: ConfigList  =>
+        case list: ConfigList =>
           Json.fromValues(list.asScala.map(convertValueUnsafe))
 
-        case _                 =>
+        case _ =>
           (value.valueType, value.unwrapped) match {
             case (ConfigValueType.NULL, _)                             => Json.Null
             case (ConfigValueType.NUMBER, int: java.lang.Integer)      => Json.fromInt(int)
@@ -29,7 +29,7 @@ trait ConfigParserExtensions {
                 throw new NumberFormatException(s"Invalid numeric string ${value.render}")
               }
 
-            case (valueType, _)                                     =>
+            case (valueType, _) =>
               throw new RuntimeException(s"No conversion for $valueType with value $value")
           }
       }

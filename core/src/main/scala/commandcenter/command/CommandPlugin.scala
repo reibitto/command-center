@@ -22,7 +22,7 @@ object CommandPlugin {
                             .parse(c)
                             .foldM(
                               {
-                                case CommandPluginError.PluginNotFound(typeName, _)   =>
+                                case CommandPluginError.PluginNotFound(typeName, _) =>
                                   log.warn(s"Plugin '$typeName' not found").toManaged_ *>
                                     ZManaged.succeed(None)
 
@@ -34,7 +34,7 @@ object CommandPlugin {
                                     .toManaged_ *>
                                     ZManaged.succeed(None)
 
-                                case other                                            =>
+                                case other =>
                                   ZManaged.fail(other)
                               },
                               c => ZManaged.succeed(Some(c))

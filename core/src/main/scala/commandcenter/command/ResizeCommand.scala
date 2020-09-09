@@ -25,8 +25,8 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
                    .fromEither(parsed)
                    .fold(
                      HelpMessage.formatted,
-                     {
-                       case (w, h) => fansi.Str(s"Set window size to width: $w, maxHeight: $h)")
+                     { case (w, h) =>
+                       fansi.Str(s"Set window size to width: $w, maxHeight: $h)")
                      }
                    )
     } yield {

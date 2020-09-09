@@ -10,10 +10,10 @@ import zio.{ RIO, UIO, ZIO }
 object ProcessUtil {
   def openBrowser(url: String): RIO[Blocking, Unit] =
     OS.os match {
-      case OS.MacOS              =>
+      case OS.MacOS =>
         PCommand("open", url).exitCode.unit
 
-      case OS.Linux              =>
+      case OS.Linux =>
         PCommand("xdg-open", url).exitCode.unit
 
       case OS.Windows | OS.Other =>
@@ -34,7 +34,7 @@ object ProcessUtil {
                        }
         } yield pid
 
-      case _        =>
+      case _ =>
         ZIO.fail(
           new UnsupportedOperationException(s"Getting the frontmost process's PID not supported yet for ${OS.os}")
         )

@@ -14,6 +14,6 @@ object CCLogging {
         val format = LogFormat.ColoredLogFormat((_, s) => s)
         Logging.console(LogLevel.Trace, format)
 
-      case TerminalType.Test  => Logging.ignore
+      case TerminalType.Test => Logging.ignore
     }
 }

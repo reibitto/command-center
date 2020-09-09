@@ -30,24 +30,22 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
                           (asn, processName)
                         }
                         .toList
-                        .filter {
-                          case (_, processName) =>
-                            processName.toLowerCase.contains(searchString)
+                        .filter { case (_, processName) =>
+                          processName.toLowerCase.contains(searchString)
                         }
-    } yield processInfo.map {
-      case (asn, processName) =>
-        val run = for {
-          pidOutput <- PCommand("lsappinfo", "info", "-only", "pid", asn).string.map(_.trim)
-          pid       <- ZIO
-                         .fromOption(pidOutput.split('=').lift(1).map(_.trim))
-                         .orElseFail(RunError.InternalError("Parsing PID failed"))
-          _         <- tools.setClipboard(pid)
-        } yield ()
+    } yield processInfo.map { case (asn, processName) =>
+      val run = for {
+        pidOutput <- PCommand("lsappinfo", "info", "-only", "pid", asn).string.map(_.trim)
+        pid       <- ZIO
+                       .fromOption(pidOutput.split('=').lift(1).map(_.trim))
+                       .orElseFail(RunError.InternalError("Parsing PID failed"))
+        _         <- tools.setClipboard(pid)
+      } yield ()
 
-        Preview.unit
-          .onRun(run)
-          .view(DefaultView(processName, "Copy PID to clipboard"))
-          .score(Scores.high(input.context))
+      Preview.unit
+        .onRun(run)
+        .view(DefaultView(processName, "Copy PID to clipboard"))
+        .score(Scores.high(input.context))
     }
 }
 
