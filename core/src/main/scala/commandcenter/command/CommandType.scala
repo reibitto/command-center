@@ -39,6 +39,7 @@ object CommandType extends Enum[CommandType] {
   case object ToggleHiddenFilesCommand  extends CommandType
   case object UUIDCommand               extends CommandType
   case object WorldTimesCommand         extends CommandType
+  case object StocksCommand             extends CommandType
 
   final case class External(typeName: String) extends CommandType
 
