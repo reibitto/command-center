@@ -2,8 +2,7 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.command.StocksCommand.StocksResult
-import commandcenter.view.DefaultView
+import commandcenter.command.StocksCommand.{ StocksResult, Ticker }
 import io.circe.{ Decoder, Json }
 import sttp.client.circe.asJson
 import sttp.client.httpclient.zio.SttpClient
@@ -34,23 +33,53 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       Preview.unit
         .score(Scores.high(input.context))
         .view(
-          DefaultView(
-            title,
-            fansi.Str.join(
-              fansi.Color.Cyan(stock.ticker),
-              fansi.Str(s" (${stock.name}) "),
-              fansi.Color.LightCyan(String.format("%.2f", stock.price))
-            )
+          fansi.Str.join(
+            fansi.Color.Cyan(stock.ticker),
+            fansi.Color.LightCyan(s" (${stock.name}) "),
+            fansi.Color.Cyan(String.format("%.2f", stock.price)),
+            fansi.Color.Cyan(s" ${stock.currency} "),
+            getChangePercentField(stock.change, stock.changePercent)
           )
         )
     }
+
+  private def getChangePercentField(change: Double, changePercent: Double): fansi.Str = {
+    val changeTextField = s"${String.format("%.2f", change)}"
+    val changePercentTextField = s" (${String.format("%.2f", changePercent.abs)}%)"
+    if (changePercent >= 0) fansi.Color.Green(s" +$changeTextField $changePercentTextField")
+    else fansi.Color.Red(s" $changeTextField $changePercentTextField")
+  }
 }
 
 object StocksCommand extends CommandPlugin[StocksCommand] {
-  final case class StocksResult(ticker: String, name: String, price: Double)
+  final case class StocksResult(
+    ticker: String,
+    name: String,
+    price: Double,
+    currency: String,
+    change: Double,
+    changePercent: Double
+  )
+
+  final case class Ticker(id: String, name: Option[String]) {
+    def displayName: String = name.getOrElse(id)
+  }
+
+  object Ticker {
+    implicit val decoder: Decoder[Ticker] = Decoder.forProduct2("ticker", "displayName")(Ticker.apply)
+  }
 
   implicit val decoder: Decoder[StocksResult] =
-    Decoder.forProduct3("symbol", "shortName", "regularMarketPrice")(StocksResult.apply)
+    Decoder.forProduct6(
+      "symbol",
+      "shortName",
+      "regularMarketPrice",
+      "currency",
+      "regularMarketChange",
+      "regularMarketChangePercent"
+    )(
+      StocksResult.apply
+    )
 
   def make(config: Config): TaskManaged[StocksCommand] =
     ZManaged.fromEither(
@@ -59,12 +88,4 @@ object StocksCommand extends CommandPlugin[StocksCommand] {
         tickers      <- config.get[List[Ticker]]("tickers")
       } yield StocksCommand(commandNames.getOrElse(List("stock", "stocks")), tickers)
     )
-}
-
-final case class Ticker(id: String, name: Option[String]) {
-  def displayName: String = name.getOrElse(id)
-}
-
-object Ticker {
-  implicit val decoder: Decoder[Ticker] = Decoder.forProduct2("ticker", "displayName")(Ticker.apply)
 }
