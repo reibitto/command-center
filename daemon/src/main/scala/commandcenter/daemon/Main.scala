@@ -17,14 +17,14 @@ object Main extends CCApp {
       config   <- CCConfig.load
       terminal <- SwingTerminal.create(config, this)
       _        <- (for {
-                      _ <- shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
-                             (for {
-                               _ <- log.debug("Opening emulated terminal...")
-                               _ <- terminal.open
-                               _ <- terminal.activate
-                             } yield ()).ignore
-                           )
-                      _ <- log.debug("Ready to accept input")
-                    } yield ()).toManaged_
+                    _ <- shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
+                           (for {
+                             _ <- log.debug("Opening emulated terminal...")
+                             _ <- terminal.open
+                             _ <- terminal.activate
+                           } yield ()).ignore
+                         )
+                    _ <- log.debug("Ready to accept input")
+                  } yield ()).toManaged_
     } yield ()).useForever.exitCode
 }

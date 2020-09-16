@@ -22,27 +22,27 @@ object Main extends CCApp {
       config   <- CCConfig.load
       terminal <- CliTerminal.createNative(config)
       exitCode <- (for {
-                      _ <- terminal.keyHandlersRef.set(
-                             terminal.defaultKeyHandlers ++ Map(
-                               new KeyStroke(KeyType.Escape) -> UIO(EventResult.Exit)
-                             )
+                    _ <- terminal.keyHandlersRef.set(
+                           terminal.defaultKeyHandlers ++ Map(
+                             new KeyStroke(KeyType.Escape) -> UIO(EventResult.Exit)
                            )
-                      _ <- Task(terminal.screen.startScreen())
-                      _ <- terminal.render(SearchResults.empty)
-                      _ <- ZStream
-                             .fromQueue(terminal.renderQueue)
-                             .foreach(terminal.render)
-                             .forkDaemon
-                      _ <- terminal
-                             .processEvent(config.commands, config.aliases)
-                             .repeatWhile {
-                               case EventResult.Exit               => false
-                               case EventResult.UnexpectedError(t) =>
-                                 // TODO: Log error
-                                 true
-                               case EventResult.Success            => true
-                             }
-                    } yield ()).exitCode.toManaged_
+                         )
+                    _ <- Task(terminal.screen.startScreen())
+                    _ <- terminal.render(SearchResults.empty)
+                    _ <- ZStream
+                           .fromQueue(terminal.renderQueue)
+                           .foreach(terminal.render)
+                           .forkDaemon
+                    _ <- terminal
+                           .processEvent(config.commands, config.aliases)
+                           .repeatWhile {
+                             case EventResult.Exit               => false
+                             case EventResult.UnexpectedError(t) =>
+                               // TODO: Log error
+                               true
+                             case EventResult.Success            => true
+                           }
+                  } yield ()).exitCode.toManaged_
     } yield exitCode
 
   def run(args: List[String]): URIO[Env, ExitCode] = {

@@ -36,8 +36,8 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
           fansi.Str.join(
             fansi.Color.Cyan(stock.ticker),
             fansi.Color.LightCyan(s" (${stock.name}) "),
-            fansi.Color.Cyan(String.format("%.2f", stock.price)),
-            fansi.Color.Cyan(s" ${stock.currency} "),
+            String.format("%.2f", stock.price),
+            s" ${stock.currency}",
             getChangePercentField(stock.change, stock.changePercent)
           )
         )
@@ -45,7 +45,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
 
   private def getChangePercentField(change: Double, changePercent: Double): fansi.Str = {
     val changeTextField        = s"${String.format("%.2f", change)}"
-    val changePercentTextField = s" (${String.format("%.2f", changePercent.abs)}%)"
+    val changePercentTextField = s"(${String.format("%.2f", changePercent.abs)}%)"
     if (changePercent >= 0) fansi.Color.Green(s" +$changeTextField $changePercentTextField")
     else fansi.Color.Red(s" $changeTextField $changePercentTextField")
   }
@@ -77,9 +77,7 @@ object StocksCommand extends CommandPlugin[StocksCommand] {
       "currency",
       "regularMarketChange",
       "regularMarketChangePercent"
-    )(
-      StocksResult.apply
-    )
+    )(StocksResult.apply)
 
   def make(config: Config): TaskManaged[StocksCommand] =
     ZManaged.fromEither(
