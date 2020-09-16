@@ -44,7 +44,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
     }
 
   private def getChangePercentField(change: Double, changePercent: Double): fansi.Str = {
-    val changeTextField = s"${String.format("%.2f", change)}"
+    val changeTextField        = s"${String.format("%.2f", change)}"
     val changePercentTextField = s" (${String.format("%.2f", changePercent.abs)}%)"
     if (changePercent >= 0) fansi.Color.Green(s" +$changeTextField $changePercentTextField")
     else fansi.Color.Red(s" $changeTextField $changePercentTextField")
