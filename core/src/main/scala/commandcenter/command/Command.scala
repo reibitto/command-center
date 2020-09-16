@@ -110,6 +110,7 @@ object Command {
                     case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
                     case CommandType.UUIDCommand               => UUIDCommand.make(config)
                     case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
+                    case CommandType.StocksCommand             => StocksCommand.make(config)
 
                     case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
                       ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))
