@@ -61,12 +61,10 @@ object StocksCommand extends CommandPlugin[StocksCommand] {
     changePercent: Double
   )
 
-  final case class Ticker(id: String, name: Option[String]) {
-    def displayName: String = name.getOrElse(id)
-  }
+  final case class Ticker(id: String)
 
   object Ticker {
-    implicit val decoder: Decoder[Ticker] = Decoder.forProduct2("ticker", "displayName")(Ticker.apply)
+    implicit val decoder: Decoder[Ticker] = Decoder.forProduct1("ticker")(Ticker.apply)
   }
 
   implicit val decoder: Decoder[StocksResult] =
