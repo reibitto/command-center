@@ -41,7 +41,7 @@ lazy val core = module("core")
       "dev.zio"                      %% "zio"                    % Version.zio,
       "dev.zio"                      %% "zio-streams"            % Version.zio,
       "dev.zio"                      %% "zio-process"            % "0.1.0",
-      "dev.zio"                      %% "zio-logging"            % "0.5.1",
+      "dev.zio"                      %% "zio-logging"            % "0.5.2",
       "io.circe"                     %% "circe-config"           % "0.8.0",
       "org.scala-lang"                % "scala-reflect"          % "2.13.3",
       "io.circe"                     %% "circe-core"             % Version.circe,
