@@ -54,7 +54,7 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                  %% "fastparse"              % "2.3.0",
       "org.typelevel"                %% "spire"                  % "0.17.0-RC1",
-      "org.cache2k"                   % "cache2k-core"           % "1.4.0.Final"
+      "org.cache2k"                   % "cache2k-core"           % "1.4.1.Final"
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
