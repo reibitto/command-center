@@ -229,6 +229,7 @@ final case class SwingTerminal(
         case KeyEvent.VK_ENTER =>
           for {
             _               <- UIO(frame.setVisible(false))
+            _               <- deactivate.ignore
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
             resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
