@@ -97,11 +97,13 @@ object Command {
                     case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
                     case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)
                     case CommandType.RadixCommand              => RadixCommand.make(config)
+                    case CommandType.RebootCommand             => RebootCommand.make(config)
                     case CommandType.ReloadCommand             => ReloadCommand.make(config)
                     case CommandType.ResizeCommand             => ResizeCommand.make(config)
                     case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
                     case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
                     case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
+                    case CommandType.StocksCommand             => StocksCommand.make(config)
                     case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
                     case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
                     case CommandType.TerminalCommand           => TerminalCommand.make(config)
@@ -110,7 +112,6 @@ object Command {
                     case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
                     case CommandType.UUIDCommand               => UUIDCommand.make(config)
                     case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
-                    case CommandType.StocksCommand             => StocksCommand.make(config)
 
                     case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
                       ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))

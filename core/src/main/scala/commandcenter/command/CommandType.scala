@@ -26,11 +26,13 @@ object CommandType extends Enum[CommandType] {
   case object OpenBrowserCommand        extends CommandType
   case object ProcessIdCommand          extends CommandType
   case object RadixCommand              extends CommandType
+  case object RebootCommand             extends CommandType
   case object ReloadCommand             extends CommandType
   case object ResizeCommand             extends CommandType
   case object SearchMavenCommand        extends CommandType
   case object SearchUrlCommand          extends CommandType
   case object SnippetsCommand           extends CommandType
+  case object StocksCommand             extends CommandType
   case object SuspendProcessCommand     extends CommandType
   case object TemperatureCommand        extends CommandType
   case object TerminalCommand           extends CommandType
@@ -39,7 +41,6 @@ object CommandType extends Enum[CommandType] {
   case object ToggleHiddenFilesCommand  extends CommandType
   case object UUIDCommand               extends CommandType
   case object WorldTimesCommand         extends CommandType
-  case object StocksCommand             extends CommandType
 
   final case class External(typeName: String) extends CommandType
 
