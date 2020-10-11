@@ -46,10 +46,11 @@ final case class SearchInput(
         case Array(prefix)       => (prefix, "")
       }
 
-      if (commandNames.contains(prefix))
-        Some(CommandInput.Prefixed(prefix, rest, context))
-      else
-        None
+      commandNames.map { name =>
+        LengthScorer.scorePrefix(name, prefix)
+      }.maxOption.collect {
+        case score if score > 0 => CommandInput.Prefixed(prefix, rest, context.matchScore(score))
+      }
     }.headOption
 
   /**
@@ -67,8 +68,8 @@ final case class SearchInput(
   private def scoreInput(text: String): Option[Double] =
     aliasedInputs.flatMap { aliasedInput =>
       commandNames.map { commandName =>
-        val matchScore      = LengthScorer.score(commandName, text)
-        val aliasMatchScore = LengthScorer.score(commandName, aliasedInput)
+        val matchScore      = LengthScorer.scoreDefault(commandName, text)
+        val aliasMatchScore = LengthScorer.scoreDefault(commandName, aliasedInput)
         matchScore max aliasMatchScore
       }
     }.maxOption

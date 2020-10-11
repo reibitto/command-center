@@ -29,7 +29,7 @@ object SearchSpec extends CommandBaseSpec {
         for {
           _        <- TestClock.setTime(1.second)
           previews <- results.map(_.previews)
-        } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo(1000L.asInstanceOf[AnyVal]))))
+        } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo("1000".asInstanceOf[Any]))))
       }
     )
 }

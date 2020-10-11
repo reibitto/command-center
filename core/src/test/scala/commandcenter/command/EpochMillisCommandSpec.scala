@@ -12,12 +12,12 @@ object EpochMillisCommandSpec extends CommandBaseSpec {
   def spec =
     suite("EpochMillisCommandSpec")(
       testM("get current time") {
-        val results = Command.search(Vector(command), Map.empty, "epoch", defaultCommandContext)
+        val results = Command.search(Vector(command), Map.empty, "epochmillis", defaultCommandContext)
 
         for {
           _        <- TestClock.setTime(5.seconds)
           previews <- results.map(_.previews)
-        } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo(5000L))))
+        } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo("5000".asInstanceOf[Any]))))
       },
       testM("return nothing for non-matching search") {
         val results = Command.search(Vector(command), Map.empty, "not matching", defaultCommandContext)

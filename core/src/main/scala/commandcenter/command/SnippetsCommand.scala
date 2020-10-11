@@ -24,7 +24,7 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
           Scores.high(searchInput.context)
         else {
           // TODO: Implement better scoring algorithm (like Sublime Text fuzzy search)
-          val matchScore = LengthScorer.score(snip.keyword, snippetSearch)
+          val matchScore = LengthScorer.scoreDefault(snip.keyword, snippetSearch)
           Scores.high(searchInput.context) * matchScore
         }
 
