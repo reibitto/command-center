@@ -1,24 +1,48 @@
 package commandcenter.command
 
+import java.time.format.{ DateTimeFormatter, FormatStyle }
+import java.time.{ Instant, ZoneId }
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
-import zio.{ clock, TaskManaged, ZIO, ZManaged }
+import zio._
 
-final case class EpochMillisCommand(commandNames: List[String]) extends Command[Long] {
+final case class EpochMillisCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.EpochMillisCommand
   val title: String            = "Epoch (milliseconds)"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Long]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
     for {
-      input     <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      epochTime <- clock.currentTime(TimeUnit.MILLISECONDS)
+      input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      (output, score) <- if (input.rest.trim.isEmpty) {
+                           (clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high)))
+                         } else {
+                           input.rest.toLongOption match {
+                             case Some(millis) =>
+                               Task {
+                                 val formatted = Instant
+                                   .ofEpochMilli(millis)
+                                   .atZone(ZoneId.systemDefault())
+                                   .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
+
+                                 val score = if (millis < 100000000000L) {
+                                   Scores.high(input.context) * 0.9
+                                 } else {
+                                   Scores.high(input.context)
+                                 }
+
+                                 (formatted, score)
+                               }.mapError(CommandError.UnexpectedException)
+
+                             case None => ZIO.fail(CommandError.NotApplicable)
+                           }
+                         }
     } yield List(
-      Preview(epochTime)
-        .score(Scores.high(input.context))
-        .onRun(tools.setClipboard(epochTime.toString))
+      Preview(output)
+        .score(score)
+        .onRun(tools.setClipboard(output))
     )
 }
 
