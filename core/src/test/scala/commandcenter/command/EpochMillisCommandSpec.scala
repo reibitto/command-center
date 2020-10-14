@@ -17,7 +17,7 @@ object EpochMillisCommandSpec extends CommandBaseSpec {
         for {
           _        <- TestClock.setTime(5.seconds)
           previews <- results.map(_.previews)
-        } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo("5000".asInstanceOf[Any]))))
+        } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo("5000"))))
       },
       testM("return nothing for non-matching search") {
         val results = Command.search(Vector(command), Map.empty, "not matching", defaultCommandContext)
