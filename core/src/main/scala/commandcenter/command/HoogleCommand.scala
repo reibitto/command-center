@@ -53,11 +53,14 @@ object HoogleCommand extends CommandPlugin[HoogleCommand] {
       for {
         url       <- c.get[String]("url")
         item      <- c.get[String]("item")
-        docs      <- c.get[String]("docs").map(_.trim)
+        docs      <- c.get[String]("docs").map(sanitizeDocs)
         module    <- c.get[HoogleReference]("module")
         `package` <- c.get[HoogleReference]("package")
       } yield HoogleResult(url, item, docs, module, `package`)
     }
+
+    private def sanitizeDocs(docs: String): String =
+      docs.trim.replaceAll("[\n]{3,}", "\n\n")
   }
 
   final case class HoogleReference(name: String, url: String)
