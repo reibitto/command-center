@@ -18,6 +18,7 @@ object CommandType extends Enum[CommandType] {
   case object FindFileCommand           extends CommandType
   case object FindInFileCommand         extends CommandType
   case object HashCommand               extends CommandType
+  case object HoogleCommand             extends CommandType
   case object ITunesCommand             extends CommandType
   case object LocalIPCommand            extends CommandType
   case object LockCommand               extends CommandType

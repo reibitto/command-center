@@ -74,6 +74,18 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
     versionCount: Int
   )
 
+  object MavenArtifact {
+    implicit val decoder: Decoder[MavenArtifact] = Decoder.instance { c =>
+      for {
+        groupId      <- c.get[String]("g")
+        artifactId   <- c.get[String]("a")
+        version      <- c.get[String]("latestVersion")
+        timestamp    <- c.get[Long]("timestamp").map(Instant.ofEpochMilli)
+        versionCount <- c.get[Int]("versionCount")
+      } yield MavenArtifact(groupId, artifactId, version, timestamp, versionCount)
+    }
+  }
+
   final case class BucketedMavenArtifact(
     artifactBase: String,
     date: LocalDate,
@@ -97,16 +109,6 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
         fansi.Color.Cyan(artifact.version)
       )
     }
-  }
-
-  implicit val artifactDecoder: Decoder[MavenArtifact] = Decoder.instance { c =>
-    for {
-      groupId      <- c.get[String]("g")
-      artifactId   <- c.get[String]("a")
-      version      <- c.get[String]("latestVersion")
-      timestamp    <- c.get[Long]("timestamp").map(Instant.ofEpochMilli)
-      versionCount <- c.get[Int]("versionCount")
-    } yield MavenArtifact(groupId, artifactId, version, timestamp, versionCount)
   }
 
   def make(config: Config): TaskManaged[SearchMavenCommand] =
