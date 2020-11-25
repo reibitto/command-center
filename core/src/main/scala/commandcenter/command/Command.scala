@@ -89,6 +89,7 @@ object Command {
                     case CommandType.FindFileCommand           => FindFileCommand.make(config)
                     case CommandType.FindInFileCommand         => FindInFileCommand.make(config)
                     case CommandType.HashCommand               => HashCommand.make(config)
+                    case CommandType.HoogleCommand             => HoogleCommand.make(config)
                     case CommandType.ITunesCommand             => ITunesCommand.make(config)
                     case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
                     case CommandType.LockCommand               => LockCommand.make(config)

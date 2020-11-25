@@ -124,6 +124,7 @@ final class CalculatorUtil(parameters: Parameters) {
     P("random" ~ "int".!.? ~ multipleParametersParser(2)).map {
       case (Some(_), Seq(a, b)) => BigDecimal(Uniform(a.toBigInt, b.toBigInt).apply(randomGenerator))
       case (_, Seq(a, b))       => Uniform(a, b).apply(randomGenerator)
+      case _                    => BigDecimal(0) // TODO: Handle this case properly
     } |
       P("random").map(_ => Uniform(BigDecimal(0.0), BigDecimal(1.0)).apply(randomGenerator))
 
