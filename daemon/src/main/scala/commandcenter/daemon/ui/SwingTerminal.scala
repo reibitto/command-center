@@ -247,16 +247,18 @@ final case class SwingTerminal(
           } yield ()
 
         case KeyEvent.VK_DOWN =>
+          e.consume() // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
+
           for {
-            _               <- UIO(e.consume())
             previousResults <- searchResultsRef.get
             _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.previews.length - 1))
             _               <- render(previousResults)
           } yield ()
 
         case KeyEvent.VK_UP =>
+          e.consume() // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
+
           for {
-            _               <- UIO(e.consume())
             previousResults <- searchResultsRef.get
             _               <- commandCursorRef.update(cursor => (cursor - 1) max 0)
             _               <- render(previousResults)
