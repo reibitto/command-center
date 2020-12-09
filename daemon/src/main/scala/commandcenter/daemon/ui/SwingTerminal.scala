@@ -215,7 +215,7 @@ final case class SwingTerminal(
     val previewResult = results.previews.lift(cursorIndex)
 
     for {
-      _ <- ZIO.foreach(previewResult) { preview =>
+      _ <- ZIO.foreach_(previewResult) { preview =>
              // TODO: Log defects
              preview.onRun.absorb.forkDaemon
            }
@@ -272,7 +272,7 @@ final case class SwingTerminal(
                                  p.source.shortcuts.contains(shortcutPressed)
                                }
             bestMatch        = eligibleResults.maxByOption(_.score)
-            _               <- ZIO.foreach(bestMatch) { preview =>
+            _               <- ZIO.foreach_(bestMatch) { preview =>
                                  for {
                                    _ <- UIO(frame.setVisible(false))
                                    _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects

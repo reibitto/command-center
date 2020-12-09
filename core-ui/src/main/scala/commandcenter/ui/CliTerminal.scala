@@ -180,7 +180,7 @@ final case class CliTerminal[T <: Terminal](
     val previewResult = results.previews.lift(cursorIndex)
 
     for {
-      _ <- ZIO.foreach(previewResult) { preview =>
+      _ <- ZIO.foreach_(previewResult) { preview =>
              // TODO: Log defects
              preview.onRun.absorb.forkDaemon
            }
@@ -253,7 +253,7 @@ final case class CliTerminal[T <: Terminal](
   def printAnsiStr(string: fansi.Str, cursor: Cursor): UIO[Cursor] = {
     val lines = string.render.linesIterator.toVector
     for {
-      _ <- IO.foreach(lines.zipWithIndex) { case (s, i) =>
+      _ <- ZIO.foreach_(lines.zipWithIndex) { case (s, i) =>
              putAnsiStrRaw(s, cursor + Cursor(0, i))
            }
     } yield cursor + Cursor(0, lines.length)
