@@ -271,8 +271,6 @@ final case class CliTerminal[T <: Terminal](
 }
 
 object CliTerminal {
-//  val server = new TelnetTerminalServer(23, StandardCharsets.UTF_8) // Need to have one instance of this and clean it up at the end so we don't get "address in use"
-
   def createNative(config: CCConfig): Managed[Throwable, CliTerminal[Terminal]] =
     create(config) {
       val terminalFactory = new DefaultTerminalFactory()

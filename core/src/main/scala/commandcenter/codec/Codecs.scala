@@ -4,7 +4,7 @@ import java.time.ZoneId
 import java.util.Locale
 
 import cats.syntax.either._
-import io.circe.{ Decoder, Encoder, Json }
+import io.circe._
 
 object Codecs {
   implicit val localeDecoder: Decoder[Locale] = Decoder.decodeString.emap { s =>
@@ -18,4 +18,22 @@ object Codecs {
   }
 
   implicit val zoneIdEncoder: Encoder[ZoneId] = (locale: ZoneId) => Json.fromString(locale.getId)
+
+  def decodeSumBySoleKey[A](f: PartialFunction[(String, ACursor), Decoder.Result[A]]): Decoder[A] = {
+    def keyErr = "Expected a single key indicating the subtype"
+    Decoder.instance { c =>
+      c.keys match {
+        case Some(it) =>
+          it.toList match {
+            case singleKey :: Nil =>
+              val arg  = (singleKey, c.downField(singleKey))
+              def fail = Left(DecodingFailure("Unknown subtype: " + singleKey, c.history))
+              f.applyOrElse(arg, (_: (String, ACursor)) => fail)
+            case Nil              => Left(DecodingFailure(keyErr, c.history))
+            case keys             => Left(DecodingFailure(s"$keyErr, found multiple: $keys", c.history))
+          }
+        case None     => Left(DecodingFailure(keyErr, c.history))
+      }
+    }
+  }
 }

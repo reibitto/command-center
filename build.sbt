@@ -20,6 +20,7 @@ lazy val root = project
          ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
          ||     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
          |`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '
+         |
          |""".stripMargin,
     usefulTasks := Seq(
       UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
@@ -73,9 +74,14 @@ lazy val coreUI = module("core-ui")
 lazy val cliClient = module("cli-client")
   .dependsOn(coreUI)
   .settings(
+    fork := true,
+    baseDirectory in run := file("."),
+    libraryDependencies ++= Seq(
+      "org.scalameta" %% "svm-subs" % Version.graal,
+      "org.zeromq"     % "jeromq"   % "0.5.2"
+    ),
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % "5.6.0").filter(_ => OS.os == OS.Windows),
-    libraryDependencies ++= Seq("org.scalameta" %% "svm-subs" % Version.graal),
     mainClass in assembly := Some("commandcenter.cli.Main"),
     assemblyJarName in assembly := "ccc.jar",
     assemblyMergeStrategy in assembly := {
@@ -88,6 +94,7 @@ lazy val cliClient = module("cli-client")
       "-H:+TraceClassInitialization",
       "-H:IncludeResources=lipsum",
       "-H:IncludeResources=applescript/.*",
+      "--rerun-class-initialization-at-runtime=sun.security.provider.NativePRNG", // TODO: This is deprecated and doesn't quite work. Will need a workaround.
       "--initialize-at-run-time=com.googlecode.lanterna.terminal.win32.WindowsTerminal",
       "--initialize-at-build-time",
       "--no-fallback",
