@@ -1,8 +1,8 @@
-package commandcenter.daemon
+package commandcenter.emulator.swing
 
 import commandcenter.CCRuntime.Env
-import commandcenter.daemon.shortcuts.LiveShortcuts
-import commandcenter.daemon.ui.SwingTerminal
+import commandcenter.emulator.swing.shortcuts.LiveShortcuts
+import commandcenter.emulator.swing.ui.SwingTerminal
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.{ shortcuts, CCApp, CCConfig, TerminalType }
 import zio._

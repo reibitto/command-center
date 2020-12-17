@@ -1,11 +1,11 @@
-package commandcenter.daemon.shortcuts
+package commandcenter.emulator.swing.shortcuts
 
 import java.awt.Toolkit
 
 import com.tulskiy.keymaster.common.{ HotKey, HotKeyListener, Provider }
 import commandcenter.CCRuntime.Env
-import commandcenter.daemon.Main.unsafeRunAsync_
-import commandcenter.daemon.event.KeyboardShortcutUtil
+import commandcenter.emulator.swing.Main.unsafeRunAsync_
+import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
 import zio._

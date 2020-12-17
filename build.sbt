@@ -8,8 +8,8 @@ lazy val root = project
   .aggregate(
     core,
     coreUI,
-    cliClient,
-    daemon
+    cli,
+    emulatorSwing
   )
   .settings(
     addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll"),
@@ -25,15 +25,15 @@ lazy val root = project
     usefulTasks := Seq(
       UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
       UsefulTask("b", "fmt", "Run scalafmt on the entire project"),
-      UsefulTask("c", "cli-client/run", "Run the Command Center CLI client (interactive mode by default)"),
-      UsefulTask("d", "cli-client/assembly", "Create an executable JAR for running command line utility"),
+      UsefulTask("c", "cli/run", "Run the Command Center CLI client (interactive mode by default)"),
+      UsefulTask("d", "cli/assembly", "Create an executable JAR for running command line utility"),
       UsefulTask(
         "e",
-        "cli-client/graalvm-native-image:packageBin",
+        "cli/graalvm-native-image:packageBin",
         s"Create a native executable of the CLI client ${scala.Console.RED}(Windows not yet supported)"
       ),
-      UsefulTask("f", "daemon/run", "Run the Command Center daemon (emulated terminal)"),
-      UsefulTask("g", "daemon/assembly", "Create an executable JAR for running in daemon mode")
+      UsefulTask("f", "emulator-swing/run", "Run the Command Center emulated terminal"),
+      UsefulTask("g", "emulator-swing/assembly", "Create an executable JAR for running in terminal emulator mode")
     )
   )
 
@@ -71,7 +71,7 @@ lazy val coreUI = module("core-ui")
     )
   )
 
-lazy val cliClient = module("cli-client")
+lazy val cli = module("cli")
   .dependsOn(coreUI)
   .settings(
     fork := true,
@@ -117,7 +117,7 @@ def optionalPlugin(project: Project): Option[ClasspathDependency] = {
   cp
 }
 
-lazy val daemon = module("daemon")
+lazy val emulatorSwing = module("emulator-swing")
   .dependsOn(coreUI)
   .dependsOn(
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
@@ -125,8 +125,8 @@ lazy val daemon = module("daemon")
   .settings(
     fork := true,
     baseDirectory in run := file("."),
-    mainClass in assembly := Some("commandcenter.daemon.Main"),
-    assemblyJarName in assembly := "ccd.jar",
+    mainClass in assembly := Some("commandcenter.emulator.swing.Main"),
+    assemblyJarName in assembly := "cc-swing.jar",
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard

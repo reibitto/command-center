@@ -1,4 +1,4 @@
-package commandcenter.daemon.event
+package commandcenter.emulator.swing.event
 
 import java.awt.event.{ InputEvent, KeyEvent }
 

@@ -1,4 +1,4 @@
-package commandcenter.daemon.ui
+package commandcenter.emulator.swing.ui
 
 import java.awt.event.{ KeyEvent, KeyListener }
 
