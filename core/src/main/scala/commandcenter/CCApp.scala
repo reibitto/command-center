@@ -26,7 +26,7 @@ trait CCApp extends CCRuntime {
 
   override lazy val platform: Platform       = runtime.platform.withReportFailure { c =>
     if (!c.interrupted) {
-      // TODO: Only log to console if running in daemon mode. Because in CLI mode it'll interfere with the UI.
+      // TODO: Only log to console if running in terminal emulator mode. Because in CLI mode it'll interfere with the UI.
       // Need a solution for CLI mode. Maybe log into a file or an in-memory ring buffer and then have a separate
       // command for viewing errors.
       //System.err.println(c.prettyPrint)
