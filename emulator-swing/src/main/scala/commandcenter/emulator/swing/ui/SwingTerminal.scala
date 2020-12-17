@@ -1,4 +1,4 @@
-package commandcenter.daemon.ui
+package commandcenter.emulator.swing.ui
 
 import java.awt.event.KeyEvent
 import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment, KeyboardFocusManager }
@@ -6,7 +6,7 @@ import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment, Key
 import commandcenter.CCRuntime.Env
 import commandcenter._
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
-import commandcenter.daemon.event.KeyboardShortcutUtil
+import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme

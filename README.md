@@ -194,11 +194,11 @@ Writing a command is as simple as writing a single class [like so](https://githu
 Once you start SBT, you should be presented a list of common commands. For example:
 
 - `~compile` - Compile all modules with file-watch enabled
-- `cli-client/run` - Run Command Center CLI client (interactive mode by default). Particularly useful for local development.
-- `daemon/run` - Run Command Center in daemon mode (cmd+space to summon terminal emulator)
-- `daemon/assembly` - Create an executable JAR for running in daemon mode
-- `cli-client/assembly` - Create an executable JAR for running command line utility
-- `cli-client/graalvm-native-image:packageBin` - Create a native executable of the CLI client
+- `cli/run` - Run Command Center CLI client (interactive mode by default). Particularly useful for local development.
+- `emulator-swing/run` - Run the Command Center emulated terminal (cmd+space to summon terminal emulator)
+- `emulator-swing/assembly` - Create an executable JAR for running in terminal emulator mode
+- `cli/assembly` - Create an executable JAR for running command line utility
+- `cli/graalvm-native-image:packageBin` - Create a native executable of the CLI client
 
 ### Configuration
 
@@ -218,7 +218,7 @@ create your own separate repository to host it. If you let me know, I can add it
 
 Eventually the goal is to make installing external plugins as simple as running a single install command. See this issue [here](https://github.com/reibitto/command-center/issues/24).
 Until then, it's a matter of dropping your jar file in the `plugins` folder and restarting the app. For more details on
-external plugins, refer to the [plugins readme](daemon/plugins/PLUGINS.md).
+external plugins, refer to the [plugins readme](emulator-swing/plugins/PLUGINS.md).
 
 ## Contributing
 
