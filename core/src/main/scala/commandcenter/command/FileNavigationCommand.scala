@@ -1,12 +1,12 @@
 package commandcenter.command
 
-import java.io.File
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
+import commandcenter.util.ProcessUtil
 import zio._
 
+import java.io.File
 import scala.util.Try
 
 final case class FileNavigationCommand() extends Command[File] {
@@ -20,6 +20,7 @@ final case class FileNavigationCommand() extends Command[File] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[File]]] = {
     val input = searchInput.input
+    // TODO: Support \ paths and C:\ D:\ etc.
     if (!input.startsWith("/") && !input.startsWith("~/"))
       IO.fail(NotApplicable)
     else {
@@ -30,7 +31,7 @@ final case class FileNavigationCommand() extends Command[File] {
       }
 
       val exists     = file.exists()
-      val score      = if (exists) 100 else 10
+      val score      = if (exists) 101 else 100
       val titleColor = if (exists) fansi.Color.Blue else fansi.Color.Red
 
       // TODO: This can be made more efficient. Also improve the view, such as highlighting the matched part in a different color
@@ -39,7 +40,12 @@ final case class FileNavigationCommand() extends Command[File] {
         .getOrElse(List.empty)
         .filter(f => f.getAbsolutePath.startsWith(file.getAbsolutePath) && f != file)
         .take(5)
-        .map(f => Preview(f).score(score).view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file")))
+        .map { f =>
+          Preview(f)
+            .score(score)
+            .view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
+            .onRun(ProcessUtil.browseFile(f))
+        }
 
       val children = Option(file)
         .filter(_.isDirectory)
@@ -47,11 +53,19 @@ final case class FileNavigationCommand() extends Command[File] {
         .getOrElse(List.empty)
         .filter(f => f.getAbsolutePath.startsWith(file.getAbsolutePath) && f != file)
         .take(5)
-        .map(f => Preview(f).score(score).view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file")))
+        .map { f =>
+          Preview(f)
+            .score(score)
+            .view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
+            .onRun(ProcessUtil.browseFile(f))
+        }
 
       UIO {
         List(
-          Preview(file).score(score).view(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file"))
+          Preview(file)
+            .score(score)
+            .view(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
+            .onRun(ProcessUtil.browseFile(file))
         ) ++ sameLevel ++ children
       }
     }

@@ -1,11 +1,12 @@
 package commandcenter.util
 
-import java.awt.Desktop
-import java.net.URI
-
 import zio.blocking.{ Blocking, _ }
 import zio.process.{ Command => PCommand }
 import zio.{ RIO, UIO, ZIO }
+
+import java.awt.Desktop
+import java.io.File
+import java.net.URI
 
 object ProcessUtil {
   def openBrowser(url: String): RIO[Blocking, Unit] =
@@ -38,6 +39,26 @@ object ProcessUtil {
         ZIO.fail(
           new UnsupportedOperationException(s"Getting the frontmost process's PID not supported yet for ${OS.os}")
         )
+    }
+
+  def browseFile(file: File): RIO[Blocking, Unit] =
+    OS.os match {
+      case OS.MacOS =>
+        val command =
+          if (file.isDirectory) PCommand("open", file.getAbsolutePath)
+          else PCommand("open", "-R", file.getAbsolutePath)
+
+        command.successfulExitCode.unit
+
+      case OS.Windows          =>
+        val arg =
+          if (file.isDirectory) file.getCanonicalPath
+          else s"/select,${file.getAbsolutePath}"
+
+        PCommand("explorer.exe", arg).successfulExitCode.unit
+
+      // TODO: To properly support Linux, we probably need to detect the Linux flavor
+      case OS.Linux | OS.Other => effectBlocking(Desktop.getDesktop.browseFileDirectory(file))
     }
 
 }

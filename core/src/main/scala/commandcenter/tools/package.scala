@@ -1,10 +1,9 @@
 package commandcenter
 
-import java.io.File
-
 import zio._
 import zio.blocking.Blocking
 
+import java.io.File
 import scala.util.Try
 
 package object tools {
@@ -34,10 +33,10 @@ package object tools {
 
   def processId: URIO[Tools, Long] = ZIO.accessM[Tools](_.get.processId)
 
-  def activate: ZIO[Tools with Blocking, Throwable, Unit] = ZIO.accessM[Tools with Blocking](_.get.activate)
+  def activate: RIO[Tools with Blocking, Unit] = ZIO.accessM[Tools with Blocking](_.get.activate)
 
-  def hide: ZIO[Tools with Blocking, Throwable, Unit] = ZIO.accessM[Tools with Blocking](_.get.hide)
+  def hide: RIO[Tools with Blocking, Unit] = ZIO.accessM[Tools with Blocking](_.get.hide)
 
-  def setClipboard(text: String): ZIO[Tools with Blocking, Throwable, Unit] =
+  def setClipboard(text: String): RIO[Tools with Blocking, Unit] =
     ZIO.accessM[Tools with Blocking](_.get.setClipboard(text))
 }

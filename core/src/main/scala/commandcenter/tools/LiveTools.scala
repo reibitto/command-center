@@ -1,13 +1,13 @@
 package commandcenter.tools
 
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
-import java.io.File
-
 import commandcenter.util.AppleScript
 import zio.blocking.{ effectBlocking, Blocking }
 import zio.process.{ Command => PCommand }
 import zio.{ RIO, UIO }
+
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
+import java.io.File
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
 class LiveTools(pid: Long, toolsPath: Option[File]) extends Tools.Service {
