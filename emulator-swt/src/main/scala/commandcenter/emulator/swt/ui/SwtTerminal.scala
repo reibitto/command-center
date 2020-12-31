@@ -153,7 +153,6 @@ final case class SwtTerminal(
       override def keyPressed(e: KeyEvent): Unit =
         e.keyCode match {
           case SWT.CR =>
-            println("cr")
             runtime.unsafeRunAsync_ {
               for {
                 _               <- hide

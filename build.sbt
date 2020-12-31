@@ -117,10 +117,22 @@ def optionalPlugin(project: Project): Option[ClasspathDependency] = {
   cp
 }
 
-// TODO: Add emulatorCore module with shared code
+lazy val emulatorCore = module("emulator-core")
+  .dependsOn(coreUI)
+  .dependsOn(
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+  )
+  .settings(
+    fork := true,
+    baseDirectory in run := file("."),
+    libraryDependencies ++= Seq(
+      "com.github.tulskiy" % "jkeymaster" % "1.3",
+      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
+    )
+  )
 
 lazy val emulatorSwing = module("emulator-swing")
-  .dependsOn(coreUI)
+  .dependsOn(emulatorCore)
   .dependsOn(
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
   )
@@ -133,33 +145,27 @@ lazy val emulatorSwing = module("emulator-swing")
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
-    },
-    libraryDependencies ++= Seq(
-      "com.github.tulskiy" % "jkeymaster" % "1.3",
-      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
-    )
+    }
   )
 
 lazy val emulatorSwt = module("emulator-swt")
-  .dependsOn(coreUI)
+  .dependsOn(emulatorCore)
   .dependsOn(
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
   )
   .settings(
     fork := true,
+    publishMavenStyle := false,
     baseDirectory in run := file("."),
     mainClass in assembly := Some("commandcenter.emulator.swt.Main"),
-//    javaOptions := Seq("-XstartOnFirstThread"), // TODO: Only macOS
+    javaOptions := Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
     assemblyJarName in assembly := "cc-swt.jar",
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
     },
-    libraryDependencies ++= Seq(
-      "com.github.tulskiy" % "jkeymaster" % "1.3",
-      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
-    )
+    libraryDependencies ++= swtDependencies
   )
 
 lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
@@ -172,6 +178,18 @@ lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
 lazy val extras     = project
   .in(file("extras"))
   .aggregate(strokeOrderPlugin, jectPlugin)
+
+def swtDependencies: Seq[ModuleID] =
+  OS.os match {
+    case OS.Windows =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % "3.115.100" intransitive ())
+    case OS.MacOS   =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % "3.115.100" intransitive ())
+    case OS.Linux   =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % "3.115.100" intransitive ())
+    case OS.Other   =>
+      Seq.empty
+  }
 
 def module(projectId: String, moduleFile: Option[String] = None): Project =
   Project(id = projectId, base = file(moduleFile.getOrElse(projectId)))

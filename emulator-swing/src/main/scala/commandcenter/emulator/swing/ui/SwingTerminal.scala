@@ -46,6 +46,7 @@ final case class SwingTerminal(
   if (runtime.unsafeRun(GraphicsUtil.isOpacitySupported))
     frame.setOpacity(config.display.opacity)
   frame.getContentPane.setLayout(new BorderLayout())
+  frame.getRootPane.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, CCTheme.default.darkGray))
 
   val inputTextField = new ZTextField
   inputTextField.setFont(font)
@@ -207,9 +208,9 @@ final case class SwingTerminal(
     for {
       _ <- commandCursorRef.set(0)
       _ <- UIO {
-        inputTextField.setText("")
-        document.remove(0, document.getLength)
-      }
+             inputTextField.setText("")
+             document.remove(0, document.getLength)
+           }
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
