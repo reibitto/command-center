@@ -333,7 +333,7 @@ final case class SwtTerminal(
   def reset: UIO[Unit] =
     for {
       _ <- commandCursorRef.set(0)
-      _ <- UIO {
+      _ <- invoke {
              terminal.inputBox.setText("")
            }
       _ <- searchResultsRef.set(SearchResults.empty)
