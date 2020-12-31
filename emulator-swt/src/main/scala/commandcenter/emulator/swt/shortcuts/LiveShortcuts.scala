@@ -1,15 +1,14 @@
-package commandcenter.emulator.swing.shortcuts
+package commandcenter.emulator.swt.shortcuts
 
 import java.awt.Toolkit
+import scala.util.Try
 
 import com.tulskiy.keymaster.common.{ HotKey, HotKeyListener, Provider }
 import commandcenter.CCRuntime.Env
-import commandcenter.emulator.swing.event.KeyboardShortcutUtil
+import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
 import zio._
-
-import scala.util.Try
 
 class LiveShortcuts(val provider: Provider, runtime: Runtime[Env]) extends Shortcuts.Service {
   def addGlobalShortcut(shortcut: KeyboardShortcut)(handler: KeyboardShortcut => URIO[Env, Unit]): Task[Unit] =
@@ -17,7 +16,8 @@ class LiveShortcuts(val provider: Provider, runtime: Runtime[Env]) extends Short
       provider.register(
         KeyboardShortcutUtil.toKeyStroke(shortcut),
         new HotKeyListener {
-          def onHotKey(hotKey: HotKey): Unit = runtime.unsafeRunAsync_(handler(shortcut))
+          def onHotKey(hotKey: HotKey): Unit =
+            runtime.unsafeRunAsync_(handler(shortcut))
         }
       )
     }

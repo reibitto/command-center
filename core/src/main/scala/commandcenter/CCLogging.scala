@@ -10,7 +10,7 @@ object CCLogging {
     terminalType match {
       case TerminalType.Cli => Logging.ignore // TODO: File logging
 
-      case TerminalType.Swing =>
+      case TerminalType.Swing | TerminalType.Swt =>
         val format = LogFormat.ColoredLogFormat((_, s) => s)
         Logging.console(LogLevel.Trace, format)
 

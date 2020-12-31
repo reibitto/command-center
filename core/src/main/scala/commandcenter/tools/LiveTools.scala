@@ -1,9 +1,9 @@
 package commandcenter.tools
 
 import commandcenter.util.AppleScript
-import zio.blocking.{ effectBlocking, Blocking }
-import zio.process.{ Command => PCommand }
-import zio.{ RIO, UIO }
+import zio.blocking.{Blocking, effectBlocking}
+import zio.process.{Command => PCommand}
+import zio.{RIO, UIO, ZIO}
 
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection

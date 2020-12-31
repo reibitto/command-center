@@ -83,7 +83,7 @@ lazy val cli = module("cli")
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % "5.6.0").filter(_ => OS.os == OS.Windows),
     mainClass in assembly := Some("commandcenter.cli.Main"),
-    assemblyJarName in assembly := "ccc.jar",
+    assemblyJarName in assembly := "cc.jar",
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
@@ -117,6 +117,8 @@ def optionalPlugin(project: Project): Option[ClasspathDependency] = {
   cp
 }
 
+// TODO: Add emulatorCore module with shared code
+
 lazy val emulatorSwing = module("emulator-swing")
   .dependsOn(coreUI)
   .dependsOn(
@@ -127,6 +129,28 @@ lazy val emulatorSwing = module("emulator-swing")
     baseDirectory in run := file("."),
     mainClass in assembly := Some("commandcenter.emulator.swing.Main"),
     assemblyJarName in assembly := "cc-swing.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
+      case _                                       => MergeStrategy.first
+    },
+    libraryDependencies ++= Seq(
+      "com.github.tulskiy" % "jkeymaster" % "1.3",
+      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
+    )
+  )
+
+lazy val emulatorSwt = module("emulator-swt")
+  .dependsOn(coreUI)
+  .dependsOn(
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+  )
+  .settings(
+    fork := true,
+    baseDirectory in run := file("."),
+    mainClass in assembly := Some("commandcenter.emulator.swt.Main"),
+//    javaOptions := Seq("-XstartOnFirstThread"), // TODO: Only macOS
+    assemblyJarName in assembly := "cc-swt.jar",
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard

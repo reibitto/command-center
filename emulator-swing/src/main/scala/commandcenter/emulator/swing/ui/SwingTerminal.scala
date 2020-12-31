@@ -203,11 +203,13 @@ final case class SwingTerminal(
       frame.pack()
     }
 
-  def reset(): UIO[Unit] =
+  def reset: UIO[Unit] =
     for {
       _ <- commandCursorRef.set(0)
-      _ <- UIO(inputTextField.setText(""))
-      _ <- UIO(document.remove(0, document.getLength))
+      _ <- UIO {
+        inputTextField.setText("")
+        document.remove(0, document.getLength)
+      }
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
@@ -219,7 +221,7 @@ final case class SwingTerminal(
              // TODO: Log defects
              preview.onRun.absorb.forkDaemon
            }
-      _ <- reset()
+      _ <- reset
     } yield previewResult
   }
 
@@ -228,7 +230,7 @@ final case class SwingTerminal(
       e.getKeyCode match {
         case KeyEvent.VK_ENTER =>
           for {
-            _               <- UIO(frame.setVisible(false))
+            _               <- hide
             _               <- deactivate.ignore
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
@@ -241,9 +243,9 @@ final case class SwingTerminal(
 
         case KeyEvent.VK_ESCAPE =>
           for {
-            _ <- UIO(frame.setVisible(false))
+            _ <- hide
             _ <- deactivate.ignore
-            _ <- reset()
+            _ <- reset
           } yield ()
 
         case KeyEvent.VK_DOWN =>
@@ -274,9 +276,9 @@ final case class SwingTerminal(
             bestMatch        = eligibleResults.maxByOption(_.score)
             _               <- ZIO.foreach_(bestMatch) { preview =>
                                  for {
-                                   _ <- UIO(frame.setVisible(false))
+                                   _ <- hide
                                    _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
-                                   _ <- reset()
+                                   _ <- reset
                                  } yield ()
                                }
           } yield ()
@@ -348,6 +350,7 @@ final case class SwingTerminal(
     fonts.filter(f => installedFontNames.contains(f.getName))
   }
 
+  // TODO: Extract out
   @tailrec
   private def groupConsecutive[A](list: List[A], acc: List[List[A]] = Nil): List[List[A]] =
     list match {

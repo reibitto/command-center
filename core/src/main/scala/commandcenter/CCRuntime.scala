@@ -1,5 +1,8 @@
 package commandcenter
 
+import java.util.concurrent.Executor
+import scala.concurrent.ExecutionContext
+
 import commandcenter.CCRuntime.Env
 import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
@@ -11,7 +14,9 @@ import zio.logging.Logging
 import zio.{ Runtime, ULayer, ZEnv }
 
 trait CCRuntime extends Runtime[Env] {
-  lazy val runtime: Runtime.Managed[Env] = Runtime.unsafeFromLayer {
+  val executionContext = ExecutionContext.fromExecutor(new DirectExecutor())
+
+  lazy val runtime: Runtime.Managed[Env] = Runtime.unsafeFromLayer(
     ZEnv.live >>> (
       ZEnv.live
         ++ CCLogging.make(terminalType)
@@ -19,8 +24,9 @@ trait CCRuntime extends Runtime[Env] {
         ++ shortcutsLayer
         ++ HttpClientZioBackend.layer()
         ++ InMemoryCache.make(5.minutes)
-    )
-  }
+    ),
+    Platform.fromExecutionContext(executionContext) // TODO:: Only if first thread is set, otherwise Platform.default
+  )
 
   def shortcutsLayer: ULayer[Shortcuts]
   def terminalType: TerminalType
@@ -31,4 +37,8 @@ trait CCRuntime extends Runtime[Env] {
 
 object CCRuntime {
   type Env = ZEnv with Logging with Tools with Shortcuts with SttpClient with InMemoryCache
+}
+
+class DirectExecutor extends Executor {
+  def execute(command: Runnable): Unit = command.run()
 }
