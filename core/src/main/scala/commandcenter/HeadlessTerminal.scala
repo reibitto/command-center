@@ -14,6 +14,8 @@ case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) extends C
 
   def setOpacity(opacity: Float): RIO[Env, Unit] = ZIO.unit
 
+  def isOpacitySupported: URIO[Env, Boolean] = UIO(false)
+
   def size: RIO[Env, Dimension] = UIO(new Dimension(80, 40))
 
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit

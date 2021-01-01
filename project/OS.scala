@@ -3,10 +3,10 @@ import java.util.Locale
 sealed trait OS
 
 object OS {
-  case object MacOS   extends OS
-  case object Windows extends OS
-  case object Linux   extends OS
-  case object Other   extends OS
+  case object MacOS              extends OS
+  case object Windows            extends OS
+  case object Linux              extends OS
+  case class Other(name: String) extends OS
 
   lazy val os: OS = {
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
@@ -18,7 +18,7 @@ object OS {
     else if (osName.contains("nux"))
       OS.Linux
     else
-      OS.Other
+      OS.Other(osName)
   }
 
 }

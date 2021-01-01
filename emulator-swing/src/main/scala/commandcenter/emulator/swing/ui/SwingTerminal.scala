@@ -1,26 +1,25 @@
 package commandcenter.emulator.swing.ui
 
-import java.awt.event.KeyEvent
-import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsEnvironment, KeyboardFocusManager }
-
 import commandcenter.CCRuntime.Env
 import commandcenter._
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
+import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{ Debounced, GraphicsUtil, OS }
+import commandcenter.util.{ Debounced, OS }
 import commandcenter.view.{ Rendered, Style }
-import javax.swing._
-import javax.swing.plaf.basic.BasicScrollBarUI
-import javax.swing.text.{ DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext }
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.duration._
 
-import scala.annotation.tailrec
+import java.awt.event.KeyEvent
+import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsDevice, GraphicsEnvironment, KeyboardFocusManager }
+import javax.swing._
+import javax.swing.plaf.basic.BasicScrollBarUI
+import javax.swing.text.{ DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext }
 
 final case class SwingTerminal(
   var config: CCConfig, // TODO: Convert to Ref
@@ -43,9 +42,10 @@ final case class SwingTerminal(
   frame.setBackground(theme.background)
   frame.setFocusable(false)
   frame.setUndecorated(true)
-  if (runtime.unsafeRun(GraphicsUtil.isOpacitySupported))
+  if (runtime.unsafeRun(isOpacitySupported))
     frame.setOpacity(config.display.opacity)
   frame.getContentPane.setLayout(new BorderLayout())
+  frame.getRootPane.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, CCTheme.default.darkGray))
 
   val inputTextField = new ZTextField
   inputTextField.setFont(font)
@@ -176,7 +176,7 @@ final case class SwingTerminal(
             val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
             var i: Int = 0
-            groupConsecutive(renderStr.getColors.toList).foreach { c =>
+            Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
               val s = renderStr.plainText.substring(i, i + c.length)
 
               i += c.length
@@ -184,13 +184,22 @@ final case class SwingTerminal(
               val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
               val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
 
-              val awtForeground = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
-              val awtBackground = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
+              val awtForegroundOpt = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
+              val awtBackgroundOpt = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
 
-              val style = new SimpleAttributeSet()
+              val style = (awtForegroundOpt, awtBackgroundOpt) match {
+                case (None, None) =>
+                  // Don't bother wastefully creating a StyleRange object
+                  null
 
-              awtForeground.foreach(StyleConstants.setForeground(style, _))
-              awtBackground.foreach(StyleConstants.setBackground(style, _))
+                case _ =>
+                  val style = new SimpleAttributeSet()
+
+                  awtForegroundOpt.foreach(StyleConstants.setForeground(style, _))
+                  awtBackgroundOpt.foreach(StyleConstants.setBackground(style, _))
+
+                  style
+              }
 
               document.insertString(document.getLength, s, style)
             }
@@ -203,11 +212,13 @@ final case class SwingTerminal(
       frame.pack()
     }
 
-  def reset(): UIO[Unit] =
+  def reset: UIO[Unit] =
     for {
       _ <- commandCursorRef.set(0)
-      _ <- UIO(inputTextField.setText(""))
-      _ <- UIO(document.remove(0, document.getLength))
+      _ <- UIO {
+             inputTextField.setText("")
+             document.remove(0, document.getLength)
+           }
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
@@ -219,7 +230,7 @@ final case class SwingTerminal(
              // TODO: Log defects
              preview.onRun.absorb.forkDaemon
            }
-      _ <- reset()
+      _ <- reset
     } yield previewResult
   }
 
@@ -228,7 +239,7 @@ final case class SwingTerminal(
       e.getKeyCode match {
         case KeyEvent.VK_ENTER =>
           for {
-            _               <- UIO(frame.setVisible(false))
+            _               <- hide
             _               <- deactivate.ignore
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
@@ -241,9 +252,9 @@ final case class SwingTerminal(
 
         case KeyEvent.VK_ESCAPE =>
           for {
-            _ <- UIO(frame.setVisible(false))
+            _ <- hide
             _ <- deactivate.ignore
-            _ <- reset()
+            _ <- reset
           } yield ()
 
         case KeyEvent.VK_DOWN =>
@@ -274,9 +285,9 @@ final case class SwingTerminal(
             bestMatch        = eligibleResults.maxByOption(_.score)
             _               <- ZIO.foreach_(bestMatch) { preview =>
                                  for {
-                                   _ <- UIO(frame.setVisible(false))
+                                   _ <- hide
                                    _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
-                                   _ <- reset()
+                                   _ <- reset
                                  } yield ()
                                }
           } yield ()
@@ -326,6 +337,12 @@ final case class SwingTerminal(
 
   def setOpacity(opacity: Float): RIO[Env, Unit] = Task(frame.setOpacity(opacity))
 
+  def isOpacitySupported: URIO[Env, Boolean] =
+    Task(
+      GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
+        .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.TRANSLUCENT)
+    ).orElseSucceed(false)
+
   def size: RIO[Env, Dimension] = UIO(frame.getSize)
 
   def setSize(width: Int, maxHeight: Int): RIO[Env, Unit] =
@@ -347,15 +364,6 @@ final case class SwingTerminal(
 
     fonts.filter(f => installedFontNames.contains(f.getName))
   }
-
-  @tailrec
-  private def groupConsecutive[A](list: List[A], acc: List[List[A]] = Nil): List[List[A]] =
-    list match {
-      case head :: tail =>
-        val (t1, t2) = tail.span(_ == head)
-        groupConsecutive(t2, acc :+ (head :: t1))
-      case _            => acc
-    }
 }
 
 object SwingTerminal {

@@ -9,6 +9,7 @@ lazy val root = project
     core,
     coreUI,
     cli,
+    emulatorSwt,
     emulatorSwing
   )
   .settings(
@@ -32,8 +33,14 @@ lazy val root = project
         "cli/graalvm-native-image:packageBin",
         s"Create a native executable of the CLI client ${scala.Console.RED}(Windows not yet supported)"
       ),
-      UsefulTask("f", "emulator-swing/run", "Run the Command Center emulated terminal"),
-      UsefulTask("g", "emulator-swing/assembly", "Create an executable JAR for running in terminal emulator mode")
+      UsefulTask("f", "emulator-swt/run", "Run the Command Center emulated terminal (SWT)"),
+      UsefulTask("g", "emulator-swt/assembly", "Create an executable JAR for running in terminal emulator mode (SWT)"),
+      UsefulTask("h", "emulator-swing/run", "Run the Command Center emulated terminal (Swing)"),
+      UsefulTask(
+        "i",
+        "emulator-swing/assembly",
+        "Create an executable JAR for running in terminal emulator mode (Swing)"
+      )
     )
   )
 
@@ -56,7 +63,7 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                  %% "fastparse"              % "2.3.0",
       "org.typelevel"                %% "spire"                  % "0.17.0",
-      "org.cache2k"                   % "cache2k-core"           % "2.0.0.Final"
+      "org.cache2k"                   % "cache2k-core"           % "1.6.0.Final"
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
@@ -83,7 +90,7 @@ lazy val cli = module("cli")
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % "5.6.0").filter(_ => OS.os == OS.Windows),
     mainClass in assembly := Some("commandcenter.cli.Main"),
-    assemblyJarName in assembly := "ccc.jar",
+    assemblyJarName in assembly := "cc.jar",
     assemblyMergeStrategy in assembly := {
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
@@ -117,8 +124,42 @@ def optionalPlugin(project: Project): Option[ClasspathDependency] = {
   cp
 }
 
-lazy val emulatorSwing = module("emulator-swing")
+lazy val emulatorCore = module("emulator-core")
   .dependsOn(coreUI)
+  .dependsOn(
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+  )
+  .settings(
+    fork := true,
+    baseDirectory in run := file("."),
+    libraryDependencies ++= Seq(
+      "com.github.tulskiy" % "jkeymaster" % "1.3",
+      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
+    )
+  )
+
+lazy val emulatorSwt = module("emulator-swt")
+  .dependsOn(emulatorCore)
+  .dependsOn(
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+  )
+  .settings(
+    fork := true,
+    publishMavenStyle := false,
+    baseDirectory in run := file("."),
+    mainClass in assembly := Some("commandcenter.emulator.swt.Main"),
+    javaOptions := Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
+    assemblyJarName in assembly := "cc-swt.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
+      case _                                       => MergeStrategy.first
+    },
+    libraryDependencies ++= swtDependencies
+  )
+
+lazy val emulatorSwing = module("emulator-swing")
+  .dependsOn(emulatorCore)
   .dependsOn(
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
   )
@@ -131,11 +172,7 @@ lazy val emulatorSwing = module("emulator-swing")
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
-    },
-    libraryDependencies ++= Seq(
-      "com.github.tulskiy" % "jkeymaster" % "1.3",
-      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
-    )
+    }
   )
 
 lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
@@ -148,6 +185,19 @@ lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
 lazy val extras     = project
   .in(file("extras"))
   .aggregate(strokeOrderPlugin, jectPlugin)
+
+def swtDependencies: Seq[ModuleID] =
+  OS.os match {
+    case OS.Windows     =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % Version.swt intransitive ())
+    case OS.MacOS       =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % Version.swt intransitive ())
+    case OS.Linux       =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % Version.swt intransitive ())
+    case OS.Other(name) =>
+      println(s"SWT does not support OS '$name'")
+      Seq.empty
+  }
 
 def module(projectId: String, moduleFile: Option[String] = None): Project =
   Project(id = projectId, base = file(moduleFile.getOrElse(projectId)))

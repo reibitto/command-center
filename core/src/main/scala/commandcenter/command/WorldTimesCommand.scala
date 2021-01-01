@@ -43,7 +43,10 @@ final case class WorldTimesResults(dateTimeFormat: String, results: List[WorldTi
 object WorldTimesResults {
   implicit val displayable: View[WorldTimesResults] = View.ansi { results =>
     // TODO: This is a temporary hack. Aligning should be handled automatically.
-    val align = if (results.context.terminal.terminalType == TerminalType.Swing) "  " else ""
+    val align = results.context.terminal.terminalType match {
+      case TerminalType.Swing | TerminalType.Swt => "  "
+      case TerminalType.Cli | TerminalType.Test  => ""
+    }
 
     intersperse(fansi.Str(s"\n$align")) {
       results.results

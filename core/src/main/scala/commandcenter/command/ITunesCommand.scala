@@ -81,11 +81,15 @@ final case class ITunesCommand(commandNames: List[String]) extends Command[Unit]
                        case None                                    =>
                          // TODO: Always show track details at top for every command. May want to also cache this?
                          (for {
-                           details                                <- trackDetailsFn
-                           Array(trackName, artist, album, rating) = details.trim.split("\t")
-                         } yield fansi.Color.Magenta(trackName) ++ " " ++ artist ++ " " ++ fansi.Color
-                           .Cyan(album) ++ " " ++ fansi.Color.Yellow(rating))
-                           .mapError(CommandError.UnexpectedException)
+                           details         <- trackDetailsFn
+                           detailsFormatted = details.trim.split("\t") match {
+                                                case Array(trackName, artist, album, rating) =>
+                                                  fansi.Color.Magenta(trackName) ++ " " ++ artist ++ " " ++
+                                                    fansi.Color.Cyan(album) ++ " " ++ fansi.Color.Yellow(rating)
+
+                                                case _ => fansi.Str("not playing")
+                                              }
+                         } yield detailsFormatted).mapError(CommandError.UnexpectedException)
                      }
                    )
     } yield {
