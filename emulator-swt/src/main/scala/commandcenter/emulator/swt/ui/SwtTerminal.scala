@@ -69,8 +69,8 @@ class RawSwtTerminal(val config: CCConfig)(implicit runtime: Runtime[Env]) {
 
   val font = new Font(display, "Fira Code", 14, SWT.NORMAL)
 
-  val preferredFrameWidth: Int =
-    config.display.width //min GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
+  // TODO: Clamp with screen size
+  val preferredFrameWidth: Int = config.display.width
 
   shell.setText("Command Center")
   shell.setMinimumSize(preferredFrameWidth, 0)
