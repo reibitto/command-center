@@ -4,11 +4,12 @@ import commandcenter.CCRuntime.Env
 import commandcenter._
 import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
+import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
 import commandcenter.util.{ Debounced, OS }
-import commandcenter.view.Rendered
+import commandcenter.view.{ Rendered, Style }
 import org.eclipse.swt.SWT
 import org.eclipse.swt.custom.{ StyleRange, StyledText }
 import org.eclipse.swt.events.{ KeyAdapter, KeyEvent, ModifyEvent, ModifyListener }
@@ -253,7 +254,7 @@ final case class SwtTerminal(
               val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
               var i: Int = 0
-              groupConsecutive(renderStr.getColors.toList).foreach { c =>
+              Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
                 val s = renderStr.plainText.substring(i, i + c.length)
 
                 i += c.length
@@ -263,16 +264,21 @@ final case class SwtTerminal(
 
                 buffer.append(s)
 
-                val foregroundOpt = terminal.fromFansiColorCode(ansiForeground.toInt)
-                val backgroundOpt = terminal.fromFansiColorCode(ansiBackground.toInt)
+                val swtForegroundOpt = terminal.fromFansiColorCode(ansiForeground.toInt)
+                val swtBackgroundOpt = terminal.fromFansiColorCode(ansiBackground.toInt)
 
-                (foregroundOpt, backgroundOpt) match {
+                (swtForegroundOpt, swtBackgroundOpt) match {
                   case (None, None) =>
                   // Don't bother wastefully creating a StyleRange object
 
                   case _ =>
                     styles.append(
-                      new StyleRange(buffer.length - s.length, s.length, foregroundOpt.orNull, backgroundOpt.orNull)
+                      new StyleRange(
+                        buffer.length - s.length,
+                        s.length,
+                        swtForegroundOpt.orNull,
+                        swtBackgroundOpt.orNull
+                      )
                     )
                 }
               }
@@ -298,16 +304,6 @@ final case class SwtTerminal(
     } yield ()
   }
 
-  // TODO: Extract out
-  @tailrec
-  private def groupConsecutive[A](list: List[A], acc: List[List[A]] = Nil): List[List[A]] =
-    list match {
-      case head :: tail =>
-        val (t1, t2) = tail.span(_ == head)
-        groupConsecutive(t2, acc :+ (head :: t1))
-      case _            => acc
-    }
-
   def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] = {
     val previewResult = results.previews.lift(cursorIndex)
 
@@ -324,9 +320,10 @@ final case class SwtTerminal(
     UIO(Display.getDefault.asyncExec(() => effect))
 
   def invokeReturn[A](effect: => A): Task[A] =
-    Task.effectAsyncM { cb =>
-      invoke {
-        cb(UIO(effect))
+    Task.effectAsync { cb =>
+      Display.getDefault.asyncExec { () =>
+        val evaluatedEffect = effect
+        cb(UIO(evaluatedEffect))
       }
     }
 
@@ -370,6 +367,8 @@ final case class SwtTerminal(
   def setOpacity(opacity: Float): RIO[Env, Unit] = invoke {
     terminal.shell.setAlpha((255 * opacity).toInt)
   }
+
+  def isOpacitySupported: URIO[Env, Boolean] = UIO(true)
 
   def size: RIO[Env, Dimension] =
     invokeReturn {

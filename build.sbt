@@ -9,6 +9,7 @@ lazy val root = project
     core,
     coreUI,
     cli,
+    emulatorSwt,
     emulatorSwing
   )
   .settings(
@@ -32,8 +33,14 @@ lazy val root = project
         "cli/graalvm-native-image:packageBin",
         s"Create a native executable of the CLI client ${scala.Console.RED}(Windows not yet supported)"
       ),
-      UsefulTask("f", "emulator-swing/run", "Run the Command Center emulated terminal"),
-      UsefulTask("g", "emulator-swing/assembly", "Create an executable JAR for running in terminal emulator mode")
+      UsefulTask("f", "emulator-swt/run", "Run the Command Center emulated terminal (SWT)"),
+      UsefulTask("g", "emulator-swt/assembly", "Create an executable JAR for running in terminal emulator mode (SWT)"),
+      UsefulTask("h", "emulator-swing/run", "Run the Command Center emulated terminal (Swing)"),
+      UsefulTask(
+        "i",
+        "emulator-swing/assembly",
+        "Create an executable JAR for running in terminal emulator mode (Swing)"
+      )
     )
   )
 
@@ -56,7 +63,7 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                  %% "fastparse"              % "2.3.0",
       "org.typelevel"                %% "spire"                  % "0.17.0",
-      "org.cache2k"                   % "cache2k-core"           % "2.0.0.Final"
+      "org.cache2k"                   % "cache2k-core"           % "1.6.0.Final"
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
@@ -131,23 +138,6 @@ lazy val emulatorCore = module("emulator-core")
     )
   )
 
-lazy val emulatorSwing = module("emulator-swing")
-  .dependsOn(emulatorCore)
-  .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
-  )
-  .settings(
-    fork := true,
-    baseDirectory in run := file("."),
-    mainClass in assembly := Some("commandcenter.emulator.swing.Main"),
-    assemblyJarName in assembly := "cc-swing.jar",
-    assemblyMergeStrategy in assembly := {
-      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
-      case _                                       => MergeStrategy.first
-    }
-  )
-
 lazy val emulatorSwt = module("emulator-swt")
   .dependsOn(emulatorCore)
   .dependsOn(
@@ -168,6 +158,23 @@ lazy val emulatorSwt = module("emulator-swt")
     libraryDependencies ++= swtDependencies
   )
 
+lazy val emulatorSwing = module("emulator-swing")
+  .dependsOn(emulatorCore)
+  .dependsOn(
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+  )
+  .settings(
+    fork := true,
+    baseDirectory in run := file("."),
+    mainClass in assembly := Some("commandcenter.emulator.swing.Main"),
+    assemblyJarName in assembly := "cc-swing.jar",
+    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
+      case _                                       => MergeStrategy.first
+    }
+  )
+
 lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
   .dependsOn(core)
 
@@ -181,13 +188,14 @@ lazy val extras     = project
 
 def swtDependencies: Seq[ModuleID] =
   OS.os match {
-    case OS.Windows =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % "3.115.100" intransitive ())
-    case OS.MacOS   =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % "3.115.100" intransitive ())
-    case OS.Linux   =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % "3.115.100" intransitive ())
-    case OS.Other   =>
+    case OS.Windows     =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % Version.swt intransitive ())
+    case OS.MacOS       =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % Version.swt intransitive ())
+    case OS.Linux       =>
+      Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % Version.swt intransitive ())
+    case OS.Other(name) =>
+      println(s"SWT does not support OS '$name'")
       Seq.empty
   }
 

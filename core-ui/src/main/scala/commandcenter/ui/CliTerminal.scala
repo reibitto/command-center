@@ -41,6 +41,8 @@ final case class CliTerminal[T <: Terminal](
 
   def setOpacity(opacity: Float): RIO[Env, Unit] = ZIO.unit
 
+  def isOpacitySupported: URIO[Env, Boolean] = UIO(false)
+
   def size: RIO[Env, Dimension] = UIO(new Dimension(screen.getTerminalSize.getColumns, screen.getTerminalSize.getRows))
 
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit

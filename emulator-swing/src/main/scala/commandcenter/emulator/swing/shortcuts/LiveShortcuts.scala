@@ -17,7 +17,8 @@ class LiveShortcuts(val provider: Provider, runtime: Runtime[Env]) extends Short
       provider.register(
         KeyboardShortcutUtil.toKeyStroke(shortcut),
         new HotKeyListener {
-          def onHotKey(hotKey: HotKey): Unit = runtime.unsafeRunAsync_(handler(shortcut))
+          def onHotKey(hotKey: HotKey): Unit =
+            runtime.unsafeRunAsync_(handler(shortcut))
         }
       )
     }

@@ -1,6 +1,6 @@
 package commandcenter.emulator.swt.event
 
-import commandcenter.event.{KeyCode, KeyModifier, KeyboardShortcut}
+import commandcenter.event.{ KeyCode, KeyModifier, KeyboardShortcut }
 import org.eclipse.swt.SWT
 import org.eclipse.swt.events.KeyEvent
 

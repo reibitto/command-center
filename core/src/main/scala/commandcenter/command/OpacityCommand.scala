@@ -4,8 +4,6 @@ import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.TerminalType
-import commandcenter.util.GraphicsUtil
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
@@ -17,11 +15,9 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
 
   val opacityCommand = decline.Command("opacity", title)(opacity)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
-    val isSwingTerminal = searchInput.context.terminal.terminalType == TerminalType.Swing
-    val applicable      = GraphicsUtil.isOpacitySupported.map(isSwingTerminal && _)
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
-      _              <- ZIO.fail(CommandError.NotApplicable).unlessM(applicable)
+      _              <- ZIO.fail(CommandError.NotApplicable).unlessM(searchInput.context.terminal.isOpacitySupported)
       input          <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed          = opacityCommand.parse(input.args)
       message        <- ZIO
@@ -41,7 +37,6 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
           .view(DefaultView(s"$title (current: $currentOpacity)", message))
       )
     }
-  }
 }
 
 object OpacityCommand extends CommandPlugin[OpacityCommand] {
