@@ -14,9 +14,8 @@ object Main {
       def shortcutsLayer: ULayer[Shortcuts] = LiveShortcuts.layer(this).orDie
     }
 
-    val config = runtime.unsafeRun(CCConfig.load.useNow)
-
-    val rawTerminal = new RawSwtTerminal(config)(runtime)
+    val config      = runtime.unsafeRun(CCConfig.load.useNow)
+    val rawTerminal = new RawSwtTerminal(config)
 
     runtime.unsafeRunAsync_ {
       (for {
