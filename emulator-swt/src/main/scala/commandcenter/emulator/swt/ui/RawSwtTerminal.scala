@@ -1,6 +1,7 @@
 package commandcenter.emulator.swt.ui
 
 import commandcenter.CCConfig
+import commandcenter.util.OS
 import org.eclipse.swt.SWT
 import org.eclipse.swt.custom.StyledText
 import org.eclipse.swt.graphics.{ Color, Font }
@@ -10,6 +11,10 @@ import org.eclipse.swt.widgets.{ Display, Shell, Text }
 class RawSwtTerminal(val config: CCConfig) {
   val display = new Display()
   val shell   = new Shell(display, SWT.MODELESS | SWT.DOUBLE_BUFFERED)
+
+  if (OS.os == OS.Windows) {
+    display.setData("org.eclipse.swt.internal.win32.useDarkModeExplorerTheme", true)
+  }
 
   val black        = new Color(display, 0, 0, 0)
   val red          = new Color(display, 236, 91, 57)
@@ -49,10 +54,9 @@ class RawSwtTerminal(val config: CCConfig) {
       case _  => None
     }
 
-  val font = new Font(display, "Fira Code", 14, SWT.NORMAL)
+  val font = getPreferredFont(config.display.fonts)
 
-  // TODO: Clamp with screen size
-  val preferredFrameWidth: Int = config.display.width
+  val preferredFrameWidth: Int = config.display.width min display.getBounds.width
 
   shell.setText("Command Center")
   shell.setMinimumSize(preferredFrameWidth, 0)
@@ -97,5 +101,20 @@ class RawSwtTerminal(val config: CCConfig) {
       if (!display.readAndDispatch()) display.sleep()
 
     display.dispose()
+  }
+
+  private def getPreferredFont(fonts: List[java.awt.Font]): Font = {
+    val installedFontNames =
+      (display.getFontList(null, false).toSet ++ display.getFontList(null, true).toSet).map(_.getName)
+
+    val selected = fonts
+      .find(f => installedFontNames.contains(f.getName))
+
+    fonts
+      .find(f => installedFontNames.contains(f.getName))
+      .map(f => new Font(display, f.getName, f.getSize, SWT.NORMAL))
+      .getOrElse {
+        new Font(display, "Monospaced", 14, SWT.NORMAL)
+      }
   }
 }

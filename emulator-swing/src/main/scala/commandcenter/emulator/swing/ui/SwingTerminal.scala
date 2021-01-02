@@ -34,7 +34,7 @@ final case class SwingTerminal(
   val document = new DefaultStyledDocument
   val context  = new StyleContext
   val frame    = new JFrame("Command Center")
-  val font     = filterMissingFonts(config.display.fonts).headOption.getOrElse(new Font("Monospaced", Font.PLAIN, 18))
+  val font     = getPreferredFont(config.display.fonts)
 
   val preferredFrameWidth: Int =
     config.display.width min GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
@@ -359,10 +359,10 @@ final case class SwingTerminal(
       }
     }
 
-  private def filterMissingFonts(fonts: List[Font]): List[Font] = {
+  private def getPreferredFont(fonts: List[Font]): Font = {
     val installedFontNames = GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet
 
-    fonts.filter(f => installedFontNames.contains(f.getName))
+    fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(new Font("Monospaced", Font.PLAIN, 18))
   }
 }
 
