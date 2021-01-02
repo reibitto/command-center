@@ -107,9 +107,6 @@ class RawSwtTerminal(val config: CCConfig) {
     val installedFontNames =
       (display.getFontList(null, false).toSet ++ display.getFontList(null, true).toSet).map(_.getName)
 
-    val selected = fonts
-      .find(f => installedFontNames.contains(f.getName))
-
     fonts
       .find(f => installedFontNames.contains(f.getName))
       .map(f => new Font(display, f.getName, f.getSize, SWT.NORMAL))
