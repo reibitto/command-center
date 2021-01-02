@@ -79,7 +79,8 @@ object Build {
     Resolver.sonatypeRepo("releases"),
     Resolver.typesafeRepo("releases"),
     Resolver.jcenterRepo,
-    Resolver.sonatypeRepo("snapshots")
+    Resolver.sonatypeRepo("snapshots"),
+    Resolver.mavenLocal
   )
 
   def compilerOption(key: String): Option[String] =
