@@ -17,7 +17,7 @@ object ProcessUtil {
       case OS.Linux =>
         PCommand("xdg-open", url).exitCode.unit
 
-      case OS.Windows | OS.Other =>
+      case OS.Windows | OS.Other(_) =>
         effectBlocking(
           Desktop.getDesktop.browse(new URI(url))
         )
@@ -50,7 +50,7 @@ object ProcessUtil {
 
         command.successfulExitCode.unit
 
-      case OS.Windows          =>
+      case OS.Windows             =>
         val arg =
           if (file.isDirectory) file.getCanonicalPath
           else s"/select,${file.getAbsolutePath}"
@@ -58,7 +58,7 @@ object ProcessUtil {
         PCommand("explorer.exe", arg).successfulExitCode.unit
 
       // TODO: To properly support Linux, we probably need to detect the Linux flavor
-      case OS.Linux | OS.Other => effectBlocking(Desktop.getDesktop.browseFileDirectory(file))
+      case OS.Linux | OS.Other(_) => effectBlocking(Desktop.getDesktop.browseFileDirectory(file))
     }
 
 }
