@@ -170,10 +170,10 @@ object WindowManager {
 
     // HACK: When the DPIs of the monitors are different, Windows seems to automatically resize the window not respecting
     // the width/height sent into SetWindowPos. You can even see that the window is initially the correct size when sent
-    // to the second monitor for a split second. After that Windows is resizing it.
+    // to the second monitor for a split-second. After that Windows resizes it to a different scaled value.
     //
-    // A temporary working is calling it SetWindowPos 2nd time. Once the window is on the right monitor, SetWindowPos
-    // works as expected. Ideally we find a "proper" solution for this though.
+    // A temporary workaround is to call SetWindowPos a 2nd time. Once the window is on the right monitor, SetWindowPos
+    // works as expected. Ideally we eventually find a "proper" solution to this.
     User32.INSTANCE.SetWindowPos(
       window,
       null,
