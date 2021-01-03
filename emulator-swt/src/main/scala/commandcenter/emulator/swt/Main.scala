@@ -3,7 +3,7 @@ package commandcenter.emulator.swt
 import commandcenter.emulator.swt.shortcuts.LiveShortcuts
 import commandcenter.emulator.swt.ui.{ RawSwtTerminal, SwtTerminal }
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.{ shortcuts, CCConfig, CCRuntime, TerminalType }
+import commandcenter.{ shortcuts, CCConfig, CCRuntime, GlobalActions, TerminalType }
 import zio._
 import zio.logging.log
 
@@ -29,6 +29,7 @@ object Main {
                              } yield ()).ignore
                            )
                       _ <- log.debug("Ready to accept input")
+                      _ <- GlobalActions.setupCommon(config.globalActions)
                     } yield ()).toManaged_
       } yield ()).useForever.exitCode
     }

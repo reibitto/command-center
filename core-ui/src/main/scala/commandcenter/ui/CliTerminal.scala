@@ -294,7 +294,7 @@ object CliTerminal {
       textCursorRef      <- Ref.makeManaged(TextCursor.unit)
       searchResultsRef   <- Ref.makeManaged(SearchResults.empty[Any])
       keyHandlersRef     <- Ref.makeManaged(Map.empty[KeyStroke, URIO[Env, EventResult]])
-      searchDebounce     <- Debounced[Env, Nothing, Unit](250.millis).toManaged_
+      searchDebounce     <- Debounced[Env, Nothing, Unit](200.millis).toManaged_
       renderQueue        <- Queue.sliding[SearchResults[Any]](1).toManaged_
       lastSearchFiberRef <- Ref.makeManaged(Option.empty[Fiber[Throwable, SearchResults[Any]]])
     } yield CliTerminal(

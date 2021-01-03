@@ -8,11 +8,12 @@ object Build {
   val CommandCenterVersion = "0.0.1"
 
   object Version {
-    val zio   = "1.0.3"
-    val circe = "0.13.0"
-    val sttp  = "2.2.9"
-    val graal = "20.2.0"
-    val swt   = "3.115.100"
+    val zio        = "1.0.3"
+    val enumeratum = "1.6.1"
+    val circe      = "0.13.0"
+    val sttp       = "2.2.9"
+    val graal      = "20.2.0"
+    val swt        = "3.115.100"
 
     // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
     // and build a Linux image (e.g. setting it to s"$graal-java11").

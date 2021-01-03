@@ -57,7 +57,8 @@ lazy val core = module("core")
       "io.circe"                     %% "circe-parser"           % Version.circe,
       "com.monovore"                 %% "decline"                % "1.3.0",
       "com.lihaoyi"                  %% "fansi"                  % "0.2.9",
-      "com.beachape"                 %% "enumeratum"             % "1.6.1",
+      "com.beachape"                 %% "enumeratum"             % Version.enumeratum,
+      "com.beachape"                 %% "enumeratum-circe"       % Version.enumeratum,
       "com.softwaremill.sttp.client" %% "core"                   % Version.sttp,
       "com.softwaremill.sttp.client" %% "circe"                  % Version.sttp,
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
@@ -133,8 +134,10 @@ lazy val emulatorCore = module("emulator-core")
     fork := true,
     baseDirectory in run := file("."),
     libraryDependencies ++= Seq(
-      "com.github.tulskiy" % "jkeymaster" % "1.3",
-      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
+      "com.github.tulskiy" % "jkeymaster"   % "1.3",
+      "net.java.dev.jna"   % "jna"          % "5.6.0",
+      "net.java.dev.jna"   % "jna-platform" % "5.6.0",
+      "org.slf4j"          % "slf4j-nop"    % "1.7.30" // Seems to be required for jkeymaster on Linux
     )
   )
 

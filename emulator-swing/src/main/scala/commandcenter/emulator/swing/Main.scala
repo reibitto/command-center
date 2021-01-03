@@ -4,7 +4,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.emulator.swing.shortcuts.LiveShortcuts
 import commandcenter.emulator.swing.ui.SwingTerminal
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.{ shortcuts, CCApp, CCConfig, TerminalType }
+import commandcenter.{ shortcuts, CCApp, CCConfig, GlobalActions, TerminalType }
 import zio._
 import zio.logging.log
 
@@ -25,6 +25,7 @@ object Main extends CCApp {
                            } yield ()).ignore
                          )
                     _ <- log.debug("Ready to accept input")
+                    _ <- GlobalActions.setupCommon(config.globalActions)
                   } yield ()).toManaged_
     } yield ()).useForever.exitCode
 }
