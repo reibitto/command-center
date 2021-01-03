@@ -7,17 +7,13 @@ object GlobalActions {
   def setupCommon(actions: Vector[GlobalAction]): RIO[Shortcuts, Unit] =
     ZIO.foreach_(actions) { action =>
       val run = action.id match {
-        case GlobalActionId.CenterWindow =>
-          WindowManager.centerScreen
-
-        case GlobalActionId.MoveToPreviousDisplay =>
-          WindowManager.moveToPreviousDisplay
-
-        case GlobalActionId.MoveToNextDisplay =>
-          WindowManager.moveToNextDisplay
-
-        case GlobalActionId.ResizeToScreenSize =>
-          WindowManager.resizeToScreenSize
+        case GlobalActionId.MinimizeWindow       => WindowManager.minimizeWindow
+        case GlobalActionId.MaximizeWindow       => WindowManager.maximizeWindow
+        case GlobalActionId.ToggleMaximizeWindow => WindowManager.toggleMaximizeWindow
+        case GlobalActionId.CenterWindow         => WindowManager.centerScreen
+        case GlobalActionId.MoveToPreviousScreen => WindowManager.moveToPreviousDisplay
+        case GlobalActionId.MoveToNextScreen     => WindowManager.moveToNextDisplay
+        case GlobalActionId.ResizeToScreenSize   => WindowManager.resizeToScreenSize
 
         case id @ GlobalActionId.CycleWindowSizeLeft =>
           WindowManager
