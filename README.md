@@ -7,7 +7,7 @@
 ## What is it?
 
 Command Center is used to launch applications, find files, control music playback, search the web, run one-off CLI commands,
-and anything else you can imagine.
+manage windows, and anything else you can imagine since it's customizable.
 
 If you're familiar with tools like [Alfred](https://www.alfredapp.com), [Wox](http://www.wox.one),
 [ueli](https://ueli.oliverschwendener.ch), [Keypirinha](https://keypirinha.com), etc. you may already understand the concept. These
@@ -61,6 +61,19 @@ You can suspend (toggle) a process by its PID with:
 The suspend command also has a configurable `suspendShortcut` attribute that is a global shortcut. This is
 useful if you want to be able to pause applications that don't have a built-in pause feature, such as games. The idea
 for this feature came from [Universal Pause Button](https://github.com/ryanries/UniversalPauseButton).
+
+#### Window Manager
+
+Global hotkeys can be mapped to various window management actions. For example:
+
+- Minimize/maximize window 
+- Center window
+- Move window to next/previous monitor
+- Cycle window location+size in each direction. For example, pressing win+alt+right the first time will
+  move+resize the window to the right half of the screen. Pressing it again will resize it to 2/3 of the
+  screen. And once more will be 1/3 of the screen. Then the cycle repeats.
+
+*Note: This feature currently only supports Windows. The goal is to support all OSes soon.*
 
 #### Calculator
 

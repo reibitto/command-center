@@ -91,9 +91,12 @@ object GlobalAction {
 sealed trait GlobalActionId extends EnumEntry with LowerCamelcase
 
 object GlobalActionId extends Enum[GlobalActionId] with CirceEnum[GlobalActionId] {
+  case object MinimizeWindow        extends GlobalActionId
+  case object MaximizeWindow        extends GlobalActionId
+  case object ToggleMaximizeWindow  extends GlobalActionId
   case object CenterWindow          extends GlobalActionId
-  case object MoveToNextDisplay     extends GlobalActionId
-  case object MoveToPreviousDisplay extends GlobalActionId
+  case object MoveToNextScreen      extends GlobalActionId
+  case object MoveToPreviousScreen  extends GlobalActionId
   case object ResizeToScreenSize    extends GlobalActionId
   case object CycleWindowSizeLeft   extends GlobalActionId
   case object CycleWindowSizeRight  extends GlobalActionId

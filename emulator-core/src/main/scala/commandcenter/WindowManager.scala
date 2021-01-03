@@ -1,7 +1,7 @@
 package commandcenter
 
 import com.sun.jna.platform.win32.WinDef.{ HDC, LPARAM, RECT }
-import com.sun.jna.platform.win32.WinUser.{ MONITORENUMPROC, MONITORINFO, MONITORINFOEX }
+import com.sun.jna.platform.win32.WinUser.{ MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT }
 import com.sun.jna.platform.win32.{ User32, WinUser }
 import commandcenter.command.cache.InMemoryCache
 import zio.clock.Clock
@@ -50,6 +50,37 @@ object WindowManager {
     val y = monitorInfo.rcWork.top
 
     User32.INSTANCE.SetWindowPos(window, null, x, y, monitorWidth, monitorHeight, WinUser.SWP_NOZORDER)
+  }
+
+  def minimizeWindow: Task[Unit] = Task {
+    val window = User32.INSTANCE.GetForegroundWindow()
+
+    User32.INSTANCE.ShowWindow(window, WinUser.SW_FORCEMINIMIZE)
+  }
+
+  def maximizeWindow: Task[Unit] = Task {
+    val window = User32.INSTANCE.GetForegroundWindow()
+
+    User32.INSTANCE.ShowWindow(window, WinUser.SW_MAXIMIZE)
+  }
+
+  def restoreWindow: Task[Unit] = Task {
+    val window = User32.INSTANCE.GetForegroundWindow()
+
+    User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
+  }
+
+  def toggleMaximizeWindow: Task[Unit] = Task {
+    val window = User32.INSTANCE.GetForegroundWindow()
+
+    val windowPlacement = new WINDOWPLACEMENT()
+    User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
+
+    if ((windowPlacement.flags & WinUser.SW_MAXIMIZE) != 0) {
+      User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
+    } else {
+      User32.INSTANCE.ShowWindow(window, WinUser.SW_MAXIMIZE)
+    }
   }
 
   def cycleWindowSize(step: Int, name: String)(
@@ -132,7 +163,7 @@ object WindowManager {
       new LPARAM(0)
     )
 
-    val currentMonitorIndex = monitors.indexWhere(x => util.Arrays.equals(x.szDevice, currentMonitor.szDevice))
+    val currentMonitorIndex = monitors.indexWhere(m => util.Arrays.equals(m.szDevice, currentMonitor.szDevice))
 
     val nextMonitorIndex = if (step > 0) {
       (currentMonitorIndex + step) % monitors.length
