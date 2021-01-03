@@ -296,7 +296,7 @@ final case class SwtTerminal(
 object SwtTerminal {
   def create(config: CCConfig, runtime: CCRuntime, terminal: RawSwtTerminal): ZManaged[Env, Throwable, SwtTerminal] =
     for {
-      searchDebounce   <- Debounced[Env, Nothing, Unit](250.millis).toManaged_
+      searchDebounce   <- Debounced[Env, Nothing, Unit](200.millis).toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
       swtTerminal       = new SwtTerminal(config, commandCursorRef, searchResultsRef, searchDebounce, terminal)(runtime)

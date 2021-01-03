@@ -369,7 +369,7 @@ final case class SwingTerminal(
 object SwingTerminal {
   def create(config: CCConfig, runtime: CCRuntime): Managed[Throwable, SwingTerminal] =
     for {
-      searchDebounce   <- Debounced[Env, Nothing, Unit](250.millis).toManaged_
+      searchDebounce   <- Debounced[Env, Nothing, Unit](200.millis).toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
     } yield new SwingTerminal(config, commandCursorRef, searchResultsRef, searchDebounce)(runtime)

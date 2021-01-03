@@ -11,6 +11,7 @@ object InMemoryCache {
   trait Service[K, V] {
     def get[V2](key: K): Task[Option[V2]]
     def getOrElseUpdate[V2 <: V](key: K, ttl: Duration)(orElse: => Task[V2]): RIO[Clock, V2]
+    def set(key: K, value: V): Task[Unit]
     def set(key: K, value: V, ttl: Duration): RIO[Clock, Unit]
     def remove(key: K): Task[Unit]
     def removeAll(keys: K*): Task[Unit]
@@ -33,6 +34,9 @@ object InMemoryCache {
 
   def getOrElseUpdate[V](key: String, ttl: Duration)(orElse: => Task[V]): RIO[InMemoryCache with Clock, V] =
     ZIO.accessM[InMemoryCache with Clock](_.get.getOrElseUpdate[V](key, ttl)(orElse))
+
+  def set(key: String, value: Any): RIO[InMemoryCache, Unit] =
+    ZIO.accessM[InMemoryCache](_.get.set(key, value))
 
   def set(key: String, value: Any, ttl: Duration): RIO[InMemoryCache with Clock, Unit] =
     ZIO.accessM[InMemoryCache with Clock](_.get.set(key, value, ttl))
@@ -65,6 +69,8 @@ class InMemoryCacheImpl[K, V](cache: Cache[K, V]) extends InMemoryCache.Service[
         _        <- set(key, rawValue, ttl)
       } yield rawValue
     }
+
+  def set(key: K, value: V): Task[Unit] = Task(cache.put(key, value))
 
   def set(key: K, value: V, ttl: Duration): RIO[Clock, Unit] =
     for {
