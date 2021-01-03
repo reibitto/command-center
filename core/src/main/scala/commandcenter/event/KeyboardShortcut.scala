@@ -2,8 +2,13 @@ package commandcenter.event
 
 import cats.data.Validated.{ Invalid, Valid }
 import cats.data.{ NonEmptyList, ValidatedNel }
+import io.circe.Decoder
 
 final case class KeyboardShortcut(key: KeyCode, modifiers: Set[KeyModifier]) {
+  def isEmpty: Boolean = this == KeyboardShortcut.empty
+
+  def nonEmpty: Boolean = !isEmpty
+
   override def toString: String = {
     def modifierPart(modifier: KeyModifier): String =
       if (modifiers.contains(modifier)) s"${modifier.entryName} " else ""
@@ -14,6 +19,8 @@ final case class KeyboardShortcut(key: KeyCode, modifiers: Set[KeyModifier]) {
 }
 
 object KeyboardShortcut {
+  val empty: KeyboardShortcut = KeyboardShortcut(KeyCode.CharUndefined, Set.empty)
+
   def fromString(shortcut: String): ValidatedNel[String, KeyboardShortcut] =
     shortcut.split("[ +]+") match {
       case Array()        => Invalid(NonEmptyList.one("Keyboard shortcut cannot be empty"))
@@ -37,4 +44,12 @@ object KeyboardShortcut {
         } else
           Invalid(NonEmptyList.fromListUnsafe(errors.toList))
     }
+
+  implicit val keyboardShortcutDecoder: Decoder[KeyboardShortcut] = Decoder.decodeString.emap { s =>
+    if (s.isEmpty)
+      Right(KeyboardShortcut.empty)
+    else
+      KeyboardShortcut.fromString(s).toEither.left.map(_.toList.mkString("; "))
+  }
+
 }

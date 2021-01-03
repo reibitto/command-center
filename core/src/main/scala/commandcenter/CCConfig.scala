@@ -36,7 +36,13 @@ object CCConfig {
       displayConfig  <- ZManaged.fromEither(config.as[DisplayConfig]("display"))
       keyboardConfig <- ZManaged.fromEither(config.as[KeyboardConfig]("keyboard"))
       globalActions  <- ZManaged.fromEither(config.get[Vector[GlobalAction]]("globalActions"))
-    } yield CCConfig(commands.toVector, aliases, displayConfig, keyboardConfig, globalActions)
+    } yield CCConfig(
+      commands.toVector,
+      aliases,
+      displayConfig,
+      keyboardConfig,
+      globalActions.filter(_.shortcut.nonEmpty)
+    )
 
   private def envConfigFile: Option[File] =
     sys.env
@@ -84,8 +90,12 @@ object KeyboardConfig {
 final case class GlobalAction(id: GlobalActionId, shortcut: KeyboardShortcut)
 
 object GlobalAction {
-  implicit val decoder: Decoder[GlobalAction] =
-    Decoder.forProduct2("id", "shortcut")(GlobalAction.apply)
+  implicit val decoder: Decoder[GlobalAction] = Decoder.instance { c =>
+    for {
+      id       <- c.get[GlobalActionId]("id")
+      shortcut <- c.get[KeyboardShortcut]("shortcut")
+    } yield GlobalAction(id, shortcut)
+  }
 }
 
 sealed trait GlobalActionId extends EnumEntry with LowerCamelcase

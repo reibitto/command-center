@@ -8,7 +8,6 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.codec.Codecs.localeDecoder
 import commandcenter.command.CommandError._
-import commandcenter.config.Decoders.keyboardShortcutDecoder
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView

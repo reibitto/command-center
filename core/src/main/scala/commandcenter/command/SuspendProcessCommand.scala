@@ -4,7 +4,6 @@ import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.config.Decoders.keyboardShortcutDecoder
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts
 import commandcenter.util.{ OS, ProcessUtil }
