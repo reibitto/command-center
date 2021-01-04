@@ -14,6 +14,7 @@ object Build {
     val sttp       = "2.2.9"
     val graal      = "20.2.0"
     val swt        = "3.115.100"
+    val jna        = "5.6.0"
 
     // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
     // and build a Linux image (e.g. setting it to s"$graal-java11").
