@@ -13,6 +13,7 @@ lazy val root = project
     emulatorSwing
   )
   .settings(
+    name := "command-center",
     addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll"),
     addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll"),
     logo :=
@@ -64,7 +65,9 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                  %% "fastparse"              % "2.3.0",
       "org.typelevel"                %% "spire"                  % "0.17.0",
-      "org.cache2k"                   % "cache2k-core"           % "1.6.0.Final"
+      "org.cache2k"                   % "cache2k-core"           % "1.6.0.Final",
+      "net.java.dev.jna"              % "jna"                    % Version.jna,
+      "net.java.dev.jna"              % "jna-platform"           % Version.jna
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
@@ -134,10 +137,8 @@ lazy val emulatorCore = module("emulator-core")
     fork := true,
     baseDirectory in run := file("."),
     libraryDependencies ++= Seq(
-      "com.github.tulskiy" % "jkeymaster"   % "1.3",
-      "net.java.dev.jna"   % "jna"          % "5.6.0",
-      "net.java.dev.jna"   % "jna-platform" % "5.6.0",
-      "org.slf4j"          % "slf4j-nop"    % "1.7.30" // Seems to be required for jkeymaster on Linux
+      "com.github.tulskiy" % "jkeymaster" % "1.3",
+      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
     )
   )
 

@@ -11,6 +11,7 @@ import enumeratum.EnumEntry.LowerCamelcase
 import enumeratum.{ CirceEnum, Enum, EnumEntry }
 import io.circe.Decoder
 import zio.blocking._
+import zio.logging.log
 import zio.{ RManaged, ZManaged }
 
 import java.awt.Font
@@ -20,7 +21,10 @@ import scala.util.Try
 object CCConfig {
   def load: RManaged[Env, CCConfig] = {
     val configFile = envConfigFile.orElse(homeConfigFile).getOrElse(new File("application.conf"))
-    load(configFile)
+
+    log.debug(s"Loading config file at ${configFile.getAbsolutePath}").toManaged_ *>
+      load(configFile)
+
   }
 
   def load(file: File): RManaged[Env, CCConfig] =

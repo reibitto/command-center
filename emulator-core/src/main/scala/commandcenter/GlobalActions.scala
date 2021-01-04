@@ -1,6 +1,7 @@
 package commandcenter
 
 import commandcenter.shortcuts.Shortcuts
+import commandcenter.util.{ WindowBounds, WindowManager }
 import zio.{ RIO, ZIO }
 
 object GlobalActions {

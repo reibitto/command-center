@@ -1,7 +1,5 @@
 package commandcenter.command
 
-import java.util.Locale
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
@@ -11,6 +9,8 @@ import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
 import zio._
 import zio.logging._
+
+import java.util.Locale
 
 trait Command[+R] extends ViewInstances {
   val commandType: CommandType
@@ -107,6 +107,7 @@ object Command {
                     case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
                     case CommandType.StocksCommand             => StocksCommand.make(config)
                     case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
+                    case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
                     case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
                     case CommandType.TerminalCommand           => TerminalCommand.make(config)
                     case CommandType.TimerCommand              => TimerCommand.make(config)

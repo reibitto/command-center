@@ -36,6 +36,7 @@ object CommandType extends Enum[CommandType] {
   case object SnippetsCommand           extends CommandType
   case object StocksCommand             extends CommandType
   case object SuspendProcessCommand     extends CommandType
+  case object SwitchWindowCommand       extends CommandType
   case object TemperatureCommand        extends CommandType
   case object TerminalCommand           extends CommandType
   case object TimerCommand              extends CommandType

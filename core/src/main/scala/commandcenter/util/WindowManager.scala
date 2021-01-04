@@ -1,6 +1,7 @@
-package commandcenter
+package commandcenter.util
 
-import com.sun.jna.platform.win32.WinDef.{ HDC, LPARAM, RECT }
+import com.sun.jna.Pointer
+import com.sun.jna.platform.win32.WinDef.{ HDC, HWND, LPARAM, RECT }
 import com.sun.jna.platform.win32.WinUser.{ MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT }
 import com.sun.jna.platform.win32.{ User32, WinUser }
 import commandcenter.command.cache.InMemoryCache
@@ -76,7 +77,7 @@ object WindowManager {
     val windowPlacement = new WINDOWPLACEMENT()
     User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
 
-    if ((windowPlacement.flags & WinUser.SW_MAXIMIZE) != 0) {
+    if (windowPlacement.showCmd == WinUser.SW_SHOWMINIMIZED || windowPlacement.showCmd == WinUser.SW_MINIMIZE) {
       User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
     } else {
       User32.INSTANCE.ShowWindow(window, WinUser.SW_MAXIMIZE)
@@ -214,10 +215,74 @@ object WindowManager {
       newWindowHeight.round.toInt,
       WinUser.SWP_NOZORDER
     )
+  }
 
+  def topLevelWindows: List[TopLevelWindow] = {
+    // This list comes from GoToWindow: https://github.com/christianrondeau/GoToWindow/blob/master/GoToWindow.Api/WindowsListFactory.cs
+    val ignoredClasses: Set[String] = Set(
+      "Button",
+      "DV2ControlHost",
+      "Frame Alternate Owner",
+      "MsgrIMEWindowClass",
+      "MultitaskingViewFrame",
+      "Shell_TrayWnd",
+      "SysShadow",
+      "Windows.UI.Core.CoreWindow"
+    )
+
+    val WS_EX_TOOLWINDOW = 0x00000080L
+
+    val windows = new mutable.ArrayDeque[TopLevelWindow]()
+
+    User32.INSTANCE.EnumWindows(
+      (window: HWND, _: Pointer) => {
+        if (
+          User32.INSTANCE.IsWindowVisible(window) &&
+          (User32.INSTANCE.GetWindowLong(window, WinUser.GWL_EXSTYLE) & WS_EX_TOOLWINDOW) == 0
+        ) {
+          val className = fromCString(256)(a => User32.INSTANCE.GetClassName(window, a, a.length))
+
+          // TODO: If the className is `ApplicationFrameWindow` that means it's a Windows 10 app. Right now I'm ignoring
+          // those but we need to add special logic for it like how GoToWindow does.
+          if (!ignoredClasses.contains(className) && className != "ApplicationFrameWindow") {
+            val title = fromCString(512)(a => User32.INSTANCE.GetWindowText(window, a, a.length))
+
+            if (!title.isBlank)
+              windows.append(TopLevelWindow(title, window))
+          }
+        }
+        true
+      },
+      Pointer.NULL
+    )
+
+    windows.toList
+  }
+
+  def giveWindowFocus(window: HWND): Task[Unit] = Task {
+    val windowPlacement = new WINDOWPLACEMENT()
+    User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
+
+    windowPlacement.showCmd match {
+      case WinUser.SW_SHOWMINIMIZED | WinUser.SW_MINIMIZE | WinUser.SW_HIDE =>
+        User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
+
+      case _ => ()
+    }
+
+    User32.INSTANCE.SetForegroundWindow(window)
+
+  }
+
+  private def fromCString(bufferSize: Int)(fn: Array[Char] => Int) = {
+    val buffer = Array.ofDim[Char](bufferSize)
+    val size   = fn(buffer)
+    new String(buffer, 0, size)
   }
 }
 
 final case class WindowBounds(left: Double, top: Double, right: Double, bottom: Double)
 
 final case class CycleWindowState(index: Int, lastAction: Option[String])
+
+final case class TopLevelWindow(title: String, window: HWND)
