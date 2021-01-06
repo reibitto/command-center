@@ -92,7 +92,7 @@ lazy val cli = module("cli")
       "org.zeromq"     % "jeromq"   % "0.5.2"
     ),
     // Windows native terminal requires JNA.
-    libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % "5.6.0").filter(_ => OS.os == OS.Windows),
+    libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % Version.jna).filter(_ => OS.os == OS.Windows),
     mainClass in assembly := Some("commandcenter.cli.Main"),
     assemblyJarName in assembly := "cc.jar",
     assemblyMergeStrategy in assembly := {
