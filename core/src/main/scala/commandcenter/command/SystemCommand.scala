@@ -47,7 +47,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                        val (view, run) = subcommand match {
                          case SystemSubcommand.Sleep =>
                            Tuple2(
-                             DefaultView("sleep", ""),
+                             DefaultView("Sleep", "Put computer to sleep"),
                              Task {
                                PowrProf
                                  .SetSuspendState(bHibernate = false, bForce = false, bWakeupEventsDisabled = false)
