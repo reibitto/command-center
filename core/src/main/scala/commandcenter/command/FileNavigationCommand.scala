@@ -73,5 +73,5 @@ final case class FileNavigationCommand() extends Command[File] {
 }
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
-  def make(config: Config): TaskManaged[FileNavigationCommand] = ZManaged.succeed(FileNavigationCommand())
+  def make(config: Config): UManaged[FileNavigationCommand] = ZManaged.succeed(FileNavigationCommand())
 }

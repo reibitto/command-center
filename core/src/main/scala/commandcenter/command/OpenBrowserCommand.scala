@@ -27,5 +27,5 @@ final case class OpenBrowserCommand() extends Command[Unit] {
 }
 
 object OpenBrowserCommand extends CommandPlugin[OpenBrowserCommand] {
-  def make(config: Config): TaskManaged[OpenBrowserCommand] = ZManaged.succeed(OpenBrowserCommand())
+  def make(config: Config): UManaged[OpenBrowserCommand] = ZManaged.succeed(OpenBrowserCommand())
 }

@@ -1,5 +1,6 @@
 package commandcenter.command
 
+import com.monovore.decline.Help
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
@@ -29,6 +30,15 @@ trait Command[+R] extends ViewInstances {
 
     def unit[A >: R](implicit ev: Command[A] =:= Command[Unit]): PreviewResult[Unit] =
       new PreviewResult(ev(Command.this), (), UIO.unit, 1.0, () => DefaultView(title, "").render)
+
+    def help[A >: R](help: Help)(implicit ev: Command[A] =:= Command[Unit]): PreviewResult[Unit] =
+      new PreviewResult(
+        ev(Command.this),
+        (),
+        UIO.unit,
+        1.0,
+        () => DefaultView(title, HelpMessage.formatted(help)).render
+      )
   }
 
 }
@@ -108,6 +118,7 @@ object Command {
                     case CommandType.StocksCommand             => StocksCommand.make(config)
                     case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
                     case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
+                    case CommandType.SystemCommand             => SystemCommand.make(config)
                     case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
                     case CommandType.TerminalCommand           => TerminalCommand.make(config)
                     case CommandType.TimerCommand              => TimerCommand.make(config)
