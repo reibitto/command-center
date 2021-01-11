@@ -16,7 +16,6 @@ import org.eclipse.swt.events.{ KeyAdapter, KeyEvent, ModifyEvent, ModifyListene
 import org.eclipse.swt.widgets.Display
 import zio._
 import zio.blocking.Blocking
-import zio.clock.Clock
 import zio.duration._
 
 import java.awt.Dimension
@@ -192,22 +191,24 @@ final case class SwtTerminal(
       }
 
       _ <- invoke {
-             if (buffer.isEmpty) {
-               terminal.outputBox.setVisible(false)
-               terminal.outputBoxGridData.exclude = true
-               terminal.outputBox.setText("")
-             } else {
-               terminal.outputBox.setVisible(true)
-               terminal.outputBoxGridData.exclude = false
-               terminal.outputBox.setText(buffer.toString)
+             if (terminal.shell.isVisible) {
+               if (buffer.isEmpty) {
+                 terminal.outputBox.setVisible(false)
+                 terminal.outputBoxGridData.exclude = true
+                 terminal.outputBox.setText("")
+               } else {
+                 terminal.outputBox.setVisible(true)
+                 terminal.outputBoxGridData.exclude = false
+                 terminal.outputBox.setText(buffer.toString)
 
-               terminal.outputBox.setStyleRanges(styles.toArray)
+                 terminal.outputBox.setStyleRanges(styles.toArray)
+               }
+
+               val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
+               terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
+
+               terminal.outputBox.setSelection(scrollToPosition)
              }
-
-             val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
-             terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
-
-             terminal.outputBox.setSelection(scrollToPosition)
            }
     } yield ()
   }

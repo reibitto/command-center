@@ -12,7 +12,6 @@ import commandcenter.util.{ Debouncer, OS }
 import commandcenter.view.{ Rendered, Style }
 import zio._
 import zio.blocking.Blocking
-import zio.clock.Clock
 import zio.duration._
 
 import java.awt.event.KeyEvent
@@ -121,96 +120,98 @@ final case class SwingTerminal(
   private def render(searchResults: SearchResults[Any]): UIO[Unit] =
     for {
       commandCursor <- commandCursorRef.get
-    } yield SwingUtilities.invokeLater { () =>
-      def colorMask(width: Int): Long = ~0L >>> (64 - width)
+    } yield
+      if (frame.isVisible) // If the frame isn't visible, trying to insert into the document will throw an exception
+        SwingUtilities.invokeLater { () =>
+          def colorMask(width: Int): Long = ~0L >>> (64 - width)
 
-      document.remove(0, document.getLength)
+          document.remove(0, document.getLength)
 
-      var scrollToPosition: Int = 0
+          var scrollToPosition: Int = 0
 
-      def renderBar(rowIndex: Int): Unit = {
-        val barStyle = new SimpleAttributeSet()
+          def renderBar(rowIndex: Int): Unit = {
+            val barStyle = new SimpleAttributeSet()
 
-        if (rowIndex == commandCursor)
-          StyleConstants.setBackground(barStyle, CCTheme.default.green)
-        else
-          StyleConstants.setBackground(barStyle, CCTheme.default.darkGray)
+            if (rowIndex == commandCursor)
+              StyleConstants.setBackground(barStyle, CCTheme.default.green)
+            else
+              StyleConstants.setBackground(barStyle, CCTheme.default.darkGray)
 
-        document.insertString(document.getLength, " ", barStyle)
-        document.insertString(document.getLength, " ", null)
-      }
+            document.insertString(document.getLength, " ", barStyle)
+            document.insertString(document.getLength, " ", null)
+          }
 
-      searchResults.rendered.zipWithIndex.foreach { case (r, row) =>
-        r match {
-          case Rendered.Styled(segments) =>
-            renderBar(row)
+          searchResults.rendered.zipWithIndex.foreach { case (r, row) =>
+            r match {
+              case Rendered.Styled(segments) =>
+                renderBar(row)
 
-            segments.foreach { styledText =>
-              val style = new SimpleAttributeSet()
-
-              styledText.styles.foreach {
-                case Style.Bold                   => StyleConstants.setBold(style, true)
-                case Style.Underline              => StyleConstants.setUnderline(style, true)
-                case Style.Italic                 => StyleConstants.setItalic(style, true)
-                case Style.ForegroundColor(color) => StyleConstants.setForeground(style, color)
-                case Style.BackgroundColor(color) => StyleConstants.setForeground(style, color)
-                case Style.FontFamily(fontFamily) => StyleConstants.setFontFamily(style, fontFamily)
-                case Style.FontSize(fontSize)     => StyleConstants.setFontSize(style, fontSize)
-              }
-
-              if (row < commandCursor)
-                scrollToPosition += styledText.text.length + 3
-
-              document.insertString(document.getLength, styledText.text, style)
-            }
-
-            if (row < searchResults.rendered.length - 1)
-              document.insertString(document.getLength, "\n", null)
-
-          case ar: Rendered.Ansi =>
-            renderBar(row)
-
-            if (row < commandCursor)
-              scrollToPosition += ar.ansiStr.length + 3
-
-            val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
-
-            var i: Int = 0
-            Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
-              val s = renderStr.plainText.substring(i, i + c.length)
-
-              i += c.length
-
-              val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
-              val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
-
-              val awtForegroundOpt = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
-              val awtBackgroundOpt = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
-
-              val style = (awtForegroundOpt, awtBackgroundOpt) match {
-                case (None, None) =>
-                  // Don't bother wastefully creating a StyleRange object
-                  null
-
-                case _ =>
+                segments.foreach { styledText =>
                   val style = new SimpleAttributeSet()
 
-                  awtForegroundOpt.foreach(StyleConstants.setForeground(style, _))
-                  awtBackgroundOpt.foreach(StyleConstants.setBackground(style, _))
+                  styledText.styles.foreach {
+                    case Style.Bold                   => StyleConstants.setBold(style, true)
+                    case Style.Underline              => StyleConstants.setUnderline(style, true)
+                    case Style.Italic                 => StyleConstants.setItalic(style, true)
+                    case Style.ForegroundColor(color) => StyleConstants.setForeground(style, color)
+                    case Style.BackgroundColor(color) => StyleConstants.setForeground(style, color)
+                    case Style.FontFamily(fontFamily) => StyleConstants.setFontFamily(style, fontFamily)
+                    case Style.FontSize(fontSize)     => StyleConstants.setFontSize(style, fontSize)
+                  }
 
-                  style
-              }
+                  if (row < commandCursor)
+                    scrollToPosition += styledText.text.length + 3
 
-              document.insertString(document.getLength, s, style)
+                  document.insertString(document.getLength, styledText.text, style)
+                }
+
+                if (row < searchResults.rendered.length - 1)
+                  document.insertString(document.getLength, "\n", null)
+
+              case ar: Rendered.Ansi =>
+                renderBar(row)
+
+                if (row < commandCursor)
+                  scrollToPosition += ar.ansiStr.length + 3
+
+                val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
+
+                var i: Int = 0
+                Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
+                  val s = renderStr.plainText.substring(i, i + c.length)
+
+                  i += c.length
+
+                  val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
+                  val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
+
+                  val awtForegroundOpt = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
+                  val awtBackgroundOpt = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
+
+                  val style = (awtForegroundOpt, awtBackgroundOpt) match {
+                    case (None, None) =>
+                      // Don't bother wastefully creating a StyleRange object
+                      null
+
+                    case _ =>
+                      val style = new SimpleAttributeSet()
+
+                      awtForegroundOpt.foreach(StyleConstants.setForeground(style, _))
+                      awtBackgroundOpt.foreach(StyleConstants.setBackground(style, _))
+
+                      style
+                  }
+
+                  document.insertString(document.getLength, s, style)
+                }
+
             }
+          }
 
+          outputTextPane.setCaretPosition(scrollToPosition)
+
+          frame.pack()
         }
-      }
-
-      outputTextPane.setCaretPosition(scrollToPosition)
-
-      frame.pack()
-    }
 
   def reset: UIO[Unit] =
     for {

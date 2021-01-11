@@ -29,7 +29,6 @@ final case class CliTerminal[T <: Terminal](
   keyHandlersRef: Ref[Map[KeyStroke, URIO[Env, EventResult]]],
   searchDebouncer: Debouncer[Env, Nothing, Unit],
   renderQueue: Queue[SearchResults[Any]],
-  lastSearchFiberRef: Ref[Option[Fiber[Throwable, SearchResults[Any]]]],
   buffer: StringBuilder
 ) extends CCTerminal {
 
@@ -129,8 +128,6 @@ final case class CliTerminal[T <: Terminal](
         // TODO: Make resetCursorOnChange customizable
         commandCursorRef.set(0) *> searchResultsRef.set(r) *> renderQueue.offer(r)
       }
-      .forkDaemon
-      .tap(searchFiber => lastSearchFiberRef.set(Some(searchFiber)))
       .unit
   }
 
@@ -215,15 +212,7 @@ final case class CliTerminal[T <: Terminal](
                             } // TODO: Add option for re-rendering only the input textfield and so on. Or auto-detect that case
       _                  <- searchResultsRef.set(resultsWithNewInput)
       _                  <- if (previousResults.hasChange(searchTerm))
-                              // TODO: Rather than get all search results in one go, render them in an async fashion so that 1 slow command can't delay the rest.
-                              for {
-                                lastSearchFiber <- lastSearchFiberRef.get
-                                _               <- lastSearchFiber match {
-                                                     case Some(fiber) => fiber.interrupt.forkDaemon
-                                                     case None        => ZIO.unit
-                                                   }
-                                _               <- searchDebouncer(search(commands, aliases)(searchTerm))
-                              } yield ()
+                              searchDebouncer(search(commands, aliases)(searchTerm)).flatMap(_.join).forkDaemon
                             else
                               UIO(previousResults)
       _                  <- textCursorRef.get
@@ -286,17 +275,16 @@ object CliTerminal {
     config: CCConfig
   )(managedTerminal: Managed[Throwable, T]): Managed[Throwable, CliTerminal[T]] =
     for {
-      terminal           <- managedTerminal
-      screen             <- ZManaged.fromAutoCloseable(Task(new TerminalScreen(terminal)))
-      graphics           <- Task(screen.newTextGraphics()).toManaged_
-      configRef          <- Ref.makeManaged(config)
-      commandCursorRef   <- Ref.makeManaged(0)
-      textCursorRef      <- Ref.makeManaged(TextCursor.unit)
-      searchResultsRef   <- Ref.makeManaged(SearchResults.empty[Any])
-      keyHandlersRef     <- Ref.makeManaged(Map.empty[KeyStroke, URIO[Env, EventResult]])
-      searchDebouncer    <- Debouncer.make[Env, Nothing, Unit](200.millis).toManaged_
-      renderQueue        <- Queue.sliding[SearchResults[Any]](1).toManaged_
-      lastSearchFiberRef <- Ref.makeManaged(Option.empty[Fiber[Throwable, SearchResults[Any]]])
+      terminal         <- managedTerminal
+      screen           <- ZManaged.fromAutoCloseable(Task(new TerminalScreen(terminal)))
+      graphics         <- Task(screen.newTextGraphics()).toManaged_
+      configRef        <- Ref.makeManaged(config)
+      commandCursorRef <- Ref.makeManaged(0)
+      textCursorRef    <- Ref.makeManaged(TextCursor.unit)
+      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
+      keyHandlersRef   <- Ref.makeManaged(Map.empty[KeyStroke, URIO[Env, EventResult]])
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](200.millis).toManaged_
+      renderQueue      <- Queue.sliding[SearchResults[Any]](1).toManaged_
     } yield CliTerminal(
       terminal,
       screen,
@@ -308,7 +296,6 @@ object CliTerminal {
       keyHandlersRef,
       searchDebouncer,
       renderQueue,
-      lastSearchFiberRef,
       new StringBuilder()
     )
 }
