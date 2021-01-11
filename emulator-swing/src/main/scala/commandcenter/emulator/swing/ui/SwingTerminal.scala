@@ -8,7 +8,7 @@ import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{ Debounced, OS }
+import commandcenter.util.{ Debouncer, OS }
 import commandcenter.view.{ Rendered, Style }
 import zio._
 import zio.blocking.Blocking
@@ -25,9 +25,9 @@ final case class SwingTerminal(
   var config: CCConfig, // TODO: Convert to Ref
   commandCursorRef: Ref[Int],
   searchResultsRef: Ref[SearchResults[Any]],
-  searchDebounce: URIO[Env, Unit] => URIO[Env with Clock, Fiber[Nothing, Unit]]
+  searchDebouncer: Debouncer[Env, Nothing, Unit]
 )(implicit runtime: Runtime[Env])
-    extends CCTerminal {
+    extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swing
 
   val theme    = CCTheme.default
@@ -110,7 +110,7 @@ final case class SwingTerminal(
     val searchTerm = inputTextField.getText
     val context    = CommandContext(Language.detect(searchTerm), SwingTerminal.this, 1.0)
 
-    searchDebounce(
+    searchDebouncer(
       Command
         .search(config.commands, config.aliases, searchTerm, context)
         .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
@@ -241,6 +241,7 @@ final case class SwingTerminal(
           for {
             _               <- hide
             _               <- deactivate.ignore
+            _               <- searchDebouncer.triggerNowAwait
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
             resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
@@ -369,8 +370,8 @@ final case class SwingTerminal(
 object SwingTerminal {
   def create(config: CCConfig, runtime: CCRuntime): Managed[Throwable, SwingTerminal] =
     for {
-      searchDebounce   <- Debounced[Env, Nothing, Unit](200.millis).toManaged_
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](200.millis).toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-    } yield new SwingTerminal(config, commandCursorRef, searchResultsRef, searchDebounce)(runtime)
+    } yield new SwingTerminal(config, commandCursorRef, searchResultsRef, searchDebouncer)(runtime)
 }

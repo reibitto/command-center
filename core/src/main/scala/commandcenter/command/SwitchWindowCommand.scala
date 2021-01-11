@@ -14,9 +14,12 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input   <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       // TODO: Consider adding more info than just the title. Like "File Explorer" and so on.
-      windows = WindowManager.topLevelWindows.tail.filter(w => w.title.contains(input.rest))
+      windows <- WindowManager.topLevelWindows.bimap(
+                   CommandError.UnexpectedException,
+                   _.tail.filter(_.title.contains(input.rest))
+                 )
     } yield windows.map { w =>
       Preview.unit
         .onRun(WindowManager.giveWindowFocus(w.window))

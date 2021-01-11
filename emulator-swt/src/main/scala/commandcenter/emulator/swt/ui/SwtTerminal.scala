@@ -8,7 +8,7 @@ import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{ Debounced, OS }
+import commandcenter.util.{ Debouncer, OS }
 import commandcenter.view.Rendered
 import org.eclipse.swt.SWT
 import org.eclipse.swt.custom.StyleRange
@@ -26,10 +26,10 @@ final case class SwtTerminal(
   var config: CCConfig, // TODO: Convert to Ref
   commandCursorRef: Ref[Int],
   searchResultsRef: Ref[SearchResults[Any]],
-  searchDebounce: URIO[Env, Unit] => URIO[Env with Clock, Fiber[Nothing, Unit]],
+  searchDebouncer: Debouncer[Env, Nothing, Unit],
   terminal: RawSwtTerminal
 )(implicit runtime: Runtime[Env])
-    extends CCTerminal {
+    extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swt
 
   val theme = CCTheme.default
@@ -44,7 +44,7 @@ final case class SwtTerminal(
         val context    = CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0)
 
         runtime.unsafeRunAsync_ {
-          searchDebounce(
+          searchDebouncer(
             Command
               .search(config.commands, config.aliases, searchTerm, context)
               .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
@@ -62,6 +62,7 @@ final case class SwtTerminal(
               for {
                 _               <- hide
                 _               <- deactivate.ignore
+                _               <- searchDebouncer.triggerNowAwait
                 previousResults <- searchResultsRef.get
                 cursorIndex     <- commandCursorRef.get
                 resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
@@ -296,10 +297,10 @@ final case class SwtTerminal(
 object SwtTerminal {
   def create(config: CCConfig, runtime: CCRuntime, terminal: RawSwtTerminal): ZManaged[Env, Throwable, SwtTerminal] =
     for {
-      searchDebounce   <- Debounced[Env, Nothing, Unit](200.millis).toManaged_
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](200.millis).toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-      swtTerminal       = new SwtTerminal(config, commandCursorRef, searchResultsRef, searchDebounce, terminal)(runtime)
+      swtTerminal       = new SwtTerminal(config, commandCursorRef, searchResultsRef, searchDebouncer, terminal)(runtime)
       _                <- swtTerminal.init.toManaged_
     } yield swtTerminal
 }
