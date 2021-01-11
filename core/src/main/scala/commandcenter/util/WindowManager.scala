@@ -4,6 +4,7 @@ import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.WinDef.{ HDC, HWND, LPARAM, RECT }
 import com.sun.jna.platform.win32.WinUser.{ MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT }
 import com.sun.jna.platform.win32.{ User32, WinUser }
+import com.sun.jna.ptr.IntByReference
 import commandcenter.command.cache.InMemoryCache
 import zio.clock.Clock
 import zio.{ RIO, Task }
@@ -217,7 +218,29 @@ object WindowManager {
     )
   }
 
-  def topLevelWindows: List[TopLevelWindow] = {
+  def commandCenterWindow: Task[Option[HWND]] = Task {
+    val currentProcess         = ProcessHandle.current()
+    var ccWindow: Option[HWND] = None
+
+    User32.INSTANCE.EnumWindows(
+      (window: HWND, _: Pointer) => {
+        val processId = new IntByReference()
+        User32.INSTANCE.GetWindowThreadProcessId(window, processId)
+
+        if (processId.getValue == currentProcess.pid()) {
+          ccWindow = Some(window)
+          false
+        } else {
+          true
+        }
+      },
+      Pointer.NULL
+    )
+
+    ccWindow
+  }
+
+  def topLevelWindows: Task[List[TopLevelWindow]] = Task {
     // This list comes from GoToWindow: https://github.com/christianrondeau/GoToWindow/blob/master/GoToWindow.Api/WindowsListFactory.cs
     val ignoredClasses: Set[String] = Set(
       "Button",

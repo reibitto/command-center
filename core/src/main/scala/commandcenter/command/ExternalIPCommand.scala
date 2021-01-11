@@ -4,8 +4,6 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools
 import commandcenter.util.OS
-import sttp.client._
-import sttp.client.httpclient.zio.SttpClient
 import zio.blocking.Blocking
 import zio.process.{ Command => PCommand }
 import zio.{ TaskManaged, ZIO, ZManaged }
@@ -24,14 +22,16 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
         .onRun(tools.setClipboard(externalIP))
     )
 
-  private def getExternalIP: ZIO[SttpClient with Blocking, CommandError, String] =
+  private def getExternalIP: ZIO[Blocking, CommandError, String] =
     OS.os match {
       case OS.Windows =>
-        val request = basicRequest.get(uri"https://api.ipify.org").response(asString)
-        SttpClient
-          .send(request)
-          .bimap(CommandError.UnexpectedException, _.body)
-          .rightOrFailWith(CommandError.InternalError)
+        val prefix = "Address:"
+        (for {
+          lines <- PCommand("nslookup", "myip.opendns.com", "resolver1.opendns.com").lines
+        } yield lines.filter(_.startsWith("Address:")).drop(1).headOption.map { a =>
+          a.drop(prefix.length).trim
+        }).mapError(CommandError.UnexpectedException)
+          .someOrFail(CommandError.InternalError("Could not parse nslookup results"))
       case _          =>
         PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
           .bimap(CommandError.UnexpectedException, _.trim)
