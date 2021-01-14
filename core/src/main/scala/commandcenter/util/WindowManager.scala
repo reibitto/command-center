@@ -109,6 +109,15 @@ object WindowManager {
     val window  = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
+    val windowPlacement = new WINDOWPLACEMENT()
+    User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
+
+    // Before transforming the window size, make sure it's not maximized. Otherwise we can get into a weird state (shows
+    // up as maximized even though it's not taking up the full screen).
+    if (windowPlacement.showCmd == WinUser.SW_SHOWMAXIMIZED || windowPlacement.showCmd == WinUser.SW_MAXIMIZE) {
+      User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
+    }
+
     val monitorInfo = new MONITORINFO()
     User32.INSTANCE.GetMonitorInfo(monitor, monitorInfo)
 
