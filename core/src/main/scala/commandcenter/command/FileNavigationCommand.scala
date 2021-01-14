@@ -8,6 +8,7 @@ import zio._
 
 import java.io.File
 import scala.util.Try
+import scala.util.matching.Regex
 
 final case class FileNavigationCommand() extends Command[File] {
   val commandType: CommandType = CommandType.FileNavigationCommand
@@ -18,10 +19,12 @@ final case class FileNavigationCommand() extends Command[File] {
 
   val homeDirectory: Option[String] = Try(System.getProperty("user.home")).toOption
 
+  // For Windows-style paths like `C:/folder`
+  val drivePathRegex: Regex = "[A-Za-z]:".r
+
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[File]]] = {
     val input = searchInput.input
-    // TODO: Support \ paths and C:\ D:\ etc.
-    if (!input.startsWith("/") && !input.startsWith("~/"))
+    if (!input.startsWith("/") && !input.startsWith("~/") && drivePathRegex.findPrefixOf(input).isEmpty)
       IO.fail(NotApplicable)
     else {
       val file = homeDirectory match {
