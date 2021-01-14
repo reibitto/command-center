@@ -191,24 +191,22 @@ final case class SwtTerminal(
       }
 
       _ <- invoke {
-             if (terminal.shell.isVisible) {
-               if (buffer.isEmpty) {
-                 terminal.outputBox.setVisible(false)
-                 terminal.outputBoxGridData.exclude = true
-                 terminal.outputBox.setText("")
-               } else {
-                 terminal.outputBox.setVisible(true)
-                 terminal.outputBoxGridData.exclude = false
-                 terminal.outputBox.setText(buffer.toString)
+             if (buffer.isEmpty || !terminal.shell.isVisible) {
+               terminal.outputBox.setVisible(false)
+               terminal.outputBoxGridData.exclude = true
+               terminal.outputBox.setText("")
+             } else {
+               terminal.outputBox.setVisible(true)
+               terminal.outputBoxGridData.exclude = false
+               terminal.outputBox.setText(buffer.toString)
 
-                 terminal.outputBox.setStyleRanges(styles.toArray)
-               }
-
-               val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
-               terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
-
-               terminal.outputBox.setSelection(scrollToPosition)
+               terminal.outputBox.setStyleRanges(styles.toArray)
              }
+
+             val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
+             terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
+
+             terminal.outputBox.setSelection(scrollToPosition)
            }
     } yield ()
   }
@@ -246,9 +244,8 @@ final case class SwtTerminal(
     } yield ()
 
   def deactivate: RIO[Tools with Blocking, Unit] =
-    OS.os match {
-      case OS.MacOS => tools.hide
-      case _        => UIO.unit
+    ZIO.whenCase(OS.os) { case OS.MacOS =>
+      tools.hide
     }
 
   def clearScreen: UIO[Unit] =

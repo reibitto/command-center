@@ -121,7 +121,7 @@ final case class SwingTerminal(
     for {
       commandCursor <- commandCursorRef.get
     } yield
-      if (frame.isVisible) // If the frame isn't visible, trying to insert into the document will throw an exception
+      if (frame.isVisible) { // If the frame isn't visible, trying to insert into the document will throw an exception
         SwingUtilities.invokeLater { () =>
           def colorMask(width: Int): Long = ~0L >>> (64 - width)
 
@@ -212,6 +212,12 @@ final case class SwingTerminal(
 
           frame.pack()
         }
+      } else {
+        SwingUtilities.invokeLater { () =>
+          document.remove(0, document.getLength)
+          frame.pack()
+        }
+      }
 
   def reset: UIO[Unit] =
     for {
@@ -314,9 +320,12 @@ final case class SwingTerminal(
 
       frame.setLocation(x, 0)
       frame.setVisible(true)
+
     }
 
-  def hide: UIO[Unit] = UIO(frame.setVisible(false))
+  def hide: UIO[Unit] = UIO {
+    frame.setVisible(false)
+  }
 
   def activate: RIO[Tools with Blocking, Unit] =
     OS.os match {
