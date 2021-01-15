@@ -121,9 +121,6 @@ object WindowManager {
     val monitorInfo = new MONITORINFO()
     User32.INSTANCE.GetMonitorInfo(monitor, monitorInfo)
 
-    val windowRect = new RECT()
-    User32.INSTANCE.GetWindowRect(window, windowRect)
-
     val monitorWidth  = monitorInfo.rcWork.right - monitorInfo.rcWork.left
     val monitorHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top
 
