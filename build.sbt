@@ -63,7 +63,7 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "core"                   % Version.sttp,
       "com.softwaremill.sttp.client" %% "circe"                  % Version.sttp,
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
-      "com.lihaoyi"                  %% "fastparse"              % "2.3.1",
+      "com.lihaoyi"                  %% "fastparse"              % "2.3.2",
       "org.typelevel"                %% "spire"                  % "0.17.0",
       "org.cache2k"                   % "cache2k-core"           % "1.6.0.Final",
       "net.java.dev.jna"              % "jna"                    % Version.jna,
