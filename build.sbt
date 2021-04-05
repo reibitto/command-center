@@ -57,7 +57,7 @@ lazy val core = module("core")
       "io.circe"                     %% "circe-core"             % Version.circe,
       "io.circe"                     %% "circe-parser"           % Version.circe,
       "com.monovore"                 %% "decline"                % "2.0.0",
-      "com.lihaoyi"                  %% "fansi"                  % "0.2.11",
+      "com.lihaoyi"                  %% "fansi"                  % "0.2.12",
       "com.beachape"                 %% "enumeratum"             % Version.enumeratum,
       "com.beachape"                 %% "enumeratum-circe"       % Version.enumeratum,
       "com.softwaremill.sttp.client" %% "core"                   % Version.sttp,
