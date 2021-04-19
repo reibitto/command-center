@@ -86,16 +86,16 @@ lazy val cli = module("cli")
   .dependsOn(coreUI)
   .settings(
     fork := true,
-    baseDirectory in run := file("."),
+    run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
       "org.scalameta" %% "svm-subs" % Version.graal,
       "org.zeromq"     % "jeromq"   % "0.5.2"
     ),
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % Version.jna).filter(_ => OS.os == OS.Windows),
-    mainClass in assembly := Some("commandcenter.cli.Main"),
-    assemblyJarName in assembly := "cc.jar",
-    assemblyMergeStrategy in assembly := {
+    assembly / mainClass := Some("commandcenter.cli.Main"),
+    assembly / assemblyJarName := "cc.jar",
+    assembly / assemblyMergeStrategy := {
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
     },
@@ -135,7 +135,7 @@ lazy val emulatorCore = module("emulator-core")
   )
   .settings(
     fork := true,
-    baseDirectory in run := file("."),
+    run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
       "com.github.tulskiy" % "jkeymaster" % "1.3",
       "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
@@ -150,11 +150,11 @@ lazy val emulatorSwt = module("emulator-swt")
   .settings(
     fork := true,
     publishMavenStyle := false,
-    baseDirectory in run := file("."),
-    mainClass in assembly := Some("commandcenter.emulator.swt.Main"),
+    run / baseDirectory := file("."),
+    assembly / mainClass := Some("commandcenter.emulator.swt.Main"),
     javaOptions := Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
-    assemblyJarName in assembly := "cc-swt.jar",
-    assemblyMergeStrategy in assembly := {
+    assembly / assemblyJarName := "cc-swt.jar",
+    assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
@@ -169,10 +169,10 @@ lazy val emulatorSwing = module("emulator-swing")
   )
   .settings(
     fork := true,
-    baseDirectory in run := file("."),
-    mainClass in assembly := Some("commandcenter.emulator.swing.Main"),
-    assemblyJarName in assembly := "cc-swing.jar",
-    assemblyMergeStrategy in assembly := {
+    run / baseDirectory := file("."),
+    assembly / mainClass := Some("commandcenter.emulator.swing.Main"),
+    assembly / assemblyJarName := "cc-swing.jar",
+    assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
