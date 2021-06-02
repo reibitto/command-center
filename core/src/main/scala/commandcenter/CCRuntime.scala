@@ -9,7 +9,7 @@ import sttp.client.httpclient.zio.{ HttpClientZioBackend, SttpClient }
 import zio.duration._
 import zio.internal.Platform
 import zio.logging.Logging
-import zio.{ Runtime, ULayer, ZEnv }
+import zio.{ Runtime, ULayer, ZEnv, ZLayer }
 
 import java.util.concurrent.Executor
 import scala.concurrent.ExecutionContext
@@ -20,21 +20,23 @@ trait CCRuntime extends Runtime[Env] {
     def execute(command: Runnable): Unit = command.run()
   }
 
-  lazy val runtime: Runtime.Managed[Env] = {
+  lazy val runtime: Runtime[Env] = {
     val platform =
       if (OS.os == OS.MacOS && terminalType == TerminalType.Swt)
         Platform.fromExecutionContext(ExecutionContext.fromExecutor(new DirectExecutor()))
       else
         Platform.default
 
+    import zio.magic._
+
     Runtime.unsafeFromLayer(
-      ZEnv.live >>> (
-        ZEnv.live
-          ++ CCLogging.make(terminalType)
-          ++ Tools.live
-          ++ shortcutsLayer
-          ++ HttpClientZioBackend.layer()
-          ++ InMemoryCache.make(5.minutes)
+      ZLayer.fromMagic[Env](
+        ZEnv.live,
+        CCLogging.make(terminalType),
+        Tools.live,
+        shortcutsLayer,
+        HttpClientZioBackend.layer(),
+        InMemoryCache.make(5.minutes)
       ),
       platform
     )

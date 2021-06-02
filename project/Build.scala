@@ -59,9 +59,9 @@ object Build {
     Seq(
       name := projectName,
       version := CommandCenterVersion,
-      javaOptions in Test += "-Duser.timezone=UTC",
+      Test / javaOptions += "-Duser.timezone=UTC",
       scalacOptions := ScalacOptions,
-      scalaVersion in ThisBuild := ScalaVersion,
+      ThisBuild / scalaVersion := ScalaVersion,
       unmanagedBase := baseDirectory.value / "plugins",
       libraryDependencies ++= Plugins.BaseCompilerPlugins,
       libraryDependencies ++= Seq(
@@ -72,8 +72,8 @@ object Build {
       autoAPIMappings := true,
       resolvers := Resolvers,
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
-      fork in Test := true,
-      logBuffered in Test := false
+      Test / fork := true,
+      Test / logBuffered := false
     )
 
   lazy val Resolvers = Seq(
