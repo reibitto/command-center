@@ -14,7 +14,7 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
   val commandType: CommandType = CommandType.HoogleCommand
   val title: String            = "Hoogle"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input    <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
       request   = basicRequest
@@ -28,7 +28,7 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
       results  <- IO.fromEither(
                     response.as[List[HoogleResult]]
                   ).mapError(CommandError.UnexpectedException)
-    } yield results.map { result =>
+    } yield PreviewResults.fromIterable(results.map { result =>
       Preview.unit
         .onRun(ProcessUtil.openBrowser(result.url))
         .score(Scores.high(input.context))
@@ -36,7 +36,7 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
           fansi.Color.Magenta(result.item) ++ " " ++ fansi.Color.Yellow(result.module.name) ++ " " ++ fansi.Color
             .Cyan(result.`package`.name) ++ "\n" ++ result.docs
         )
-    }
+    })
 }
 
 object HoogleCommand extends CommandPlugin[HoogleCommand] {

@@ -15,7 +15,7 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
   val commandType: CommandType = CommandType.LocalIPCommand
   val title: String            = "Local IP"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input    <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       localIps <- effectBlocking {
@@ -28,12 +28,12 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
                         }
                       }
                   }.mapError(CommandError.UnexpectedException)
-    } yield localIps.map { case (interfaceName, localIp) =>
+    } yield PreviewResults.fromIterable(localIps.map { case (interfaceName, localIp) =>
       Preview(localIp)
         .onRun(tools.setClipboard(localIp))
         .score(Scores.high(input.context))
         .view(DefaultView(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp)))
-    }
+    })
 }
 
 object LocalIPCommand extends CommandPlugin[LocalIPCommand] {

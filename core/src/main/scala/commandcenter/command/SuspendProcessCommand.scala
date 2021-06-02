@@ -21,7 +21,7 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 
   val command = decline.Command("suspend", title)(Opts.argument[Long]("pid"))
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input        <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsedCommand = command.parse(input.args)
@@ -35,7 +35,7 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
         _           <- SuspendProcessCommand.setProcessState(!isSuspended, pid)
       } yield ()
 
-      List(
+      PreviewResults.one(
         Preview.unit
           .onRun(run.orDie)
           .score(Scores.high(input.context))

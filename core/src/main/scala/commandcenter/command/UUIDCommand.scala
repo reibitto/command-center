@@ -11,11 +11,11 @@ final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
   val commandType: CommandType = CommandType.UUIDCommand
   val title: String            = "UUID"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[UUID]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[UUID]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       uuid   = UUID.randomUUID()
-    } yield List(
+    } yield PreviewResults.one(
       Preview(uuid).onRun(tools.setClipboard(uuid.toString)).score(Scores.high(input.context))
     )
 }

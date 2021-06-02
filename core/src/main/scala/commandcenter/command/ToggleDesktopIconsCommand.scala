@@ -12,7 +12,7 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
     } yield {
@@ -23,7 +23,7 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
         _            <- PCommand("killall", "Finder").exitCode
       } yield ()
 
-      List(Preview.unit.onRun(run).score(Scores.high(input.context)))
+      PreviewResults.one(Preview.unit.onRun(run).score(Scores.high(input.context)))
     }
 }
 

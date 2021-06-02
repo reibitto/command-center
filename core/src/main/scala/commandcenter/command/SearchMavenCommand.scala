@@ -22,7 +22,7 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
 
   val scalaArtifactRegex: Regex = "(.+?)(_[02].\\d+)".r
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input          <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
       request         = basicRequest
@@ -37,14 +37,14 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
                           response.hcursor.downField("response").downField("docs").as[List[MavenArtifact]]
                         ).mapError(CommandError.UnexpectedException)
       scoredArtifacts = bucket(artifacts, Some(input.rest)).take(20)
-    } yield scoredArtifacts.map { artifact =>
+    } yield PreviewResults.fromIterable(scoredArtifacts.map { artifact =>
       val renderedCoordinates = artifact.render
 
       Preview(renderedCoordinates)
         .onRun(tools.setClipboard(renderedCoordinates))
         .score(Scores.high(input.context))
         .view(artifact.renderColored)
-    }
+    })
 
   private def bucket(mavenArtifacts: List[MavenArtifact], searchTerm: Option[String]): List[BucketedMavenArtifact] =
     mavenArtifacts.map { m =>

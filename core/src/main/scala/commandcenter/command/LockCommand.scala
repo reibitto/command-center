@@ -14,10 +14,10 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
 
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield List(
+    } yield PreviewResults.one(
       Preview.unit.onRun(pCommand.exitCode.unit).score(Scores.high(input.context))
     )
 

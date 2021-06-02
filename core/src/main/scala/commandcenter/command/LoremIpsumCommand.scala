@@ -30,7 +30,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
 
   val lipsumCommand = decline.Command(title, title)((numOpt, typeOpt).tupled)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed   = lipsumCommand.parse(input.args)
@@ -53,7 +53,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
                           }
         _              <- tools.setClipboard(text)
       } yield ()
-      List(
+      PreviewResults.one(
         Preview.unit
           .onRun(run)
           .score(Scores.high(input.context))

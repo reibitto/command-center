@@ -10,6 +10,7 @@ import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
 import zio._
 import zio.logging._
+import zio.stream.ZStream
 
 import java.util.Locale
 
@@ -22,7 +23,7 @@ trait Command[+R] extends ViewInstances {
   def supportedOS: Set[OS]             = Set.empty
   def shortcuts: Set[KeyboardShortcut] = Set.empty
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[R]]]
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[R]]
 
   object Preview {
     def apply[A >: R](a: A): PreviewResult[A] =
@@ -58,28 +59,40 @@ object Command {
     // The user's input + all the matching aliases which have been resolved (expanded) to its full text value
     val aliasedInputs = input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)
 
-    ZIO
-      .foreachParN(8) {
-        commands.map(command =>
-          command
-            .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
-            .tapCause { cause =>
-              log
-                .error(s"${command.getClass.getSimpleName} encountered a defect with input: $input", cause)
-                .when(cause.died)
-            }
-            .either
-            .absorb
-            .mapError { t =>
-              CommandError.UnexpectedException(t): CommandError
-            } // Defects in a single command are isolated and don't fail the entire search
-            .absolve
-        )
-      }(_.option)
-      .map { r =>
-        val results = r.flatten.flatten.sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
-        SearchResults(input, results)
+    (for {
+      chunks <- ZStream
+                  .fromIterable(commands)
+                  .mapMPar(8) { command =>
+                    command
+                      .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
+                      .flatMap {
+                        case PreviewResults.Single(r)               => UIO(Chunk.single(r))
+                        case PreviewResults.Multiple(rs)            => UIO(rs)
+                        case PreviewResults.Paginated(rs, pageSize) =>
+                          // TODO: Add "More..." PreviewResult
+                          rs.take(pageSize).runCollect
+                      }
+                      .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedException(t)))
+                      .either
+
+                  }
+                  .runCollect
+    } yield chunks.flatMap {
+      case Left(e)  => Chunk.single(Left(e))
+      case Right(r) => r.map(Right(_))
+    }.partitionMap(identity) match {
+      case (errors, successes) =>
+        val results = successes.sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
+
+        SearchResults(input, results, errors)
+    }).tap { r =>
+      ZIO.foreach_(r.errors) {
+        case CommandError.UnexpectedException(t) =>
+          log.throwable(s"Command encountered an unexpected exception with input: $input", t)
+
+        case _ => ZIO.unit
       }
+    }
   }
 
   def parse(config: Config): ZManaged[Env, Throwable, Command[_]] =

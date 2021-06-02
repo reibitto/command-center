@@ -52,6 +52,7 @@ lazy val core = module("core")
       "dev.zio"                      %% "zio-streams"            % Version.zio,
       "dev.zio"                      %% "zio-process"            % "0.4.0",
       "dev.zio"                      %% "zio-logging"            % "0.5.10",
+      "io.github.kitlangton"         %% "zio-magic"              % "0.3.2",
       "io.circe"                     %% "circe-config"           % "0.8.0",
       "org.scala-lang"                % "scala-reflect"          % "2.13.6",
       "io.circe"                     %% "circe-core"             % Version.circe,
@@ -184,7 +185,7 @@ lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-o
 
 lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
   .dependsOn(core)
-  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.0.1"))
+  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.1.0"))
 
 lazy val extras     = project
   .in(file("extras"))

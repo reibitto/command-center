@@ -13,12 +13,12 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
   val commandType: CommandType = CommandType.SnippetsCommand
   val title: String            = "Snippets"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       (isPrefixed, snippetSearch) <-
         ZIO.fromOption(searchInput.asPrefixed).bimap(_ => (false, searchInput.input), s => (true, s.rest)).merge
 
-    } yield snippets.map { snip =>
+    } yield PreviewResults.fromIterable(snippets.map { snip =>
       val score =
         if (isPrefixed)
           Scores.high(searchInput.context)
@@ -35,7 +35,7 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
           .onRun(tools.setClipboard(snippet.value))
           .score(score)
           .view(DefaultView(title, fansi.Color.Magenta(snippet.keyword) ++ " " ++ snippet.value))
-    }
+    })
 }
 
 object SnippetsCommand extends CommandPlugin[SnippetsCommand] {

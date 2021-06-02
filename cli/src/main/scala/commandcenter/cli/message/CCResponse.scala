@@ -3,11 +3,12 @@ package commandcenter.cli.message
 import commandcenter.command.SearchResults
 import commandcenter.view.Rendered
 import io.circe._
+import zio.Chunk
 
 sealed trait CCResponse
 
 object CCResponse {
-  final case class Search(searchTerm: String, results: Vector[SearchResult]) extends CCResponse
+  final case class Search(searchTerm: String, results: Chunk[SearchResult]) extends CCResponse
 
   object Search {
     implicit val encoder: Encoder[Search] = Encoder.forProduct2("searchTerm", "results")(s => (s.searchTerm, s.results))

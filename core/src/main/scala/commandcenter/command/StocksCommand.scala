@@ -14,7 +14,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
   val title: String            = "Stock"
   val stocksUrl: String        = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input    <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       symbols   = if (input.rest.isBlank) tickers.map(_.id).mkString(",") else input.rest
@@ -29,7 +29,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       stocks   <- IO.fromEither(
                     response.hcursor.downField("quoteResponse").downField("result").as[List[StocksResult]]
                   ).mapError(CommandError.UnexpectedException)
-    } yield stocks.map { stock =>
+    } yield PreviewResults.fromIterable(stocks.map { stock =>
       Preview.unit
         .score(Scores.high(input.context))
         .view(
@@ -41,7 +41,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
             getChangePercentField(stock.change, stock.changePercent)
           )
         )
-    }
+    })
 
   private def getChangePercentField(change: Double, changePercent: Double): fansi.Str = {
     val changeTextField        = s"${String.format("%.2f", change)}"

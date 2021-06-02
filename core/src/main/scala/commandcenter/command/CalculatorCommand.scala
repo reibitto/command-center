@@ -28,10 +28,10 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
     case arg                               => Validated.invalidNel(s"$arg is not valid: should be 'functions' or 'parameters'.")
   }
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[BigDecimal]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
     previewHelp(searchInput) <> previewEvaluation(searchInput)
 
-  private def previewHelp(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[BigDecimal]]] =
+  private def previewHelp(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
     for {
       input                <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed                = decline.Command(title, title)(helpTypeOpt).parse(input.args)
@@ -41,16 +41,16 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
                                   help => (title, HelpMessage.formatted(help)),
                                   helpType => (helpType.title, CalculatorCommand.helpMessageByType(helpType))
                                 )
-    } yield List(
+    } yield PreviewResults.one(
       Preview(BigDecimal(0.0)).score(Scores.high(searchInput.context)).view(DefaultView(helpTitle, message))
     )
 
-  private def previewEvaluation(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[BigDecimal]]] =
+  private def previewEvaluation(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
     for {
       evaluatedValue <- ZIO
                           .fromOption(new CalculatorUtil(parameters).evaluate(searchInput.input))
                           .orElseFail(CommandError.NotApplicable)
-    } yield List(
+    } yield PreviewResults.one(
       Preview(evaluatedValue)
         .render(parameters.format)
         .onRun(tools.setClipboard(parameters.format(evaluatedValue)))

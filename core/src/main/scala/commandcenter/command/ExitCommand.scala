@@ -9,10 +9,12 @@ final case class ExitCommand(commandNames: List[String]) extends Command[Command
   val commandType: CommandType = CommandType.ExitCommand
   val title: String            = "Exit Command Center"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[CommandResult]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[CommandResult]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield List(Preview(CommandResult.Exit).view(DefaultView(title, "")).score(Scores.high(input.context)))
+    } yield PreviewResults.one(
+      Preview(CommandResult.Exit).view(DefaultView(title, "")).score(Scores.high(input.context))
+    )
 }
 
 object ExitCommand extends CommandPlugin[ExitCommand] {

@@ -1,7 +1,5 @@
 package commandcenter.ject
 
-import java.nio.file.Path
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command._
@@ -13,12 +11,14 @@ import ject.entity.WordDocument
 import ject.lucene.WordIndex
 import zio.{ TaskManaged, UIO, ZIO, ZManaged }
 
+import java.nio.file.Path
+
 final case class JectCommand(commandNames: List[String], dictionaryPath: Path) extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
   val title: String            = "Ject"
   val luceneIndex: WordIndex   = new WordIndex(dictionaryPath.resolve("word"))
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input        <- ZIO
                         .fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty).map(_.rest))
@@ -30,13 +30,16 @@ final case class JectCommand(commandNames: List[String], dictionaryPath: Path) e
                             ZIO.fail(CommandError.NotApplicable)
                         }
       searchPattern = SearchPattern(input)
-      words        <- luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedException)
-    } yield words.toList.map { word =>
-      Preview.unit
-        .score(Scores.high(searchInput.context))
-        .onRun(tools.setClipboard(input))
-        .view(renderWord(word))
-    }
+      wordStream    = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedException)
+    } yield PreviewResults.paginated(
+      wordStream.map { word =>
+        Preview.unit
+          .score(Scores.high(searchInput.context))
+          .onRun(tools.setClipboard(input))
+          .view(renderWord(word))
+      },
+      20
+    )
 
   def renderWord(word: WordDocument): fansi.Str = {
     val kanjiTerms = (word.kanjiTerms.headOption.map { k =>
@@ -51,9 +54,8 @@ final case class JectCommand(commandNames: List[String], dictionaryPath: Path) e
       fansi.Color.LightBlue(k)
     }).reduceOption(_ ++ " " ++ _).getOrElse(fansi.Str(""))
 
-    val definitions = word.definitions.zipWithIndex.map {
-      case (d, i) =>
-        fansi.Color.LightGray((i + 1).toString) ++ " " ++ d
+    val definitions = word.definitions.zipWithIndex.map { case (d, i) =>
+      fansi.Color.LightGray((i + 1).toString) ++ " " ++ d
     }.reduceOption(_ ++ "\n" ++ _).getOrElse(fansi.Str(""))
 
     val partsOfSpeech = word.partsOfSpeech.map { pos =>

@@ -21,7 +21,7 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
 
   val radixCommand = decline.Command("radix", title)((fromRadixOpt, toRadixOpt, numberArg).tupled)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed   = radixCommand.parse(input.args)
@@ -47,7 +47,7 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
                        }
                      }
                    )
-    } yield List(preview)
+    } yield PreviewResults.one(preview)
 
 }
 

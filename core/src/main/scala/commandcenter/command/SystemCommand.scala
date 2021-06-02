@@ -35,7 +35,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
   val SC_MONITORPOWER: Int = 0xf170
   val SC_SCREENSAVE: Int   = 0xf140
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed   = systemCommand.parse(input.args)
@@ -94,7 +94,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                        Preview.unit.onRun(run).view(view).score(Scores.high(input.context))
                      }
                    )
-    } yield List(preview)
+    } yield PreviewResults.one(preview)
 }
 
 object SystemCommand extends CommandPlugin[SystemCommand] {

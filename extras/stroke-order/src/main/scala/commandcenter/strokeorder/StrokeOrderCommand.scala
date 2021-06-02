@@ -11,10 +11,10 @@ final case class StrokeOrderCommand(commandNames: List[String]) extends Command[
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
   val title: String            = "Stroke Order"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
-    } yield List(
+    } yield PreviewResults.one(
       Preview.unit
         .score(Scores.high(searchInput.context))
         .onRun(tools.setClipboard(input.rest))

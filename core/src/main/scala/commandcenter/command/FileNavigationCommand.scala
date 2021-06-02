@@ -22,7 +22,7 @@ final case class FileNavigationCommand() extends Command[File] {
   // For Windows-style paths like `C:/folder`
   val drivePathRegex: Regex = "[A-Za-z]:".r
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[File]]] = {
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[File]] = {
     val input = searchInput.input
     if (!input.startsWith("/") && !input.startsWith("~/") && drivePathRegex.findPrefixOf(input).isEmpty)
       IO.fail(NotApplicable)
@@ -39,7 +39,7 @@ final case class FileNavigationCommand() extends Command[File] {
 
       // TODO: This can be made more efficient. Also improve the view, such as highlighting the matched part in a different color
       val sameLevel = Option(file.getParentFile)
-        .map(_.listFiles.toList)
+        .map(_.listFiles.toVector)
         .getOrElse(List.empty)
         .filter(f => f.getAbsolutePath.startsWith(file.getAbsolutePath) && f != file)
         .take(5)
@@ -52,7 +52,7 @@ final case class FileNavigationCommand() extends Command[File] {
 
       val children = Option(file)
         .filter(_.isDirectory)
-        .map(_.listFiles.toList)
+        .map(_.listFiles.toVector)
         .getOrElse(List.empty)
         .filter(f => f.getAbsolutePath.startsWith(file.getAbsolutePath) && f != file)
         .take(5)
@@ -64,12 +64,14 @@ final case class FileNavigationCommand() extends Command[File] {
         }
 
       UIO {
-        List(
-          Preview(file)
-            .score(score)
-            .view(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
-            .onRun(ProcessUtil.browseFile(file))
-        ) ++ sameLevel ++ children
+        PreviewResults.fromIterable(
+          Vector(
+            Preview(file)
+              .score(score)
+              .view(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
+              .onRun(ProcessUtil.browseFile(file))
+          ) ++ sameLevel ++ children
+        )
       }
     }
   }

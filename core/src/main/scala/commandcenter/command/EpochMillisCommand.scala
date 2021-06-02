@@ -13,7 +13,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
   val commandType: CommandType = CommandType.EpochMillisCommand
   val title: String            = "Epoch (milliseconds)"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
@@ -39,7 +39,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
                              case None => ZIO.fail(CommandError.NotApplicable)
                            }
                          }
-    } yield List(
+    } yield PreviewResults.one(
       Preview(output)
         .score(score)
         .onRun(tools.setClipboard(output))

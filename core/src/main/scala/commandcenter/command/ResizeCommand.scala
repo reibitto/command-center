@@ -17,7 +17,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
 
   val resizeCommand = decline.Command("resize", title)((width, height).tupled)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed   = resizeCommand.parse(input.args)
@@ -35,7 +35,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
         _      <- input.context.terminal.setSize(w, h)
       } yield ()
 
-      List(
+      PreviewResults.one(
         Preview.unit
           .onRun(run.orDie)
           .score(Scores.high(input.context))

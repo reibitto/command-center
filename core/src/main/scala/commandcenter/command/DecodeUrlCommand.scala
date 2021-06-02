@@ -14,14 +14,14 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
   val commandType: CommandType = CommandType.DecodeUrlCommand
   val title: String            = "Decode (URL)"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input                    <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all                       = (stringArg, encodingOpt).tupled
       parsedCommand             = decline.Command("", s"URL decodes the given string")(all).parse(input.args)
       (valueToDecode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       decoded                  <- Task(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
-    } yield List(
+    } yield PreviewResults.one(
       Preview(decoded).onRun(tools.setClipboard(decoded)).score(Scores.high(input.context))
     )
 }
