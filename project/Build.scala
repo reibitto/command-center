@@ -8,7 +8,7 @@ object Build {
   val CommandCenterVersion = "0.0.1"
 
   object Version {
-    val zio        = "1.0.8"
+    val zio        = "1.0.9"
     val enumeratum = "1.6.1"
     val circe      = "0.14.1"
     val sttp       = "2.2.9"
