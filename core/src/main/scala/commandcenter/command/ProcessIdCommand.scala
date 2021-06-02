@@ -17,7 +17,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input        <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       stringOutput <- PCommand("lsappinfo", "visibleProcessList").string.mapError(CommandError.UnexpectedException)
@@ -33,7 +33,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
                         .filter { case (_, processName) =>
                           processName.toLowerCase.contains(searchString)
                         }
-    } yield processInfo.map { case (asn, processName) =>
+    } yield PreviewResults.fromIterable(processInfo.map { case (asn, processName) =>
       val run = for {
         pidOutput <- PCommand("lsappinfo", "info", "-only", "pid", asn).string.map(_.trim)
         pid       <- ZIO
@@ -46,7 +46,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
         .onRun(run)
         .view(DefaultView(processName, "Copy PID to clipboard"))
         .score(Scores.high(input.context))
-    }
+    })
 }
 
 object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {

@@ -15,14 +15,14 @@ final case class EncodeUrlCommand(commandNames: List[String]) extends Command[St
 
   val title: String = "Encode (URL)"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input                    <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all                       = (stringArg, encodingOpt).tupled
       parsedCommand             = decline.Command("", s"URL encodes the given string")(all).parse(input.args)
       (valueToEncode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       encoded                   = URLEncoder.encode(valueToEncode, charset)
-    } yield List(
+    } yield PreviewResults.one(
       Preview(encoded).onRun(tools.setClipboard(encoded)).score(Scores.high(input.context))
     )
 }

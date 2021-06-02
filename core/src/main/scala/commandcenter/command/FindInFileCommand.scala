@@ -16,7 +16,7 @@ final case class FindInFileCommand(commandNames: List[String]) extends Command[F
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[File]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[File]] =
     for {
       input  <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       // TODO: mdfind/Spotlight can be really slow, especially when there are a lot of matches. Streaming the top N results
@@ -35,7 +35,7 @@ final case class FindInFileCommand(commandNames: List[String]) extends Command[F
                                   .onRun(PCommand("open", file.getAbsolutePath).exitCode.unit)
                                   .score(Scores.high(input.context))
                               }
-                  } yield results).mapError(UnexpectedException)
+                  } yield PreviewResults.fromIterable(results)).mapError(UnexpectedException)
     } yield result
 }
 

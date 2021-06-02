@@ -13,7 +13,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
   val commandType: CommandType = CommandType.EpochUnixCommand
   val title: String            = "Epoch (Unix time)"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
@@ -39,7 +39,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
                              case None => ZIO.fail(CommandError.NotApplicable)
                            }
                          }
-    } yield List(
+    } yield PreviewResults.one(
       Preview(output)
         .score(score)
         .onRun(tools.setClipboard(output))

@@ -16,7 +16,7 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
   val commandType: CommandType = CommandType.SearchCratesCommand
   val title: String            = "Crates"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input    <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
       request   = basicRequest
@@ -30,12 +30,12 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
       results  <- IO.fromEither(
                     response.hcursor.downField("crates").as[List[CrateResult]]
                   ).mapError(CommandError.UnexpectedException)
-    } yield results.map { result =>
+    } yield PreviewResults.fromIterable(results.map { result =>
       Preview.unit
         .onRun(tools.setClipboard(result.render))
         .score(Scores.high(input.context))
         .view(result.renderColored)
-    }
+    })
 }
 
 object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {

@@ -12,11 +12,11 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
   val commandType: CommandType = CommandType.ExternalIPCommand
   val title: String            = "External IP"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input      <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       externalIP <- getExternalIP
-    } yield List(
+    } yield PreviewResults.one(
       Preview(externalIP)
         .score(Scores.high(input.context))
         .onRun(tools.setClipboard(externalIP))

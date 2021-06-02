@@ -15,12 +15,12 @@ final case class WorldTimesCommand(commandNames: List[String], dateTimeFormat: S
   val commandType: CommandType = CommandType.WorldTimesCommand
   val title: String            = "World Times"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       now    = OffsetDateTime.now
       times  = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.atZoneSameInstant(tz.zoneId)))
-    } yield List(
+    } yield PreviewResults.one(
       Preview.unit.view(WorldTimesResults(dateTimeFormat, times, input.context)).score(Scores.high(input.context))
     )
 }

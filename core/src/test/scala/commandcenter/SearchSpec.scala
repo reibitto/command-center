@@ -16,7 +16,7 @@ object SearchSpec extends CommandBaseSpec {
 
     def title: String = "Exit"
 
-    def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+    def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
       ZIO.dieMessage("This command is broken!")
   }
 

@@ -17,7 +17,7 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[File]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[File]] =
     for {
       input  <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       result <- // TODO: mdfind/Spotlight can be really slow, especially when there are a lot of matches. Streaming the top N results
@@ -26,7 +26,7 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
         if (input.rest.length < 3) ZIO.fail(NotApplicable) // TODO: Show feedback to user in this case?
         else
           (for {
-            lines  <- PCommand("mdfind", "-name", input.rest).linesStream.take(8).runCollect.map(_.toList)
+            lines  <- PCommand("mdfind", "-name", input.rest).linesStream.take(8).runCollect
             files   = lines.map(new File(_))
             // TODO: The default sorting is awful with mdfind. Should we intervene somehow? That would conflict a bit with
             // `take(N)` though.
@@ -38,7 +38,7 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
                           .onRun(PCommand("open", file.getAbsolutePath).exitCode.unit)
                           .score(Scores.high(input.context))
                       }
-          } yield results).mapError(UnexpectedException)
+          } yield PreviewResults.fromIterable(results)).mapError(UnexpectedException)
     } yield result
 }
 

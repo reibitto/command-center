@@ -57,7 +57,7 @@ final case class ITunesCommand(commandNames: List[String]) extends Command[Unit]
   val rateTrackFn     = AppleScript.loadFunction1[Int]("applescript/itunes/rate.applescript")
   val deleteTrackFn   = AppleScript.loadFunction0("applescript/itunes/delete-track.applescript")
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed   = itunesCommand.parse(input.args)
@@ -109,7 +109,7 @@ final case class ITunesCommand(commandNames: List[String]) extends Command[Unit]
                }
       } yield ()
 
-      List(
+      PreviewResults.one(
         Preview.unit
           .onRun(run)
           .score(Scores.high(input.context))

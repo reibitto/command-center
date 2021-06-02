@@ -10,10 +10,10 @@ final case class TerminalCommand(commandNames: List[String]) extends Command[Uni
   val commandType: CommandType = CommandType.TerminalCommand
   val title: String            = "Terminal"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-    } yield List(Preview.unit.view(DefaultView("Terminal", input.rest)).score(Scores.high(input.context)))
+    } yield PreviewResults.one(Preview.unit.view(DefaultView("Terminal", input.rest)).score(Scores.high(input.context)))
 }
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {

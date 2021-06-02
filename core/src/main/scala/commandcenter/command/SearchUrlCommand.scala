@@ -22,27 +22,27 @@ final case class SearchUrlCommand(
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchUrlCommand
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
-    def prefixPreview: ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] = {
+    def prefixPreview: ZIO[Env, CommandError, PreviewResults[Unit]] =
       for {
         input      <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
         url         = urlTemplate.replace("{query}", URLEncoder.encode(input.rest, StandardCharsets.UTF_8))
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
-      } yield List(
+      } yield PreviewResults.one(
         Preview.unit
           .score(Scores.high * localeBoost)
           .onRun(ProcessUtil.openBrowser(url))
           .view(DefaultView(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
       )
 
-    def rawInputPreview: ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+    def rawInputPreview: ZIO[Env, CommandError, PreviewResults[Unit]] =
       if (searchInput.input.isEmpty || !(locales.isEmpty || locales.contains(searchInput.context.locale)))
         IO.fail(NotApplicable)
       else {
         val url = urlTemplate.replace("{query}", URLEncoder.encode(searchInput.input, StandardCharsets.UTF_8))
 
         UIO(
-          List(
+          PreviewResults.one(
             Preview.unit
               .score(Scores.high * 0.35)
               .onRun(ProcessUtil.openBrowser(url))

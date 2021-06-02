@@ -12,20 +12,22 @@ final case class RebootCommand(commandNames: List[String]) extends Command[Unit]
   val commandType: CommandType = CommandType.RebootCommand
   val title: String            = "Reboot"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield List(
-      Preview.unit
-        .onRun(RebootCommand.reboot)
-        .score(Scores.high(input.context))
-        .view(DefaultView(title, "Restart your computer"))
-    ) ++ List(
-      Preview.unit
-        .onRun(RebootCommand.rebootIntoBios)
-        .score(Scores.high(input.context))
-        .view(DefaultView(s"$title (into BIOS setup)", "Restart your computer and enter BIOS upon startup"))
-    ).filter(_ => OS.os == OS.Windows || OS.os == OS.Linux)
+    } yield PreviewResults.fromIterable(
+      Vector(
+        Preview.unit
+          .onRun(RebootCommand.reboot)
+          .score(Scores.high(input.context))
+          .view(DefaultView(title, "Restart your computer"))
+      ) ++ Vector(
+        Preview.unit
+          .onRun(RebootCommand.rebootIntoBios)
+          .score(Scores.high(input.context))
+          .view(DefaultView(s"$title (into BIOS setup)", "Restart your computer and enter BIOS upon startup"))
+      ).filter(_ => OS.os == OS.Windows || OS.os == OS.Linux)
+    )
 }
 
 object RebootCommand extends CommandPlugin[RebootCommand] {

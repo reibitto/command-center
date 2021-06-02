@@ -15,7 +15,7 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
 
   val opacityCommand = decline.Command("opacity", title)(opacity)
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       _              <- ZIO.fail(CommandError.NotApplicable).unlessM(searchInput.context.terminal.isOpacitySupported)
       input          <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
@@ -30,7 +30,7 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
         _       <- input.context.terminal.setOpacity(opacity)
       } yield ()
 
-      List(
+      PreviewResults.one(
         Preview.unit
           .onRun(run)
           .score(Scores.high(input.context))

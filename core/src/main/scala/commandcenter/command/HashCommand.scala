@@ -16,7 +16,7 @@ final case class HashCommand(algorithm: String) extends Command[String] {
   val commandNames: List[String] = List(algorithm, algorithm.replace("-", "")).distinct
   val title: String              = algorithm
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[String]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input                  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all                     = (stringArg, encodingOpt).tupled
@@ -25,7 +25,7 @@ final case class HashCommand(algorithm: String) extends Command[String] {
       hashResult             <- IO
                                   .fromEither(HashUtil.hash(algorithm)(valueToHash, charset))
                                   .mapError(CommandError.UnexpectedException)
-    } yield List(
+    } yield PreviewResults.one(
       Preview(hashResult)
         .score(Scores.high(input.context))
         .onRun(tools.setClipboard(hashResult))

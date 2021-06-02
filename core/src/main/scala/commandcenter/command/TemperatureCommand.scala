@@ -18,7 +18,7 @@ final case class TemperatureCommand() extends Command[Double] {
 
   val temperatureRegex: Regex = """(-?\d+\.?\d*)\s*([cCＣfFＦ度どド])""".r
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Double]]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Double]] =
     for {
       (temperature, unit) <- ZIO.fromOption {
                                temperatureRegex.unapplySeq(searchInput.input.trim).flatMap {
@@ -39,7 +39,7 @@ final case class TemperatureCommand() extends Command[Double] {
                                }
                              }.orElseFail(NotApplicable)
       temperatureFormatted = f"$temperature%.1f $unit"
-    } yield List(
+    } yield PreviewResults.one(
       Preview(temperature)
         .score(Scores.high(searchInput.context))
         .view(DefaultView(title, temperatureFormatted))

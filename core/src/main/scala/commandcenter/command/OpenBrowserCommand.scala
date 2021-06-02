@@ -13,14 +13,14 @@ final case class OpenBrowserCommand() extends Command[Unit] {
 
   val title: String = "Open in Browser"
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, List[PreviewResult[Unit]]] = {
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] = {
     val input      = searchInput.input
     val startsWith = input.startsWith("http://") || input.startsWith("https://")
 
     // TODO: also check endsWith TLD + URL.isValid
 
     if (startsWith)
-      UIO(List(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
+      UIO(PreviewResults.one(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
     else
       IO.fail(NotApplicable)
   }
