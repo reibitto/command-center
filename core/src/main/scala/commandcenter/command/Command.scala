@@ -100,6 +100,7 @@ object Command {
       typeName <- Task(config.getString("type")).toManaged_
       command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
                     case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
+                    case CommandType.CalendarCommand           => CalendarCommand.make(config)
                     case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
                     case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
                     case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
