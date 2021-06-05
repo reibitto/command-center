@@ -52,9 +52,9 @@ final case class CalendarCommand(override val commandNames: List[String], client
               .view(DefaultView("Calendar event", event.toString(formats)))
           }
         )
-      case request : InsertRequest =>
+      case request: InsertRequest =>
         previewInsertRequest(request, input.context)
-      case help: Str            =>
+      case help: Str              =>
         PreviewResults.one(
           Preview.unit
             .score(Scores.high(input.context))
