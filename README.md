@@ -143,6 +143,84 @@ Type in `calculator functions` to see the full list of available operators and f
 
 Type in `calculator parameters` to see the full list of available configuration parameters for `application.conf`.
 
+#### Calendar
+
+You can add events to a configured calendar and view oncoming events. Currently only Google calendars are supported.
+
+**Pre-configuring Google calendar**
+
+To be able to view and modify events, you have to allow the calendar to be accessed from within the application.
+Open the settings for your calendar and add `cccapp@commandcentercalendar.iam.gserviceaccount.com` to the *Share with specific people* section.
+Select the option "Make changes to events".
+
+![configuring Google calendar](assets/configure-google-calendar.png "Configuring Google calendar")
+
+**Configuring application**
+
+Then copy the calendar ID from the *Integrate calendar* section
+
+![Google calendar ID](assets/configure-google-calendar_ID.png "Google calendar ID")
+
+and paste it to the `application.conf`:
+
+```hocon
+type: "CalendarCommand"
+client: {
+  type: "Google"
+  calendarId: "xyz@gmail.com"
+}
+```
+
+There you can also configure the date and time format (used both for parsing and displaying) as well as provide some date aliases:
+
+```hocon
+formats: {
+  dateFormat: "dd.MM.yyyy"
+  timeFormat: "HH:mm"
+  dayOffsets: {
+    today: 0
+    tomorrow: 1
+    next week: 7
+  }
+}
+```
+
+**Listing oncoming events**
+
+Use the `list` subcommand to get `n` oncoming events (by default `n == 3`):
+
+`cal list 4`
+
+**Adding new event**
+
+For adding a new event there are two options:
+- the simplest form: `<summary> @ <date/time>`:
+
+`John's welcome party @ 19:00`
+  
+You can specify either date, or time, or both. Time without a date counts as a today event.
+
+- if you want to provide more details use the full form:
+
+`cal insert "An important event" --date tomorrow --time 18:00 --desc "A very important event, trust me" --loc Somewhere`
+
+Available options are:
+- `--date` (or `-d`) - (start) date
+- `--time` (or `-t`) - optional (start) time; omit for all-day events
+- `--enddate` - optional end date; if omitted, equals to start date
+- `--endtime` - optional end time; required if start time is given
+- `--desc` - optional detailed description
+- `--loc` - optional location
+
+Both for simple and full form you can use configured date aliases instead of concrete dates. For each specify a name and an offset (in days) from the current day.
+You can also use localized names, e. g.
+```
+dayOffsets: {
+  heute: 0
+  morgen: 1
+}
+```
+
 ## Installation
 
 At the moment there is no simple "1-step install". You need to compile and generate an executable yourself (or run

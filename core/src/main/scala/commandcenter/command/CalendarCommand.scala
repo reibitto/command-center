@@ -44,7 +44,7 @@ final case class CalendarCommand(override val commandNames: List[String], client
                          }
                        )
     } yield previewItem match {
-      case ListResponse(events) =>
+      case ListResponse(events)   =>
         PreviewResults.fromIterable(
           events.map { event =>
             Preview.unit
