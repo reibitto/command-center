@@ -270,8 +270,10 @@ final case class SwingTerminal(
 
           for {
             previousResults <- searchResultsRef.get
-            _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-            _               <- render(previousResults)
+            previousCursor  <-
+              commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
+            // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
+            _               <- render(previousResults).when(previousCursor < previousResults.previews.length - 1)
           } yield ()
 
         case KeyEvent.VK_UP =>
@@ -279,8 +281,9 @@ final case class SwingTerminal(
 
           for {
             previousResults <- searchResultsRef.get
-            _               <- commandCursorRef.update(cursor => (cursor - 1) max 0)
-            _               <- render(previousResults)
+            previousCursor  <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
+            // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
+            _               <- render(previousResults).when(previousCursor > 0)
           } yield ()
 
         case _ =>

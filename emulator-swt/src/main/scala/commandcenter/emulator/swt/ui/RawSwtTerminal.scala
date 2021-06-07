@@ -87,7 +87,9 @@ class RawSwtTerminal(val config: CCConfig) {
   outputBoxGridData.grabExcessHorizontalSpace = true
 
   val outputBox = new StyledText(shell, SWT.WRAP | SWT.V_SCROLL)
-  outputBox.setAlwaysShowScrollBars(false)
+  // Setting `setAlwaysShowScrollBars` to `false` works, but it can cause annoying flickering issues when redrawing in
+  // certain environments. We could consider making this a config option and setting the default value to `true`.
+  outputBox.setAlwaysShowScrollBars(true)
   outputBox.setFont(font)
   outputBox.setBackground(black)
   outputBox.setForeground(white)
