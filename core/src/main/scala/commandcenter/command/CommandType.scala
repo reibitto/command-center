@@ -6,6 +6,7 @@ sealed trait CommandType extends EnumEntry
 
 object CommandType extends Enum[CommandType] {
   case object CalculatorCommand         extends CommandType
+  case object CalendarCommand           extends CommandType
   case object DecodeBase64Command       extends CommandType
   case object DecodeUrlCommand          extends CommandType
   case object EncodeBase64Command       extends CommandType
