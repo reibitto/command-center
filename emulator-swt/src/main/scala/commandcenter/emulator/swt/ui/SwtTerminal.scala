@@ -33,6 +33,8 @@ final case class SwtTerminal(
 
   val theme = CCTheme.default
 
+  val smartBuffer: TerminalBuffer = new TerminalBuffer(new StringBuilder, mutable.ArrayDeque.empty)
+
   def init: RIO[Env, Unit] =
     setOpacity(config.display.opacity)
 
@@ -90,8 +92,9 @@ final case class SwtTerminal(
             runtime.unsafeRunAsync_ {
               for {
                 previousResults <- searchResultsRef.get
-                _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-                _               <- render(previousResults)
+                previousCursor  <-
+                  commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
+                _               <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
               } yield ()
             }
 
@@ -100,9 +103,8 @@ final case class SwtTerminal(
 
             runtime.unsafeRunAsync_ {
               for {
-                previousResults <- searchResultsRef.get
-                _               <- commandCursorRef.update(cursor => (cursor - 1) max 0)
-                _               <- render(previousResults)
+                previousCursor <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
+                _              <- renderSelectionCursor(1).when(previousCursor > 0)
               } yield ()
             }
 
@@ -128,22 +130,53 @@ final case class SwtTerminal(
     })
   }
 
+  private def renderSelectionCursor(cursorDelta: Int): UIO[Unit] =
+    for {
+      commandCursor <- commandCursorRef.get
+      textIndex      = smartBuffer.lineStartIndices(commandCursor)
+      priorTextIndex = smartBuffer.lineStartIndices(commandCursor + cursorDelta)
+      _             <- invoke {
+                         terminal.outputBox.replaceStyleRanges(
+                           0,
+                           0,
+                           Array(
+                             new StyleRange(
+                               priorTextIndex,
+                               1,
+                               null,
+                               terminal.darkGray
+                             ),
+                             new StyleRange(
+                               textIndex,
+                               1,
+                               null,
+                               terminal.green
+                             )
+                           ).sortBy(_.start)
+                         )
+
+                         terminal.outputBox.setSelection(textIndex)
+                       }
+    } yield ()
+
   private def render(searchResults: SearchResults[Any]): UIO[Unit] = {
     var scrollToPosition: Int = 0
 
     for {
       commandCursor <- commandCursorRef.get
-      buffer         = new StringBuilder
+      _              = smartBuffer.clear()
       styles         = new mutable.ArrayDeque[StyleRange]()
       _              = {
         def renderBar(rowIndex: Int): Unit = {
           val barColor = if (rowIndex == commandCursor) terminal.green else terminal.darkGray
 
-          styles.append(new StyleRange(buffer.length, 1, terminal.black, barColor))
-          buffer.append("  ")
+          styles.append(new StyleRange(smartBuffer.buffer.length, 1, terminal.black, barColor))
+          smartBuffer.buffer.append("  ")
         }
 
         def colorMask(width: Int): Long = ~0L >>> (64 - width)
+
+        var lineStart = 0
 
         searchResults.rendered.zipWithIndex.foreach { case (r, row) =>
           r match {
@@ -157,6 +190,9 @@ final case class SwtTerminal(
 
               val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
+              smartBuffer.lineStartIndices.addOne(lineStart)
+              lineStart += renderStr.length + 2
+
               var i: Int = 0
               Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
                 val s = renderStr.plainText.substring(i, i + c.length)
@@ -166,7 +202,7 @@ final case class SwtTerminal(
                 val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
                 val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
 
-                buffer.append(s)
+                smartBuffer.buffer.append(s)
 
                 val swtForegroundOpt = terminal.fromFansiColorCode(ansiForeground.toInt)
                 val swtBackgroundOpt = terminal.fromFansiColorCode(ansiBackground.toInt)
@@ -178,7 +214,7 @@ final case class SwtTerminal(
                   case _ =>
                     styles.append(
                       new StyleRange(
-                        buffer.length - s.length,
+                        smartBuffer.buffer.length - s.length,
                         s.length,
                         swtForegroundOpt.orNull,
                         swtBackgroundOpt.orNull
@@ -191,14 +227,14 @@ final case class SwtTerminal(
       }
 
       _ <- invoke {
-             if (buffer.isEmpty || !terminal.shell.isVisible) {
+             if (smartBuffer.buffer.isEmpty || !terminal.shell.isVisible) {
                terminal.outputBox.setVisible(false)
                terminal.outputBoxGridData.exclude = true
                terminal.outputBox.setText("")
              } else {
                terminal.outputBox.setVisible(true)
                terminal.outputBoxGridData.exclude = false
-               terminal.outputBox.setText(buffer.toString)
+               terminal.outputBox.setText(smartBuffer.buffer.toString)
 
                terminal.outputBox.setStyleRanges(styles.toArray)
              }
