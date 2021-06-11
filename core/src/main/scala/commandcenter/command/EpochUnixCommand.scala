@@ -17,7 +17,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
     for {
       input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
-                           (clock.currentTime(TimeUnit.SECONDS).map(time => (time.toString, Scores.high)))
+                           clock.currentTime(TimeUnit.SECONDS).map(time => (time.toString, Scores.high))
                          } else {
                            input.rest.toLongOption match {
                              case Some(seconds) =>
