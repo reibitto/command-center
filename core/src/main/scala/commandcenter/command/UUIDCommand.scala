@@ -25,6 +25,6 @@ object UUIDCommand extends CommandPlugin[UUIDCommand] {
     ZManaged.fromEither(
       for {
         commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield UUIDCommand(commandNames.getOrElse(List("uuid", "guuid")))
+      } yield UUIDCommand(commandNames.getOrElse(List("uuid", "guid")))
     )
 }
