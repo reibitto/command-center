@@ -16,8 +16,8 @@ import zio.logging.log
 import zio.stream.ZStream
 
 object Main extends CCApp {
-  val terminalType: TerminalType        = TerminalType.Cli
-  val shortcutsLayer: ULayer[Shortcuts] = Shortcuts.unsupported
+  val terminalType: TerminalType             = TerminalType.Cli
+  val shortcutsLayer: ULayer[Has[Shortcuts]] = Shortcuts.unsupported
 
   def uiLoop: RManaged[Env, ExitCode] =
     for {

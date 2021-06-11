@@ -42,7 +42,7 @@ trait CCRuntime extends Runtime[Env] {
     )
   }
 
-  def shortcutsLayer: ULayer[Shortcuts]
+  def shortcutsLayer: ULayer[Has[Shortcuts]]
   def terminalType: TerminalType
 
   lazy val environment: Env   = runtime.environment
@@ -50,5 +50,5 @@ trait CCRuntime extends Runtime[Env] {
 }
 
 object CCRuntime {
-  type Env = ZEnv with Logging with Has[Tools] with Shortcuts with SttpClient with InMemoryCache
+  type Env = ZEnv with Logging with SttpClient with InMemoryCache with Has[Tools] with Has[Shortcuts]
 }

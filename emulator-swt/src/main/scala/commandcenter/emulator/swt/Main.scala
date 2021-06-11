@@ -1,17 +1,17 @@
 package commandcenter.emulator.swt
 
-import commandcenter.emulator.swt.shortcuts.LiveShortcuts
+import commandcenter.emulator.swt.shortcuts.ShortcutsLive
 import commandcenter.emulator.swt.ui.{ RawSwtTerminal, SwtTerminal }
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.{ shortcuts, CCConfig, CCRuntime, GlobalActions, TerminalType }
+import commandcenter.{ CCConfig, CCRuntime, GlobalActions, TerminalType }
 import zio._
 import zio.logging.log
 
 object Main {
   def main(args: Array[String]): Unit = {
     val runtime = new CCRuntime {
-      def terminalType: TerminalType        = TerminalType.Swt
-      def shortcutsLayer: ULayer[Shortcuts] = LiveShortcuts.layer(this).orDie
+      def terminalType: TerminalType             = TerminalType.Swt
+      def shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).orDie
     }
 
     val config      = runtime.unsafeRun(CCConfig.load.useNow)
@@ -21,7 +21,7 @@ object Main {
       (for {
         terminal <- SwtTerminal.create(config, runtime, rawTerminal)
         _        <- (for {
-                      _ <- shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
+                      _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
                              (for {
                                _ <- log.debug("Opening emulated terminal...")
                                _ <- terminal.open

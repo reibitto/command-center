@@ -7,7 +7,7 @@ import commandcenter.command.{ Command, PreviewResult, SearchResults }
 import commandcenter.locale.Language
 import zio._
 
-case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) extends CCTerminal {
+final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) extends CCTerminal {
   def terminalType: TerminalType = TerminalType.Test
 
   def opacity: RIO[Env, Float] = UIO(1.0f)
