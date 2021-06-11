@@ -2,7 +2,7 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.util.OS
 import zio.blocking.Blocking
 import zio.process.{ Command => PCommand }
@@ -19,7 +19,7 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
     } yield PreviewResults.one(
       Preview(externalIP)
         .score(Scores.high(input.context))
-        .onRun(tools.setClipboard(externalIP))
+        .onRun(Tools.setClipboard(externalIP))
     )
 
   private def getExternalIP: ZIO[Blocking, CommandError, String] =

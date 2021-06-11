@@ -330,9 +330,9 @@ final case class SwingTerminal(
     frame.setVisible(false)
   }
 
-  def activate: RIO[Tools with Blocking, Unit] =
+  def activate: RIO[Has[Tools] with Blocking, Unit] =
     OS.os match {
-      case OS.MacOS => tools.activate
+      case OS.MacOS => Tools.activate
       case _        =>
         UIO {
           frame.toFront()
@@ -341,9 +341,9 @@ final case class SwingTerminal(
         }
     }
 
-  def deactivate: RIO[Tools with Blocking, Unit] =
+  def deactivate: RIO[Has[Tools] with Blocking, Unit] =
     OS.os match {
-      case OS.MacOS => tools.hide
+      case OS.MacOS => Tools.hide
       case _        => UIO.unit
     }
 

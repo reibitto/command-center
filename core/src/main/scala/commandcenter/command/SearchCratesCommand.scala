@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.SearchCratesCommand.CrateResult
-import commandcenter.tools
+import commandcenter.tools.Tools
 import io.circe.{ Decoder, Json }
 import sttp.client._
 import sttp.client.circe._
@@ -32,7 +32,7 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
                   ).mapError(CommandError.UnexpectedException)
     } yield PreviewResults.fromIterable(results.map { result =>
       Preview.unit
-        .onRun(tools.setClipboard(result.render))
+        .onRun(Tools.setClipboard(result.render))
         .score(Scores.high(input.context))
         .view(result.renderColored)
     })

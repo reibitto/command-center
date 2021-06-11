@@ -1,15 +1,16 @@
 package commandcenter
 
-import java.util.Locale
 import commandcenter.TestRuntime.TestEnv
 import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.tools.Tools
+import commandcenter.tools.ToolsLive
 import sttp.client.httpclient.zio.HttpClientZioBackend
-import zio.{ Layer, ZLayer }
 import zio.duration._
 import zio.test.environment.testEnvironment
 import zio.test.{ RunnableSpec, TestAspect, TestExecutor, TestRunner }
+import zio.{ Layer, ZLayer }
+
+import java.util.Locale
 
 trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
   val testEnv: Layer[Throwable, TestEnv] = {
@@ -18,7 +19,7 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
     ZLayer.fromMagic[TestEnv](
       testEnvironment,
       CCLogging.make(TerminalType.Test),
-      Tools.live,
+      ToolsLive.make.orDie,
       Shortcuts.unsupported,
       HttpClientZioBackend.layer(),
       InMemoryCache.make(5.minutes)

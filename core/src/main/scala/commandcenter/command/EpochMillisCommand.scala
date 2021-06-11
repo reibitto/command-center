@@ -1,13 +1,13 @@
 package commandcenter.command
 
+import com.typesafe.config.Config
+import commandcenter.CCRuntime.Env
+import commandcenter.tools.Tools
+import zio._
+
 import java.time.format.{ DateTimeFormatter, FormatStyle }
 import java.time.{ Instant, ZoneId }
 import java.util.concurrent.TimeUnit
-
-import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.tools
-import zio._
 
 final case class EpochMillisCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.EpochMillisCommand
@@ -42,7 +42,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
     } yield PreviewResults.one(
       Preview(output)
         .score(score)
-        .onRun(tools.setClipboard(output))
+        .onRun(Tools.setClipboard(output))
     )
 }
 

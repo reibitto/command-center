@@ -3,13 +3,13 @@ package commandcenter
 import commandcenter.CCRuntime.Env
 import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.tools.Tools
+import commandcenter.tools.{ Tools, ToolsLive }
 import commandcenter.util.OS
 import sttp.client.httpclient.zio.{ HttpClientZioBackend, SttpClient }
 import zio.duration._
 import zio.internal.Platform
 import zio.logging.Logging
-import zio.{ Runtime, ULayer, ZEnv, ZLayer }
+import zio.{ Has, Runtime, ULayer, ZEnv, ZLayer }
 
 import java.util.concurrent.Executor
 import scala.concurrent.ExecutionContext
@@ -33,7 +33,7 @@ trait CCRuntime extends Runtime[Env] {
       ZLayer.fromMagic[Env](
         ZEnv.live,
         CCLogging.make(terminalType),
-        Tools.live,
+        ToolsLive.make.orDie,
         shortcutsLayer,
         HttpClientZioBackend.layer(),
         InMemoryCache.make(5.minutes)
@@ -50,5 +50,5 @@ trait CCRuntime extends Runtime[Env] {
 }
 
 object CCRuntime {
-  type Env = ZEnv with Logging with Tools with Shortcuts with SttpClient with InMemoryCache
+  type Env = ZEnv with Logging with Has[Tools] with Shortcuts with SttpClient with InMemoryCache
 }

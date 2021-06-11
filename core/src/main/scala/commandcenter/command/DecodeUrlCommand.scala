@@ -1,14 +1,14 @@
 package commandcenter.command
 
-import java.net.URLDecoder
-
 import cats.syntax.apply._
 import com.monovore.decline
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
-import commandcenter.tools
+import commandcenter.tools.Tools
 import zio._
+
+import java.net.URLDecoder
 
 final case class DecodeUrlCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.DecodeUrlCommand
@@ -22,7 +22,7 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
       (valueToDecode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       decoded                  <- Task(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
     } yield PreviewResults.one(
-      Preview(decoded).onRun(tools.setClipboard(decoded)).score(Scores.high(input.context))
+      Preview(decoded).onRun(Tools.setClipboard(decoded)).score(Scores.high(input.context))
     )
 }
 

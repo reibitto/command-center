@@ -2,7 +2,7 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
 import zio.process.{ Command => PCommand }
@@ -39,7 +39,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
         pid       <- ZIO
                        .fromOption(pidOutput.split('=').lift(1).map(_.trim))
                        .orElseFail(RunError.InternalError("Parsing PID failed"))
-        _         <- tools.setClipboard(pid)
+        _         <- Tools.setClipboard(pid)
       } yield ()
 
       Preview.unit

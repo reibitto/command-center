@@ -1,13 +1,13 @@
 package commandcenter.command
 
-import java.time.{ Instant, ZoneId }
-import java.time.format.{ DateTimeFormatter, FormatStyle }
-import java.util.concurrent.TimeUnit
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.tools
+import commandcenter.tools.Tools
 import zio.{ clock, Task, TaskManaged, ZIO, ZManaged }
+
+import java.time.format.{ DateTimeFormatter, FormatStyle }
+import java.time.{ Instant, ZoneId }
+import java.util.concurrent.TimeUnit
 
 final case class EpochUnixCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.EpochUnixCommand
@@ -42,7 +42,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
     } yield PreviewResults.one(
       Preview(output)
         .score(score)
-        .onRun(tools.setClipboard(output))
+        .onRun(Tools.setClipboard(output))
     )
 }
 

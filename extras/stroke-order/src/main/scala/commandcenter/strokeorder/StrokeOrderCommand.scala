@@ -3,7 +3,7 @@ package commandcenter.strokeorder
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command._
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.view.{ Rendered, Style, StyledText }
 import zio.{ TaskManaged, ZIO, ZManaged }
 
@@ -17,7 +17,7 @@ final case class StrokeOrderCommand(commandNames: List[String]) extends Command[
     } yield PreviewResults.one(
       Preview.unit
         .score(Scores.high(searchInput.context))
-        .onRun(tools.setClipboard(input.rest))
+        .onRun(Tools.setClipboard(input.rest))
         .renderFn { _ =>
           Rendered.Styled(
             Vector(

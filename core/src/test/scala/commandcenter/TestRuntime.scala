@@ -4,7 +4,7 @@ import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
 import sttp.client.httpclient.zio.SttpClient
-import zio.ZEnv
+import zio.{ Has, ZEnv }
 import zio.logging.Logging
 import zio.test.environment._
 import zio.test.{ Annotations, Sized }
@@ -19,7 +19,7 @@ object TestRuntime {
     with Sized
     with TestSystem
     with Logging
-    with Tools
+    with Has[Tools]
     with Shortcuts
     with SttpClient
     with InMemoryCache

@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
 import commandcenter.command.util.HashUtil
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.{ IO, TaskManaged, ZIO, ZManaged }
@@ -28,7 +28,7 @@ final case class HashCommand(algorithm: String) extends Command[String] {
     } yield PreviewResults.one(
       Preview(hashResult)
         .score(Scores.high(input.context))
-        .onRun(tools.setClipboard(hashResult))
+        .onRun(Tools.setClipboard(hashResult))
         .render(result => DefaultView(algorithm, result))
     )
 }

@@ -1,14 +1,14 @@
 package commandcenter.command
 
-import java.net.URLEncoder
-
 import cats.syntax.apply._
 import com.monovore.decline
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
-import commandcenter.tools
+import commandcenter.tools.Tools
 import zio.{ IO, TaskManaged, ZIO, ZManaged }
+
+import java.net.URLEncoder
 
 final case class EncodeUrlCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.EncodeUrlCommand
@@ -23,7 +23,7 @@ final case class EncodeUrlCommand(commandNames: List[String]) extends Command[St
       (valueToEncode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       encoded                   = URLEncoder.encode(valueToEncode, charset)
     } yield PreviewResults.one(
-      Preview(encoded).onRun(tools.setClipboard(encoded)).score(Scores.high(input.context))
+      Preview(encoded).onRun(Tools.setClipboard(encoded)).score(Scores.high(input.context))
     )
 }
 

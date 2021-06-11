@@ -1,14 +1,13 @@
 package commandcenter.command
 
-import java.net.{ Inet4Address, NetworkInterface }
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import zio.blocking._
 import zio.{ TaskManaged, ZIO, ZManaged }
 
+import java.net.{ Inet4Address, NetworkInterface }
 import scala.jdk.CollectionConverters._
 
 final case class LocalIPCommand(commandNames: List[String]) extends Command[String] {
@@ -30,7 +29,7 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
                   }.mapError(CommandError.UnexpectedException)
     } yield PreviewResults.fromIterable(localIps.map { case (interfaceName, localIp) =>
       Preview(localIp)
-        .onRun(tools.setClipboard(localIp))
+        .onRun(Tools.setClipboard(localIp))
         .score(Scores.high(input.context))
         .view(DefaultView(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp)))
     })
