@@ -1,11 +1,11 @@
 package commandcenter.command
 
-import java.util.UUID
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.tools
+import commandcenter.tools.Tools
 import zio.{ TaskManaged, ZIO, ZManaged }
+
+import java.util.UUID
 
 final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
   val commandType: CommandType = CommandType.UUIDCommand
@@ -16,7 +16,7 @@ final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       uuid   = UUID.randomUUID()
     } yield PreviewResults.one(
-      Preview(uuid).onRun(tools.setClipboard(uuid.toString)).score(Scores.high(input.context))
+      Preview(uuid).onRun(Tools.setClipboard(uuid.toString)).score(Scores.high(input.context))
     )
 }
 

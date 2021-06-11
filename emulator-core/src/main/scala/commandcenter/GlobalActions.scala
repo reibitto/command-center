@@ -2,10 +2,10 @@ package commandcenter
 
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{ WindowBounds, WindowManager }
-import zio.{ RIO, ZIO }
+import zio.{ Has, RIO, ZIO }
 
 object GlobalActions {
-  def setupCommon(actions: Vector[GlobalAction]): RIO[Shortcuts, Unit] =
+  def setupCommon(actions: Vector[GlobalAction]): RIO[Has[Shortcuts], Unit] =
     ZIO.foreach_(actions) { action =>
       val run = action.id match {
         case GlobalActionId.MinimizeWindow       => WindowManager.minimizeWindow
@@ -57,6 +57,6 @@ object GlobalActions {
             )
       }
 
-      shortcuts.addGlobalShortcut(action.shortcut)(_ => run.ignore)
+      Shortcuts.addGlobalShortcut(action.shortcut)(_ => run.ignore)
     }
 }

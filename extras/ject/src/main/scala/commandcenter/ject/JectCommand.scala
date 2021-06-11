@@ -5,7 +5,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command._
 import commandcenter.config.Decoders.pathDecoder
 import commandcenter.locale.JapaneseText
-import commandcenter.tools
+import commandcenter.tools.Tools
 import ject.SearchPattern
 import ject.entity.WordDocument
 import ject.lucene.WordIndex
@@ -35,7 +35,7 @@ final case class JectCommand(commandNames: List[String], dictionaryPath: Path) e
       wordStream.map { word =>
         Preview.unit
           .score(Scores.high(searchInput.context))
-          .onRun(tools.setClipboard(input))
+          .onRun(Tools.setClipboard(input))
           .view(renderWord(word))
       },
       20

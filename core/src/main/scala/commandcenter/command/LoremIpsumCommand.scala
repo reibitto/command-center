@@ -7,7 +7,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.LoremIpsumCommand.ChunkType
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import zio._
 
@@ -51,7 +51,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
                               Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
                             case ChunkType.Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
                           }
-        _              <- tools.setClipboard(text)
+        _              <- Tools.setClipboard(text)
       } yield ()
       PreviewResults.one(
         Preview.unit

@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.SnippetsCommand.Snippet
 import commandcenter.scorers.LengthScorer
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.{ TaskManaged, ZIO, ZManaged }
@@ -32,7 +32,7 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
     }.collect {
       case (snippet, score) if score > 0 =>
         Preview(snippet.value)
-          .onRun(tools.setClipboard(snippet.value))
+          .onRun(Tools.setClipboard(snippet.value))
           .score(score)
           .view(DefaultView(title, fansi.Color.Magenta(snippet.keyword) ++ " " ++ snippet.value))
     })

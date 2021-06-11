@@ -1,8 +1,5 @@
 package commandcenter.command
 
-import java.text.{ DecimalFormat, DecimalFormatSymbols }
-import java.util.Locale
-
 import cats.data.Validated
 import com.monovore.decline
 import com.monovore.decline.Opts
@@ -10,10 +7,13 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CalculatorCommand.{ FunctionsList, Parameters, ParametersList }
 import commandcenter.command.util.CalculatorUtil
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
 import zio.{ TaskManaged, ZIO, ZManaged }
+
+import java.text.{ DecimalFormat, DecimalFormatSymbols }
+import java.util.Locale
 
 final case class CalculatorCommand(parameters: Parameters) extends Command[BigDecimal] {
   val commandType: CommandType = CommandType.CalculatorCommand
@@ -53,7 +53,7 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
     } yield PreviewResults.one(
       Preview(evaluatedValue)
         .render(parameters.format)
-        .onRun(tools.setClipboard(parameters.format(evaluatedValue)))
+        .onRun(Tools.setClipboard(parameters.format(evaluatedValue)))
         .score(Scores.high(searchInput.context))
     )
 }

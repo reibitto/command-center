@@ -1,11 +1,9 @@
 package commandcenter.command
 
-import java.time.{ Instant, LocalDate, ZoneId }
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.SearchMavenCommand.{ BucketedMavenArtifact, MavenArtifact }
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.util.Orderings
 import io.circe.{ Decoder, Json }
 import sttp.client._
@@ -13,6 +11,7 @@ import sttp.client.circe._
 import sttp.client.httpclient.zio._
 import zio.{ IO, TaskManaged, ZIO, ZManaged }
 
+import java.time.{ Instant, LocalDate, ZoneId }
 import scala.math.Ordering
 import scala.util.matching.Regex
 
@@ -41,7 +40,7 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
       val renderedCoordinates = artifact.render
 
       Preview(renderedCoordinates)
-        .onRun(tools.setClipboard(renderedCoordinates))
+        .onRun(Tools.setClipboard(renderedCoordinates))
         .score(Scores.high(input.context))
         .view(artifact.renderColored)
     })

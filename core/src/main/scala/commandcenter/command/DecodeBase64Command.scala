@@ -1,14 +1,14 @@
 package commandcenter.command
 
-import java.util.Base64
-
 import cats.syntax.apply._
 import com.monovore.decline
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
-import commandcenter.tools
+import commandcenter.tools.Tools
 import zio.{ TaskManaged, ZIO, ZManaged }
+
+import java.util.Base64
 
 final case class DecodeBase64Command(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.DecodeBase64Command
@@ -22,7 +22,7 @@ final case class DecodeBase64Command(commandNames: List[String]) extends Command
       (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
       decoded                   = new String(Base64.getDecoder.decode(valueToDecode.getBytes(charset)), charset)
     } yield PreviewResults.one(
-      Preview(decoded).onRun(tools.setClipboard(decoded)).score(Scores.high(input.context))
+      Preview(decoded).onRun(Tools.setClipboard(decoded)).score(Scores.high(input.context))
     )
 }
 

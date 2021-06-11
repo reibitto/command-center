@@ -5,7 +5,7 @@ import com.monovore.decline
 import com.monovore.decline.{ Help, Opts }
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.tools
+import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import zio.{ TaskManaged, ZIO, ZManaged }
 
@@ -40,7 +40,7 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
 
                          Preview.unit
                            .score(Scores.high(input.context))
-                           .onRun(tools.setClipboard(message.plainText))
+                           .onRun(Tools.setClipboard(message.plainText))
                            .view(DefaultView(title, message))
                        }.getOrElse {
                          Preview.help(Help.fromCommand(radixCommand)).score(Scores.high(input.context))

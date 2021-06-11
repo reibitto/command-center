@@ -5,7 +5,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.event.KeyboardShortcut
-import commandcenter.shortcuts
+import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{ OS, ProcessUtil }
 import commandcenter.view.DefaultView
 import zio.blocking.Blocking
@@ -51,7 +51,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
       suspendShortcut <- ZManaged.fromEither(config.get[Option[KeyboardShortcut]]("suspendShortcut"))
       _               <- ZIO
                            .foreach(suspendShortcut) { suspendShortcut =>
-                             shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
+                             Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
                                (for {
                                  _   <- log.debug("Toggling suspend for frontmost process...")
                                  pid <- SuspendProcessCommand.toggleSuspendFrontProcess

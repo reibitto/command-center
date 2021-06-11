@@ -279,9 +279,9 @@ final case class SwtTerminal(
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
-  def deactivate: RIO[Tools with Blocking, Unit] =
+  def deactivate: RIO[Has[Tools] with Blocking, Unit] =
     ZIO.whenCase(OS.os) { case OS.MacOS =>
-      tools.hide
+      Tools.hide
     }
 
   def clearScreen: UIO[Unit] =
