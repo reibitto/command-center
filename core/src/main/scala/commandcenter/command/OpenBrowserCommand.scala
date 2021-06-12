@@ -22,7 +22,7 @@ final case class OpenBrowserCommand() extends Command[Unit] {
     if (startsWith)
       UIO(PreviewResults.one(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
     else
-      IO.fail(NotApplicable)
+      ZIO.fail(NotApplicable)
   }
 }
 

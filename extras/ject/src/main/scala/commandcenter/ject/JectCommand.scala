@@ -38,7 +38,7 @@ final case class JectCommand(commandNames: List[String], dictionaryPath: Path) e
           .onRun(Tools.setClipboard(input))
           .view(renderWord(word))
       },
-      20
+      10
     )
 
   def renderWord(word: WordDocument): fansi.Str = {

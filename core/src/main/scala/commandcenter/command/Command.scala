@@ -10,7 +10,7 @@ import commandcenter.view.syntax._
 import commandcenter.view.{ DefaultView, ViewInstances }
 import zio._
 import zio.logging._
-import zio.stream.ZStream
+import zio.stream.{ ZSink, ZStream }
 
 import java.util.Locale
 
@@ -27,16 +27,34 @@ trait Command[+R] extends ViewInstances {
 
   object Preview {
     def apply[A >: R](a: A): PreviewResult[A] =
-      new PreviewResult(Command.this, a, UIO.unit, 1.0, () => DefaultView(title, a.toString).render)
+      new PreviewResult(
+        Command.this,
+        a,
+        UIO.unit,
+        RunOption.Hide,
+        MoreResults.Exhausted,
+        1.0,
+        () => DefaultView(title, a.toString).render
+      )
 
     def unit[A >: R](implicit ev: Command[A] =:= Command[Unit]): PreviewResult[Unit] =
-      new PreviewResult(ev(Command.this), (), UIO.unit, 1.0, () => DefaultView(title, "").render)
+      new PreviewResult(
+        ev(Command.this),
+        (),
+        UIO.unit,
+        RunOption.Hide,
+        MoreResults.Exhausted,
+        1.0,
+        () => DefaultView(title, "").render
+      )
 
     def help[A >: R](help: Help)(implicit ev: Command[A] =:= Command[Unit]): PreviewResult[Unit] =
       new PreviewResult(
         ev(Command.this),
         (),
         UIO.unit,
+        RunOption.Hide,
+        MoreResults.Exhausted,
         1.0,
         () => DefaultView(title, HelpMessage.formatted(help)).render
       )
@@ -66,11 +84,29 @@ object Command {
                     command
                       .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
                       .flatMap {
-                        case PreviewResults.Single(r)               => UIO(Chunk.single(r))
-                        case PreviewResults.Multiple(rs)            => UIO(rs)
-                        case PreviewResults.Paginated(rs, pageSize) =>
-                          // TODO: Add "More..." PreviewResult
-                          rs.take(pageSize).runCollect
+                        case PreviewResults.Single(r)                                   => UIO(Chunk.single(r))
+                        case PreviewResults.Multiple(rs)                                => UIO(rs)
+                        case p @ PreviewResults.Paginated(rs, pageSize, totalRemaining) =>
+                          for {
+                            (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow
+                          } yield results match {
+                            case beforeLast :+ last if results.length >= pageSize =>
+                              beforeLast :+ last :+
+                                last
+                                  .view(fansi.Color.Yellow("More..."))
+                                  .runOption(RunOption.RemainOpen)
+                                  .onRun(ZIO.unit)
+                                  .moreResults(
+                                    MoreResults.Remaining(
+                                      p.copy(
+                                        results = restStream,
+                                        totalRemaining = totalRemaining.map(_ - pageSize)
+                                      )
+                                    )
+                                  )
+
+                            case chunk => chunk
+                          }
                       }
                       .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedException(t)))
                       .either

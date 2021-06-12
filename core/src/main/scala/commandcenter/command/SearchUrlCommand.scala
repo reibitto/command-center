@@ -37,7 +37,7 @@ final case class SearchUrlCommand(
 
     def rawInputPreview: ZIO[Env, CommandError, PreviewResults[Unit]] =
       if (searchInput.input.isEmpty || !(locales.isEmpty || locales.contains(searchInput.context.locale)))
-        IO.fail(NotApplicable)
+        ZIO.fail(NotApplicable)
       else {
         val url = urlTemplate.replace("{query}", URLEncoder.encode(searchInput.input, StandardCharsets.UTF_8))
 

@@ -43,6 +43,13 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
                         preview.onRun.absorb.forkDaemon
                       }
     } yield previewResult
+
+  def showMore[A](
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
+  ): RIO[Env, Unit] =
+    ZIO.unit
 }
 
 object HeadlessTerminal {
