@@ -66,7 +66,7 @@ final case class SwtTerminal(
                 cursorIndex     <- commandCursorRef.get
                 resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
                 _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                                     UIO(System.exit(0))
+                                     UIO(Display.getDefault.asyncExec(() => terminal.shell.dispose()))
                                    }
               } yield ()
             }

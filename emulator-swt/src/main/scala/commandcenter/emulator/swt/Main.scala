@@ -7,6 +7,8 @@ import commandcenter.{ CCConfig, CCRuntime, GlobalActions, TerminalType }
 import zio._
 import zio.logging.log
 
+import scala.util.Try
+
 object Main {
   def main(args: Array[String]): Unit = {
     val runtime = new CCRuntime {
@@ -14,8 +16,11 @@ object Main {
       def shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).orDie
     }
 
-    val config      = runtime.unsafeRun(CCConfig.load.useNow)
-    val rawTerminal = new RawSwtTerminal(config)
+    // The way this is set up is not typical. The reason for the weirdness is due to SWT needing to run with
+    // `-XstartOnFirstThread` on macOS.
+    val configReservation = runtime.unsafeRun(CCConfig.load.reserve)
+    val config            = runtime.unsafeRun(configReservation.acquire)
+    val rawTerminal       = new RawSwtTerminal(config)
 
     runtime.unsafeRunAsync_ {
       (for {
@@ -34,6 +39,8 @@ object Main {
       } yield ()).useForever.exitCode
     }
 
-    rawTerminal.loop()
+    val loopDone = Try(rawTerminal.loop())
+
+    runtime.unsafeRun(configReservation.release(Exit.fromTry(loopDone)))
   }
 }
