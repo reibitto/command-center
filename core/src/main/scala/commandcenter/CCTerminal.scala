@@ -1,7 +1,8 @@
 package commandcenter
 
 import commandcenter.CCRuntime.Env
-import zio.{ RIO, URIO }
+import commandcenter.command.PreviewResult
+import zio.{ Chunk, RIO, URIO }
 
 import java.awt.Dimension
 
@@ -16,6 +17,12 @@ trait CCTerminal {
   def setSize(width: Int, height: Int): RIO[Env, Unit]
 
   def reload: RIO[Env, Unit]
+
+  def showMore[A](
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
+  ): RIO[Env, Unit]
 }
 
 trait GuiTerminal extends CCTerminal {

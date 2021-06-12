@@ -1,8 +1,10 @@
 package commandcenter
 
-import java.awt.Dimension
 import commandcenter.CCRuntime.Env
-import zio.{ RIO, UIO, URIO, ZIO }
+import commandcenter.command.PreviewResult
+import zio.{ Chunk, RIO, UIO, URIO, ZIO }
+
+import java.awt.Dimension
 
 object TestTerminal extends CCTerminal {
   def terminalType: TerminalType = TerminalType.Test
@@ -18,4 +20,10 @@ object TestTerminal extends CCTerminal {
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit
 
   def reload: RIO[Env, Unit] = ZIO.unit
+
+  def showMore[A](
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
+  ): RIO[Env, Unit] = ZIO.unit
 }

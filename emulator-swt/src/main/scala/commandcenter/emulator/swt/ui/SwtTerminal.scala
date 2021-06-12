@@ -2,7 +2,7 @@ package commandcenter.emulator.swt.ui
 
 import commandcenter.CCRuntime.Env
 import commandcenter._
-import commandcenter.command.{ Command, CommandResult, PreviewResult, SearchResults }
+import commandcenter.command._
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
@@ -17,6 +17,7 @@ import org.eclipse.swt.widgets.Display
 import zio._
 import zio.blocking.Blocking
 import zio.duration._
+import zio.stream.ZSink
 
 import java.awt.Dimension
 import scala.collection.mutable
@@ -61,18 +62,11 @@ final case class SwtTerminal(
           case SWT.CR =>
             runtime.unsafeRunAsync_ {
               for {
-                _               <- hide
-                _               <- deactivate.ignore
-                _               <- searchDebouncer.triggerNowAwait
                 previousResults <- searchResultsRef.get
                 cursorIndex     <- commandCursorRef.get
                 resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
-                _               <- ZIO.whenCase(resultOpt) {
-                                     case Some(o) if o.result == CommandResult.Exit =>
-                                       for {
-                                         _ <- hide.ignore
-                                         _ <- UIO(System.exit(0))
-                                       } yield ()
+                _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
+                                     UIO(System.exit(0))
                                    }
               } yield ()
             }
@@ -247,17 +241,58 @@ final case class SwtTerminal(
     } yield ()
   }
 
-  def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] = {
-    val previewResult = results.previews.lift(cursorIndex)
+  def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
+    ZIO.foreach(results.previews.lift(cursorIndex)) { preview =>
+      for {
+        _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
+        _ <- searchDebouncer.triggerNowAwait
+        _ <- preview.moreResults match {
+               case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
+                   if totalRemaining.forall(_ > 0) =>
+                 for {
+                   _                     <- preview.onRun.absorb.forkDaemon
+                   (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
+                   _                     <- showMore(
+                                              results,
+                                              preview.moreResults(
+                                                MoreResults.Remaining(
+                                                  p.copy(
+                                                    results = restStream,
+                                                    totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                                  )
+                                                )
+                                              ),
+                                              pageSize
+                                            )
+                 } yield ()
 
+               case _ =>
+                 // TODO: Log defects
+                 preview.onRun.absorb.forkDaemon *> reset
+             }
+      } yield preview
+    }
+
+  def showMore[A](
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
+  ): RIO[Env, Unit] =
     for {
-      _ <- ZIO.foreach_(previewResult) { preview =>
-             // TODO: Log defects
-             preview.onRun.absorb.forkDaemon
-           }
-      _ <- reset
-    } yield previewResult
-  }
+      cursorIndex   <- commandCursorRef.get
+      searchResults <- searchResultsRef.updateAndGet { results =>
+                         val (front, back) = results.previews.splitAt(cursorIndex)
+
+                         val previews = if (moreResults.length < pageSize) {
+                           front ++ moreResults ++ back.tail
+                         } else {
+                           front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
+                         }
+
+                         results.copy(previews = previews)
+                       }
+      _             <- render(searchResults)
+    } yield ()
 
   def invoke(effect: => Unit): UIO[Unit] =
     UIO(Display.getDefault.asyncExec(() => effect))

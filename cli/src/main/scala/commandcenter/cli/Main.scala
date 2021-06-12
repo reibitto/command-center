@@ -1,6 +1,5 @@
 package commandcenter.cli
 
-import com.googlecode.lanterna.input.{ KeyStroke, KeyType }
 import commandcenter.CCRuntime.Env
 import commandcenter._
 import commandcenter.cli.message.{ CCRequest, CCResponse }
@@ -24,11 +23,7 @@ object Main extends CCApp {
       config   <- CCConfig.load
       terminal <- CliTerminal.createNative(config)
       exitCode <- (for {
-                    _ <- terminal.keyHandlersRef.set(
-                           terminal.defaultKeyHandlers ++ Map(
-                             new KeyStroke(KeyType.Escape) -> UIO(EventResult.Exit)
-                           )
-                         )
+                    _ <- terminal.keyHandlersRef.set(terminal.defaultKeyHandlers)
                     _ <- Task(terminal.screen.startScreen())
                     _ <- terminal.render(SearchResults.empty)
                     _ <- ZStream
@@ -38,11 +33,11 @@ object Main extends CCApp {
                     _ <- terminal
                            .processEvent(config.commands, config.aliases)
                            .repeatWhile {
-                             case EventResult.Exit               => false
-                             case EventResult.UnexpectedError(t) =>
+                             case EventResult.Exit                             => false
+                             case EventResult.UnexpectedError(t)               =>
                                // TODO: Log error
                                true
-                             case EventResult.Success            => true
+                             case EventResult.Success | EventResult.RemainOpen => true
                            }
                   } yield ()).exitCode.toManaged_
     } yield exitCode

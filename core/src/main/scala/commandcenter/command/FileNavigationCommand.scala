@@ -5,19 +5,19 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.util.ProcessUtil
 import zio._
+import zio.logging.log
+import zio.stream.ZStream
 
 import java.io.File
-import scala.util.Try
+import java.nio.file.Files
 import scala.util.matching.Regex
 
-final case class FileNavigationCommand() extends Command[File] {
+final case class FileNavigationCommand(homeDirectory: Option[String]) extends Command[File] {
   val commandType: CommandType = CommandType.FileNavigationCommand
 
   val commandNames: List[String] = List.empty
 
   val title: String = "File navigation"
-
-  val homeDirectory: Option[String] = Try(System.getProperty("user.home")).toOption
 
   // For Windows-style paths like `C:/folder`
   val drivePathRegex: Regex = "[A-Za-z]:".r
@@ -25,7 +25,7 @@ final case class FileNavigationCommand() extends Command[File] {
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[File]] = {
     val input = searchInput.input
     if (!input.startsWith("/") && !input.startsWith("~/") && drivePathRegex.findPrefixOf(input).isEmpty)
-      IO.fail(NotApplicable)
+      ZIO.fail(NotApplicable)
     else {
       val file = homeDirectory match {
         case Some(home) if input == "~/"          => new File(home)
@@ -37,40 +37,42 @@ final case class FileNavigationCommand() extends Command[File] {
       val score      = if (exists) 101 else 100
       val titleColor = if (exists) fansi.Color.Blue else fansi.Color.Red
 
-      // TODO: This can be made more efficient. Also improve the view, such as highlighting the matched part in a different color
       val sameLevel = Option(file.getParentFile)
-        .map(_.listFiles.toVector)
-        .getOrElse(List.empty)
-        .filter(f => f.getAbsolutePath.startsWith(file.getAbsolutePath) && f != file)
-        .take(5)
-        .map { f =>
-          Preview(f)
-            .score(score)
-            .view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
-            .onRun(ProcessUtil.browseFile(f))
+        .map(f => ZStream.fromJavaStream(Files.list(f.toPath)).catchAll(_ => ZStream.empty))
+        .getOrElse(ZStream.empty)
+        .map(_.toFile)
+        .filter { f =>
+          val listedPath = f.getAbsolutePath.toLowerCase
+          val inputFile  = file.getAbsolutePath.toLowerCase
+          listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
         }
 
-      val children = Option(file)
+      val children = Option
+        .when(file.isDirectory)(file)
         .filter(_.isDirectory)
-        .map(_.listFiles.toVector)
-        .getOrElse(List.empty)
-        .filter(f => f.getAbsolutePath.startsWith(file.getAbsolutePath) && f != file)
-        .take(5)
-        .map { f =>
-          Preview(f)
-            .score(score)
-            .view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
-            .onRun(ProcessUtil.browseFile(f))
+        .map(f => ZStream.fromJavaStream(Files.list(f.toPath)).catchAll(_ => ZStream.empty))
+        .getOrElse(ZStream.empty)
+        .map(_.toFile)
+        .filter { f =>
+          val listedPath = f.getAbsolutePath.toLowerCase
+          val inputFile  = file.getAbsolutePath.toLowerCase
+          listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
         }
 
       UIO {
-        PreviewResults.fromIterable(
-          Vector(
+        PreviewResults.paginated(
+          ZStream.succeed(
             Preview(file)
               .score(score)
               .view(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
               .onRun(ProcessUtil.browseFile(file))
-          ) ++ sameLevel ++ children
+          ) ++ (sameLevel ++ children).map { f =>
+            Preview(f)
+              .score(score)
+              .view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
+              .onRun(ProcessUtil.browseFile(f))
+          },
+          pageSize = 10
         )
       }
     }
@@ -78,5 +80,10 @@ final case class FileNavigationCommand() extends Command[File] {
 }
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
-  def make(config: Config): UManaged[FileNavigationCommand] = ZManaged.succeed(FileNavigationCommand())
+  def make(config: Config): RManaged[Env, FileNavigationCommand] =
+    (for {
+      homeDirectory <- zio.system.property("user.home").catchAll { t =>
+                         log.throwable("Could not obtain location of home directory", t) *> ZIO.none
+                       }
+    } yield FileNavigationCommand(homeDirectory)).toManaged_
 }
