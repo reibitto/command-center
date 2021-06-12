@@ -1,6 +1,5 @@
 package commandcenter.cli
 
-import com.googlecode.lanterna.input.{ KeyStroke, KeyType }
 import commandcenter.CCRuntime.Env
 import commandcenter._
 import commandcenter.cli.message.{ CCRequest, CCResponse }
