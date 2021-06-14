@@ -1,6 +1,6 @@
 package commandcenter
 
-import commandcenter.TestRuntime.TestEnv
+import commandcenter.TestRuntime.{ TestEnv, TestPartialEnv }
 import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.ToolsLive
@@ -16,14 +16,14 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
   val testEnv: Layer[Throwable, TestEnv] = {
     import zio.magic._
 
-    ZLayer.fromMagic[TestEnv](
+    ZLayer.fromMagic[TestPartialEnv](
       testEnvironment,
       CCLogging.make(TerminalType.Test),
       ToolsLive.make.orDie,
       Shortcuts.unsupported,
       HttpClientZioBackend.layer(),
       InMemoryCache.make(5.minutes)
-    )
+    ) ++ ConfigFake.layer
   }
 
   val defaultCommandContext: CommandContext =

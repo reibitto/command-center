@@ -7,14 +7,13 @@ import com.googlecode.lanterna.screen.TerminalScreen
 import com.googlecode.lanterna.terminal.{ DefaultTerminalFactory, Terminal }
 import com.googlecode.lanterna.{ TerminalPosition, TerminalSize, TerminalTextUtils }
 import commandcenter.CCRuntime.Env
-import commandcenter.command.{ Command, MoreResults, PreviewResult, PreviewResults, RunOption, SearchResults }
+import commandcenter.command._
 import commandcenter.locale.Language
 import commandcenter.util.{ Debouncer, TextUtils }
 import commandcenter.view.Rendered
-import commandcenter.{ CCConfig, CCTerminal, CommandContext, TerminalType }
+import commandcenter.{ CCTerminal, CommandContext, Conf, TerminalType }
 import zio._
 import zio.blocking._
-import zio.duration._
 import zio.stream.ZSink
 
 import java.awt.Dimension
@@ -23,7 +22,6 @@ final case class CliTerminal[T <: Terminal](
   terminal: T,
   screen: TerminalScreen,
   graphics: TextGraphics,
-  configRef: Ref[CCConfig],
   commandCursorRef: Ref[Int],
   textCursorRef: Ref[TextCursor],
   searchResultsRef: Ref[SearchResults[Any]],
@@ -46,10 +44,7 @@ final case class CliTerminal[T <: Terminal](
 
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit
 
-  def reload: RIO[Env, Unit] =
-    CCConfig.load.use { newConfig =>
-      configRef.set(newConfig)
-    }
+  def reload: RIO[Env, Unit] = Conf.reload.unit
 
   def defaultKeyHandlers: Map[KeyStroke, URIO[Env, EventResult]] =
     Map(
@@ -303,8 +298,8 @@ final case class CliTerminal[T <: Terminal](
 }
 
 object CliTerminal {
-  def createNative(config: CCConfig): Managed[Throwable, CliTerminal[Terminal]] =
-    create(config) {
+  def createNative: RManaged[Has[Conf], CliTerminal[Terminal]] =
+    create {
       val terminalFactory = new DefaultTerminalFactory()
 
       ZManaged.fromAutoCloseable(Task {
@@ -312,25 +307,22 @@ object CliTerminal {
       })
     }
 
-  private def create[T <: Terminal](
-    config: CCConfig
-  )(managedTerminal: Managed[Throwable, T]): Managed[Throwable, CliTerminal[T]] =
+  private def create[T <: Terminal](managedTerminal: Managed[Throwable, T]): RManaged[Has[Conf], CliTerminal[T]] =
     for {
       terminal         <- managedTerminal
       screen           <- ZManaged.fromAutoCloseable(Task(new TerminalScreen(terminal)))
       graphics         <- Task(screen.newTextGraphics()).toManaged_
-      configRef        <- Ref.makeManaged(config)
       commandCursorRef <- Ref.makeManaged(0)
       textCursorRef    <- Ref.makeManaged(TextCursor.unit)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
       keyHandlersRef   <- Ref.makeManaged(Map.empty[KeyStroke, URIO[Env, EventResult]])
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](200.millis).toManaged_
+      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
       renderQueue      <- Queue.sliding[SearchResults[Any]](1).toManaged_
     } yield CliTerminal(
       terminal,
       screen,
       graphics,
-      configRef,
       commandCursorRef,
       textCursorRef,
       searchResultsRef,

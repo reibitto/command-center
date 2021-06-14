@@ -18,7 +18,7 @@ object Shortcuts {
     ZLayer.succeed(
       new Shortcuts {
         def addGlobalShortcut(shortcut: KeyboardShortcut)(handler: KeyboardShortcut => URIO[Env, Unit]): Task[Unit] =
-          Task.unit
+          ZIO.unit
       }
     )
 }

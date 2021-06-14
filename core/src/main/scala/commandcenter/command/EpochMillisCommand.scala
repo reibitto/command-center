@@ -17,7 +17,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
     for {
       input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
-                           (clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high)))
+                           clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high))
                          } else {
                            input.rest.toLongOption match {
                              case Some(millis) =>

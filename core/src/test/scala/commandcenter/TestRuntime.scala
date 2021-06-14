@@ -10,7 +10,7 @@ import zio.test.{ Annotations, Sized }
 import zio.{ Has, ZEnv }
 
 object TestRuntime {
-  type TestEnv = ZEnv
+  type TestPartialEnv = ZEnv
     with Annotations
     with TestClock
     with TestConsole
@@ -23,4 +23,6 @@ object TestRuntime {
     with InMemoryCache
     with Has[Tools]
     with Has[Shortcuts]
+
+  type TestEnv = TestPartialEnv with Has[Conf]
 }

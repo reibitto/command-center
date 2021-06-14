@@ -18,4 +18,10 @@ object Decoders {
   implicit val pathDecoder: Decoder[Path] = Decoder.decodeString.emap { s =>
     Try(Paths.get(s)).toEither.left.map(_.getMessage)
   }
+
+  implicit val scalaDurationDecoder: Decoder[scala.concurrent.duration.Duration] = Decoder.decodeString.emap { s =>
+    Try {
+      scala.concurrent.duration.Duration(s)
+    }.toEither.left.map(_.getMessage)
+  }
 }

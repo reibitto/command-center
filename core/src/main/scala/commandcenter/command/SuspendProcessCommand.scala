@@ -3,7 +3,7 @@ package commandcenter.command
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
+import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{ OS, ProcessUtil }
@@ -45,7 +45,7 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 }
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
-  def make(config: Config): RManaged[Env, SuspendProcessCommand] =
+  def make(config: Config): RManaged[PartialEnv, SuspendProcessCommand] =
     for {
       commandNames    <- ZManaged.fromEither(config.get[Option[List[String]]]("commandNames"))
       suspendShortcut <- ZManaged.fromEither(config.get[Option[KeyboardShortcut]]("suspendShortcut"))

@@ -53,6 +53,14 @@ final case class SearchInput(
       }
     }.headOption
 
+  def asPrefixedNoSpace(prefixes: String*): Option[CommandInput.Prefixed] =
+    prefixes.collectFirst {
+      case prefix if input.startsWith(prefix) =>
+        val rest = input.substring(prefix.length)
+
+        CommandInput.Prefixed(prefix, rest, context)
+    }
+
   /**
    * Parses the search input as 1 keyword. This is useful for commands that don't take in arguments, such as "exit".
    * Prefixes are also matched, but with a lower score. For example, if the command is "exit" and the user types "ex",

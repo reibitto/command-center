@@ -8,7 +8,7 @@ import org.eclipse.swt.graphics.{ Color, Font }
 import org.eclipse.swt.layout.{ GridData, GridLayout }
 import org.eclipse.swt.widgets.{ Display, Shell, Text }
 
-class RawSwtTerminal(val config: CCConfig) {
+class RawSwtTerminal(val initialConfig: CCConfig) {
   val display = new Display()
   val shell   = new Shell(display, SWT.MODELESS | SWT.DOUBLE_BUFFERED)
 
@@ -54,9 +54,9 @@ class RawSwtTerminal(val config: CCConfig) {
       case _  => None
     }
 
-  val font = getPreferredFont(config.display.fonts)
+  val font = getPreferredFont(initialConfig.display.fonts)
 
-  val preferredFrameWidth: Int = config.display.width min display.getBounds.width
+  val preferredFrameWidth: Int = initialConfig.display.width min display.getBounds.width
 
   shell.setText("Command Center")
   shell.setMinimumSize(preferredFrameWidth, 0)
@@ -105,7 +105,7 @@ class RawSwtTerminal(val config: CCConfig) {
     display.dispose()
   }
 
-  private def getPreferredFont(fonts: List[java.awt.Font]): Font = {
+  def getPreferredFont(fonts: List[java.awt.Font]): Font = {
     val installedFontNames =
       (display.getFontList(null, false).toSet ++ display.getFontList(null, true).toSet).map(_.getName)
 

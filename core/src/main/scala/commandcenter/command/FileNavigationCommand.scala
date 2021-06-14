@@ -1,7 +1,7 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
+import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.command.CommandError._
 import commandcenter.util.ProcessUtil
 import zio._
@@ -80,7 +80,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
 }
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
-  def make(config: Config): RManaged[Env, FileNavigationCommand] =
+  def make(config: Config): RManaged[PartialEnv, FileNavigationCommand] =
     (for {
       homeDirectory <- zio.system.property("user.home").catchAll { t =>
                          log.throwable("Could not obtain location of home directory", t) *> ZIO.none

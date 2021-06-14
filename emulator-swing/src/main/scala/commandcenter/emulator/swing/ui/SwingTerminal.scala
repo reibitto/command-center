@@ -2,7 +2,7 @@ package commandcenter.emulator.swing.ui
 
 import commandcenter.CCRuntime.Env
 import commandcenter._
-import commandcenter.command.{ Command, MoreResults, PreviewResult, PreviewResults, RunOption, SearchResults }
+import commandcenter.command._
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
@@ -12,17 +12,15 @@ import commandcenter.util.{ Debouncer, OS }
 import commandcenter.view.{ Rendered, Style }
 import zio._
 import zio.blocking.Blocking
-import zio.duration._
 import zio.stream.ZSink
 
+import java.awt._
 import java.awt.event.KeyEvent
-import java.awt.{ BorderLayout, Color, Dimension, Font, GraphicsDevice, GraphicsEnvironment, KeyboardFocusManager }
 import javax.swing._
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.{ DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext }
 
 final case class SwingTerminal(
-  var config: CCConfig, // TODO: Convert to Ref
   commandCursorRef: Ref[Int],
   searchResultsRef: Ref[SearchResults[Any]],
   searchDebouncer: Debouncer[Env, Nothing, Unit]
@@ -30,25 +28,20 @@ final case class SwingTerminal(
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swing
 
-  val theme    = CCTheme.default
-  val document = new DefaultStyledDocument
-  val context  = new StyleContext
-  val frame    = new JFrame("Command Center")
-  val font     = getPreferredFont(config.display.fonts)
-
-  val preferredFrameWidth: Int =
-    config.display.width min GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
+  val theme         = CCTheme.default
+  val document      = new DefaultStyledDocument
+  val context       = new StyleContext
+  val frame         = new JFrame("Command Center")
+  val preferredFont = runtime.unsafeRun(getPreferredFont)
 
   frame.setBackground(theme.background)
   frame.setFocusable(false)
   frame.setUndecorated(true)
-  if (runtime.unsafeRun(isOpacitySupported))
-    frame.setOpacity(config.display.opacity)
   frame.getContentPane.setLayout(new BorderLayout())
   frame.getRootPane.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, CCTheme.default.darkGray))
 
   val inputTextField = new ZTextField
-  inputTextField.setFont(font)
+  inputTextField.setFont(preferredFont)
   inputTextField.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10))
   inputTextField.setBackground(theme.background)
   inputTextField.setForeground(theme.foreground)
@@ -59,7 +52,7 @@ final case class SwingTerminal(
 
   val outputTextPane = new JTextPane(document)
   outputTextPane.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 10))
-  outputTextPane.setFont(font)
+
   outputTextPane.setBackground(theme.background)
   outputTextPane.setForeground(theme.foreground)
 //  outputTextPane.setCaretColor(Color.RED) // TODO: Make caret color configurable
@@ -70,15 +63,17 @@ final case class SwingTerminal(
     ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
   ) {
-    override def getPreferredSize: Dimension = {
-      val height =
-        if (runtime.unsafeRun(searchResultsRef.get).previews.isEmpty)
-          0
-        else
-          outputTextPane.getPreferredSize.height min config.display.maxHeight
-
-      new Dimension(preferredFrameWidth, height)
-    }
+    override def getPreferredSize: Dimension =
+      runtime.unsafeRun {
+        for {
+          config              <- Conf.config
+          preferredFrameWidth <- getPreferredFrameWidth
+          searchResults       <- searchResultsRef.get
+          height               = if (searchResults.previews.isEmpty) 0
+                                 else
+                                   outputTextPane.getPreferredSize.height min config.display.maxHeight
+        } yield new Dimension(preferredFrameWidth, height)
+      }
   }
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
 
@@ -110,13 +105,22 @@ final case class SwingTerminal(
     val searchTerm = inputTextField.getText
     val context    = CommandContext(Language.detect(searchTerm), SwingTerminal.this, 1.0)
 
-    searchDebouncer(
-      Command
-        .search(config.commands, config.aliases, searchTerm, context)
-        .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-        .unit
-    ).flatMap(_.join)
+    for {
+      config <- Conf.config
+      _      <- searchDebouncer(
+                  Command
+                    .search(config.commands, config.aliases, searchTerm, context)
+                    .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                    .unit
+                ).flatMap(_.join)
+    } yield ()
   }
+
+  def init: RIO[Env, Unit] =
+    for {
+      opacity <- Conf.get(_.display.opacity)
+      _       <- setOpacity(opacity)
+    } yield ()
 
   private def render(searchResults: SearchResults[Any]): UIO[Unit] =
     for {
@@ -344,7 +348,7 @@ final case class SwingTerminal(
   })
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  frame.setMinimumSize(new Dimension(preferredFrameWidth, 20))
+  frame.setMinimumSize(new Dimension(runtime.unsafeRun(getPreferredFrameWidth), 20))
   frame.pack()
 
   def clearScreen: UIO[Unit] =
@@ -387,7 +391,7 @@ final case class SwingTerminal(
 
   def opacity: RIO[Env, Float] = UIO(frame.getOpacity)
 
-  def setOpacity(opacity: Float): RIO[Env, Unit] = Task(frame.setOpacity(opacity))
+  def setOpacity(opacity: Float): RIO[Env, Unit] = Task(frame.setOpacity(opacity)).whenM(isOpacitySupported)
 
   def isOpacitySupported: URIO[Env, Boolean] =
     Task(
@@ -397,32 +401,45 @@ final case class SwingTerminal(
 
   def size: RIO[Env, Dimension] = UIO(frame.getSize)
 
-  def setSize(width: Int, maxHeight: Int): RIO[Env, Unit] =
-    UIO {
-      config = config.copy(
-        display = config.display.copy(width = width, maxHeight = maxHeight)
-      )
-    }
+  def setSize(width: Int, maxHeight: Int): RIO[Env, Unit] = ZIO.unit
 
   def reload: RIO[Env, Unit] =
-    CCConfig.load.use { newConfig =>
-      UIO {
-        config = newConfig
-      }
-    }
+    for {
+      config <- Conf.reload
+      _      <- setOpacity(config.display.opacity)
+      _      <- Task {
+                  inputTextField.setFont(preferredFont)
+                  outputTextPane.setFont(preferredFont)
+                }
+    } yield ()
 
-  private def getPreferredFont(fonts: List[Font]): Font = {
-    val installedFontNames = GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet
+  def getPreferredFont: URIO[Has[Conf], Font] = {
+    def fallbackFont = new Font("Monospaced", Font.PLAIN, 18)
 
-    fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(new Font("Monospaced", Font.PLAIN, 18))
+    (for {
+      fonts              <- Conf.get(_.display.fonts)
+      installedFontNames <- Task(GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet)
+    } yield fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(fallbackFont)).orElse(UIO(fallbackFont))
   }
+
+  def getPreferredFrameWidth: URIO[Has[Conf], Int] =
+    for {
+      width       <- Conf.get(_.display.width)
+      screenWidth <-
+        Task(
+          GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
+        ).orElse(UIO(width))
+    } yield width min screenWidth
 }
 
 object SwingTerminal {
-  def create(config: CCConfig, runtime: CCRuntime): Managed[Throwable, SwingTerminal] =
+  def create(runtime: CCRuntime): RManaged[Env, SwingTerminal] =
     for {
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](200.millis).toManaged_
+      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-    } yield new SwingTerminal(config, commandCursorRef, searchResultsRef, searchDebouncer)(runtime)
+      swingTerminal     = new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer)(runtime)
+      _                <- swingTerminal.init.toManaged_
+    } yield swingTerminal
 }

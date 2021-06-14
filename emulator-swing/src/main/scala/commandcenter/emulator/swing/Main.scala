@@ -15,7 +15,7 @@ object Main extends CCApp {
   def run(args: List[String]): URIO[Env, ExitCode] =
     (for {
       config   <- CCConfig.load
-      terminal <- SwingTerminal.create(config, this)
+      terminal <- SwingTerminal.create(this)
       _        <- (for {
                     _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
                            (for {
