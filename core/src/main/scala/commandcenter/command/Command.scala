@@ -2,7 +2,7 @@ package commandcenter.command
 
 import com.monovore.decline.Help
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
+import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.CommandContext
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.{ JavaVM, OS }
@@ -131,7 +131,7 @@ object Command {
     }
   }
 
-  def parse(config: Config): ZManaged[Env, Throwable, Command[_]] =
+  def parse(config: Config): RManaged[PartialEnv, Command[_]] =
     for {
       typeName <- Task(config.getString("type")).toManaged_
       command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {

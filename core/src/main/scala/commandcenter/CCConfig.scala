@@ -1,7 +1,7 @@
 package commandcenter
 
-import com.typesafe.config.{ Config, ConfigFactory }
-import commandcenter.CCRuntime.Env
+import com.typesafe.config.{ ConfigFactory, Config => TypesafeConfig }
+import commandcenter.CCRuntime.PartialEnv
 import commandcenter.command.{ Command, CommandPlugin }
 import commandcenter.config.ConfigParserExtensions._
 import commandcenter.config.Decoders._
@@ -11,65 +11,86 @@ import enumeratum.EnumEntry.LowerCamelcase
 import enumeratum.{ CirceEnum, Enum, EnumEntry }
 import io.circe.Decoder
 import zio.blocking._
-import zio.logging.log
-import zio.{ RManaged, ZManaged }
+import zio.duration._
+import zio.logging.{ log, Logging }
+import zio.system.System
+import zio.{ RManaged, UIO, ZIO, ZManaged }
 
 import java.awt.Font
 import java.io.File
-import scala.util.Try
+
+final case class CCConfig(
+  commands: Vector[Command[Any]],
+  aliases: Map[String, List[String]],
+  general: GeneralConfig,
+  display: DisplayConfig,
+  keyboard: KeyboardConfig,
+  globalActions: Vector[GlobalAction]
+)
 
 object CCConfig {
-  def load: RManaged[Env, CCConfig] = {
-    val configFile = envConfigFile.orElse(homeConfigFile).getOrElse(new File("application.conf"))
+  def load: RManaged[PartialEnv, CCConfig] =
+    for {
+      file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => UIO(new File("application.conf"))).toManaged_
+      _      <- log.debug(s"Loading config file at ${file.getAbsolutePath}").toManaged_
+      config <- load(file)
+    } yield config
 
-    log.debug(s"Loading config file at ${configFile.getAbsolutePath}").toManaged_ *>
-      load(configFile)
-
-  }
-
-  def load(file: File): RManaged[Env, CCConfig] =
+  def load(file: File): RManaged[PartialEnv, CCConfig] =
     for {
       config   <- effectBlocking(ConfigFactory.parseFile(file)).toManaged_
       ccConfig <- loadFrom(config)
     } yield ccConfig
 
-  def loadFrom(config: Config): RManaged[Env, CCConfig] =
+  def loadFrom(config: TypesafeConfig): RManaged[PartialEnv, CCConfig] =
     for {
       commands       <- CommandPlugin.loadAll(config, "commands")
       aliases        <- ZManaged.fromEither(config.as[Map[String, List[String]]]("aliases"))
+      generalConfig  <- ZManaged.fromEither(config.as[GeneralConfig]("general"))
       displayConfig  <- ZManaged.fromEither(config.as[DisplayConfig]("display"))
       keyboardConfig <- ZManaged.fromEither(config.as[KeyboardConfig]("keyboard"))
       globalActions  <- ZManaged.fromEither(config.get[Vector[GlobalAction]]("globalActions"))
     } yield CCConfig(
       commands.toVector,
       aliases,
+      generalConfig,
       displayConfig,
       keyboardConfig,
       globalActions.filter(_.shortcut.nonEmpty)
     )
 
-  private def envConfigFile: Option[File] =
-    sys.env
-      .get("COMMAND_CENTER_CONFIG_PATH")
-      .map { path =>
-        val file = new File(path)
-        if (file.isDirectory) new File(file, "application.conf") else file
-      }
+  def validateConfig: ZIO[Blocking with Logging with System, Throwable, Unit] =
+    for {
+      file <- envConfigFile.orElse(homeConfigFile).catchAll(_ => UIO(new File("application.conf")))
+      _    <- log.debug(s"Validating config file at ${file.getAbsolutePath}")
+      _    <- effectBlocking(ConfigFactory.parseFile(file))
+    } yield ()
 
-  private def homeConfigFile: Option[File] = {
-    val userHome = Try(System.getProperty("user.home")).toOption.getOrElse("")
+  private def envConfigFile: ZIO[System, Option[SecurityException], File] =
+    for {
+      configPathOpt <- zio.system.env("COMMAND_CENTER_CONFIG_PATH").asSomeError
+      configPath    <- ZIO.fromOption(configPathOpt)
+      file           = new File(configPath)
+    } yield if (file.isDirectory) new File(file, "application.conf") else file
 
-    Option(new File(userHome, "/.command-center/application.conf")).filter(_.exists)
-  }
+  private def homeConfigFile: ZIO[System, Option[Throwable], File] =
+    for {
+      userHome     <- zio.system.propertyOrElse("user.home", "").asSomeError
+      potentialFile = new File(userHome, "/.command-center/application.conf")
+      file         <- ZIO.fromOption(Option.when(potentialFile.exists())(potentialFile))
+    } yield file
 }
 
-final case class CCConfig(
-  commands: Vector[Command[Any]],
-  aliases: Map[String, List[String]],
-  display: DisplayConfig,
-  keyboard: KeyboardConfig,
-  globalActions: Vector[GlobalAction]
-)
+final case class GeneralConfig(debounceDelay: Duration)
+
+object GeneralConfig {
+  implicit val decoder: Decoder[GeneralConfig] =
+    Decoder.instance { c =>
+      for {
+        debounceDelay <- c.get[scala.concurrent.duration.Duration]("debounceDelay")
+      } yield GeneralConfig(debounceDelay.toNanos.nanos)
+    }
+}
 
 final case class DisplayConfig(width: Int, maxHeight: Int, opacity: Float, fonts: List[Font])
 

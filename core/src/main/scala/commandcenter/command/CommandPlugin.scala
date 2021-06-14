@@ -1,18 +1,18 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
+import commandcenter.CCRuntime.PartialEnv
 import commandcenter.config.ConfigParserExtensions
 import commandcenter.util.OS
 import zio.logging.log
 import zio.{ RManaged, Task, ZManaged }
 
 trait CommandPlugin[A <: Command[_]] extends ConfigParserExtensions {
-  def make(config: Config): RManaged[Env, A]
+  def make(config: Config): RManaged[PartialEnv, A]
 }
 
 object CommandPlugin {
-  def loadAll(config: Config, path: String): RManaged[Env, List[Command[Any]]] = {
+  def loadAll(config: Config, path: String): RManaged[PartialEnv, List[Command[Any]]] = {
     import scala.jdk.CollectionConverters._
 
     for {
@@ -43,7 +43,7 @@ object CommandPlugin {
     } yield commands.flatten.filter(c => c.supportedOS.isEmpty || c.supportedOS.contains(OS.os))
   }
 
-  def loadDynamically(c: Config, typeName: String): ZManaged[Env, CommandPluginError, Command[Any]] = {
+  def loadDynamically(c: Config, typeName: String): ZManaged[PartialEnv, CommandPluginError, Command[Any]] = {
     val mirror = scala.reflect.runtime.universe.runtimeMirror(CommandPlugin.getClass.getClassLoader)
 
     for {

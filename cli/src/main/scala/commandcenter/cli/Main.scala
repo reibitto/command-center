@@ -20,25 +20,25 @@ object Main extends CCApp {
 
   def uiLoop: RManaged[Env, ExitCode] =
     for {
-      config   <- CCConfig.load
-      terminal <- CliTerminal.createNative(config)
+      terminal <- CliTerminal.createNative
       exitCode <- (for {
-                    _ <- terminal.keyHandlersRef.set(terminal.defaultKeyHandlers)
-                    _ <- Task(terminal.screen.startScreen())
-                    _ <- terminal.render(SearchResults.empty)
-                    _ <- ZStream
-                           .fromQueue(terminal.renderQueue)
-                           .foreach(terminal.render)
-                           .forkDaemon
-                    _ <- terminal
-                           .processEvent(config.commands, config.aliases)
-                           .repeatWhile {
-                             case EventResult.Exit                             => false
-                             case EventResult.UnexpectedError(t)               =>
-                               // TODO: Log error
-                               true
-                             case EventResult.Success | EventResult.RemainOpen => true
-                           }
+                    _      <- terminal.keyHandlersRef.set(terminal.defaultKeyHandlers)
+                    _      <- Task(terminal.screen.startScreen())
+                    _      <- terminal.render(SearchResults.empty)
+                    _      <- ZStream
+                                .fromQueue(terminal.renderQueue)
+                                .foreach(terminal.render)
+                                .forkDaemon
+                    config <- Conf.config
+                    _      <- terminal
+                                .processEvent(config.commands, config.aliases)
+                                .repeatWhile {
+                                  case EventResult.Exit                             => false
+                                  case EventResult.UnexpectedError(t)               =>
+                                    // TODO: Log error
+                                    true
+                                  case EventResult.Success | EventResult.RemainOpen => true
+                                }
                   } yield ()).exitCode.toManaged_
     } yield exitCode
 
