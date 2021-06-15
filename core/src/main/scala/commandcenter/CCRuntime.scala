@@ -1,12 +1,10 @@
 package commandcenter
 
 import commandcenter.CCRuntime.{ Env, PartialEnv }
-import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.{ Tools, ToolsLive }
 import commandcenter.util.OS
 import sttp.client.httpclient.zio.{ HttpClientZioBackend, SttpClient }
-import zio.duration._
 import zio.internal.Platform
 import zio.logging.Logging
 import zio.{ Has, Runtime, ULayer, ZEnv, ZLayer }
@@ -35,8 +33,7 @@ trait CCRuntime extends Runtime[Env] {
         CCLogging.make(terminalType),
         ToolsLive.make.orDie,
         shortcutsLayer,
-        HttpClientZioBackend.layer(),
-        InMemoryCache.make(5.minutes)
+        HttpClientZioBackend.layer()
       ) >+> ConfigLive.layer.orDie,
       platform
     )
@@ -50,6 +47,6 @@ trait CCRuntime extends Runtime[Env] {
 }
 
 object CCRuntime {
-  type PartialEnv = ZEnv with Logging with SttpClient with InMemoryCache with Has[Tools] with Has[Shortcuts]
+  type PartialEnv = ZEnv with Logging with SttpClient with Has[Tools] with Has[Shortcuts]
   type Env        = PartialEnv with Has[Conf]
 }

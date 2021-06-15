@@ -5,9 +5,8 @@ import com.sun.jna.platform.win32.WinDef.{ HDC, HWND, LPARAM, RECT }
 import com.sun.jna.platform.win32.WinUser.{ MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT }
 import com.sun.jna.platform.win32.{ User32, WinUser }
 import com.sun.jna.ptr.IntByReference
-import commandcenter.command.cache.InMemoryCache
 import zio.clock.Clock
-import zio.{ RIO, Task }
+import zio.{ RIO, Ref, Task }
 
 import java.util
 import scala.collection.mutable
@@ -85,12 +84,11 @@ object WindowManager {
     }
   }
 
-  def cycleWindowSize(step: Int, name: String)(
+  def cycleWindowSize(cycleWindowStateRef: Ref[Option[CycleWindowState]])(step: Int, name: String)(
     boundsList: Vector[WindowBounds]
-  ): RIO[InMemoryCache with Clock, Unit] = {
-    val cacheKey = "cycleWindowState"
+  ): RIO[Clock, Unit] =
     for {
-      cycleWindowState <- InMemoryCache.get[CycleWindowState](cacheKey).map(_.getOrElse(CycleWindowState(-step, None)))
+      cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))
       newIndex          = if (cycleWindowState.lastAction.contains(name)) {
                             if (step > 0) {
                               (cycleWindowState.index + step) % boundsList.length
@@ -101,9 +99,8 @@ object WindowManager {
                             0
                           }
       _                <- transform(boundsList(newIndex))
-      _                <- InMemoryCache.set(cacheKey, CycleWindowState(newIndex, Some(name)))
+      _                <- cycleWindowStateRef.set(Some(CycleWindowState(newIndex, Some(name))))
     } yield ()
-  }
 
   def transform(bounds: WindowBounds): Task[Unit] = Task {
     val window  = User32.INSTANCE.GetForegroundWindow()
