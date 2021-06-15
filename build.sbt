@@ -53,6 +53,7 @@ lazy val core = module("core")
       "dev.zio"                      %% "zio-prelude"            % "1.0.0-RC5",
       "dev.zio"                      %% "zio-process"            % "0.5.0",
       "dev.zio"                      %% "zio-logging"            % "0.5.10",
+      "dev.zio"                      %% "zio-cache"              % "0.1.0",
       "io.github.kitlangton"         %% "zio-magic"              % "0.3.3",
       "io.circe"                     %% "circe-config"           % "0.8.0",
       "org.scala-lang"                % "scala-reflect"          % "2.13.6",
@@ -67,7 +68,6 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                  %% "fastparse"              % "2.3.2",
       "org.typelevel"                %% "spire"                  % "0.17.0",
-      "org.cache2k"                   % "cache2k-core"           % "1.6.0.Final",
       "net.java.dev.jna"              % "jna"                    % Version.jna,
       "net.java.dev.jna"              % "jna-platform"           % Version.jna
     ),

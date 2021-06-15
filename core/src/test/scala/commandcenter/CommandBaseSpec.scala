@@ -1,7 +1,6 @@
 package commandcenter
 
 import commandcenter.TestRuntime.{ TestEnv, TestPartialEnv }
-import commandcenter.command.cache.InMemoryCache
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.ToolsLive
 import sttp.client.httpclient.zio.HttpClientZioBackend
@@ -21,8 +20,7 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
       CCLogging.make(TerminalType.Test),
       ToolsLive.make.orDie,
       Shortcuts.unsupported,
-      HttpClientZioBackend.layer(),
-      InMemoryCache.make(5.minutes)
+      HttpClientZioBackend.layer()
     ) ++ ConfigFake.layer
   }
 

@@ -8,10 +8,13 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonArgs._
 import commandcenter.util.{ AppleScript, OS, PowerShellScript }
 import commandcenter.view.DefaultView
+import zio.cache.{ Cache, Lookup }
 import zio.duration._
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ TaskManaged, UIO, ZIO, ZManaged }
 
-final case class TimerCommand(commandNames: List[String]) extends Command[Unit] {
+import scala.io.Source
+
+final case class TimerCommand(commandNames: List[String], cache: Cache[String, Nothing, String]) extends Command[Unit] {
   // TODO: Add option to list active timers and also one for canceling them
 
   val commandType: CommandType = CommandType.OpacityCommand
@@ -24,9 +27,9 @@ final case class TimerCommand(commandNames: List[String]) extends Command[Unit] 
 
   val notifyFn =
     if (OS.os == OS.MacOS)
-      AppleScript.loadFunction2[String, String]("applescript/system/notify.applescript")
+      AppleScript.loadFunction2[String, String](cache)("applescript/system/notify.applescript")
     else
-      PowerShellScript.loadFunction2[String, String]("powershell/system/notify.ps1")
+      PowerShellScript.loadFunction2[String, String](cache)("powershell/system/notify.ps1")
 
   // TODO: Support all OSes
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
@@ -58,9 +61,19 @@ final case class TimerCommand(commandNames: List[String]) extends Command[Unit] 
 
 object TimerCommand extends CommandPlugin[TimerCommand] {
   def make(config: Config): TaskManaged[TimerCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")))
-    )
+    for {
+      cache   <- Cache
+                   .make(
+                     1024,
+                     Duration.Infinity,
+                     Lookup((resource: String) => UIO(Source.fromResource(resource)).map(_.mkString))
+                   )
+                   .toManaged_
+      command <- ZManaged.fromEither(
+                   for {
+                     commandNames <- config.get[Option[List[String]]]("commandNames")
+                   } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), cache)
+                 )
+    } yield command
+
 }

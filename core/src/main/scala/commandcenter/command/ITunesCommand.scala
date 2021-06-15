@@ -7,9 +7,14 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{ AppleScript, OS, TTS }
 import commandcenter.view.DefaultView
+import zio.cache.{ Cache, Lookup }
 import zio.{ TaskManaged, UIO, ZIO, ZManaged }
+import zio.duration._
 
-final case class ITunesCommand(commandNames: List[String]) extends Command[Unit] {
+import scala.io.Source
+
+final case class ITunesCommand(commandNames: List[String], cache: Cache[String, Nothing, String])
+    extends Command[Unit] {
   val commandType: CommandType = CommandType.ITunesCommand
   val title: String            = "iTunes"
 
@@ -47,15 +52,15 @@ final case class ITunesCommand(commandNames: List[String]) extends Command[Unit]
 
   val itunesCommand = decline.Command("itunes", "iTunes commands")(opts)
 
-  val playFn          = AppleScript.loadFunction0("applescript/itunes/play.applescript")
-  val pauseFn         = AppleScript.loadFunction0("applescript/itunes/pause.applescript")
-  val stopFn          = AppleScript.loadFunction0("applescript/itunes/stop.applescript")
-  val nextTrackFn     = AppleScript.loadFunction0("applescript/itunes/next-track.applescript")
-  val previousTrackFn = AppleScript.loadFunction0("applescript/itunes/previous-track.applescript")
-  val trackDetailsFn  = AppleScript.loadFunction0("applescript/itunes/track-details.applescript")
-  val seekFn          = AppleScript.loadFunction1[Int]("applescript/itunes/seek.applescript")
-  val rateTrackFn     = AppleScript.loadFunction1[Int]("applescript/itunes/rate.applescript")
-  val deleteTrackFn   = AppleScript.loadFunction0("applescript/itunes/delete-track.applescript")
+  val playFn          = AppleScript.loadFunction0(cache)("applescript/itunes/play.applescript")
+  val pauseFn         = AppleScript.loadFunction0(cache)("applescript/itunes/pause.applescript")
+  val stopFn          = AppleScript.loadFunction0(cache)("applescript/itunes/stop.applescript")
+  val nextTrackFn     = AppleScript.loadFunction0(cache)("applescript/itunes/next-track.applescript")
+  val previousTrackFn = AppleScript.loadFunction0(cache)("applescript/itunes/previous-track.applescript")
+  val trackDetailsFn  = AppleScript.loadFunction0(cache)("applescript/itunes/track-details.applescript")
+  val seekFn          = AppleScript.loadFunction1[Int](cache)("applescript/itunes/seek.applescript")
+  val rateTrackFn     = AppleScript.loadFunction1[Int](cache)("applescript/itunes/rate.applescript")
+  val deleteTrackFn   = AppleScript.loadFunction0(cache)("applescript/itunes/delete-track.applescript")
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
@@ -120,11 +125,20 @@ final case class ITunesCommand(commandNames: List[String]) extends Command[Unit]
 
 object ITunesCommand extends CommandPlugin[ITunesCommand] {
   def make(config: Config): TaskManaged[ITunesCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield ITunesCommand(commandNames.getOrElse(List("itunes")))
-    )
+    for {
+      cache   <- Cache
+                   .make(
+                     1024,
+                     Duration.Infinity,
+                     Lookup((resource: String) => UIO(Source.fromResource(resource)).map(_.mkString))
+                   )
+                   .toManaged_
+      command <- ZManaged.fromEither(
+                   for {
+                     commandNames <- config.get[Option[List[String]]]("commandNames")
+                   } yield ITunesCommand(commandNames.getOrElse(List("itunes")), cache)
+                 )
+    } yield command
 
   sealed trait Opt
   case object Opt {
