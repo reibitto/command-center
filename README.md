@@ -162,7 +162,8 @@ place the `cc-tools` executable in the proper location. Either place it in `~/.c
 Command Center comes with some optional plugins. These plugins are optional because they're either too niche or bring in
 heavier dependencies that normal users wouldn't need. Currently there are:
 
-#### `ject-plugin`
+#### Ject dictionary plugin
+
 A real-time, offline dictionary plugin (currently only supports Japanese). This is based on [Ject](https://github.com/reibitto/ject).
 You'll need to build the Lucene index first as described in the README. Then specify the command in `application.conf` like this:
 
@@ -173,7 +174,28 @@ You'll need to build the Lucene index first as described in the README. Then spe
 }
 ```
 
-#### `stroke-order-plugin` 
+#### Kanji plugin
+
+A tool for searching kanji by parts. This plugin also uses [Ject](https://github.com/reibitto/ject) and requires a Lucene index for the kanji dictionary to be created first.
+
+Some example queries:
+- `kanji 日月`: 明, 朝, 晴, 腸, 盟, etc. 
+- `kanji 大山可`: 崎, 嵜, etc.
+- `kanji キヒ日`: 指, 掲, etc.
+- `kanji B東`: 陳
+
+As you can see, there are some "shortcuts" for convenience if you don't know how to type a certain radical. These can be found [here](https://github.com/reibitto/ject/blob/master/core/src/main/scala/ject/RadicalQuery.scala).
+
+To install the Kanji plugin, you need the following in `application.conf`:
+
+```hocon
+{
+  type: "commandcenter.ject.KanjiCommand$",
+  dictionaryPath: "/path/to/ject/data/lucene"
+}
+```
+
+#### Kanji stroke order plugin
 Used to bring up the stroke order of kanji. This relies on having [Kanji stroke order font](https://www.nihilist.org.uk/)
 installed. Also it requires using the terminal emulator as native CLI clients rarely allow changing the default font. Usage is `stroke 漢字`. The config
 looks like this:
