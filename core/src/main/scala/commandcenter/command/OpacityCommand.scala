@@ -22,7 +22,7 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
       parsed          = opacityCommand.parse(input.args)
       message        <- ZIO
                           .fromEither(parsed)
-                          .fold(HelpMessage.formatted, o => fansi.Str(s"Set opacity to ${o}"))
+                          .fold(HelpMessage.formatted, o => fansi.Str(s"Set opacity to $o"))
       currentOpacity <- input.context.terminal.opacity.mapError(CommandError.UnexpectedException)
     } yield {
       val run = for {

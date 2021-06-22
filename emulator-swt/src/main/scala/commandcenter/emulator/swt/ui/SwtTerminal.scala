@@ -303,7 +303,7 @@ final case class SwtTerminal(
     UIO(Display.getDefault.asyncExec(() => effect))
 
   def invokeReturn[A](effect: => A): Task[A] =
-    Task.effectAsync { cb =>
+    Task.effectAsyncM { cb =>
       invoke {
         val evaluatedEffect = effect
         cb(UIO(evaluatedEffect))

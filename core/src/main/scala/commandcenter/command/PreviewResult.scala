@@ -38,6 +38,7 @@ final case class PreviewResult[+R](
 
   def onRun(onRun: RIO[Env, Unit]): PreviewResult[R] = copy(onRun = onRun)
 
+  def rendered(rendered: => Rendered): PreviewResult[R]   = copy(renderFn = () => rendered)
   def renderFn(renderFn: R => Rendered): PreviewResult[R] = copy(renderFn = () => renderFn(result))
 
   def render[A: View](renderFn: R => A): PreviewResult[R] =

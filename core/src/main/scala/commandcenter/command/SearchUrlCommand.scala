@@ -67,7 +67,7 @@ object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
       } yield SearchUrlCommand(
         title,
         urlTemplate,
-        commandNames.getOrElse(List.empty),
+        commandNames.getOrElse(Nil),
         locales.getOrElse(Set.empty),
         shortcuts.getOrElse(Set.empty)
       )
