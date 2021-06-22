@@ -52,7 +52,7 @@ object SnippetsCommand extends CommandPlugin[SnippetsCommand] {
         snippets     <- config.get[Option[List[Snippet]]]("snippets")
       } yield SnippetsCommand(
         commandNames.getOrElse(List("snippets", "snippet", "snip")),
-        snippets.getOrElse(List.empty)
+        snippets.getOrElse(Nil)
       )
     )
 }

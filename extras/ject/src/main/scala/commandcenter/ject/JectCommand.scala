@@ -7,16 +7,16 @@ import commandcenter.config.Decoders.pathDecoder
 import commandcenter.locale.JapaneseText
 import commandcenter.tools.Tools
 import ject.SearchPattern
-import ject.entity.WordDocument
-import ject.lucene.WordIndex
-import zio.{ TaskManaged, UIO, ZIO, ZManaged }
+import ject.docs.WordDoc
+import ject.lucene.WordReader
+import zio.{ TaskManaged, UIO, ZIO }
 
 import java.nio.file.Path
 
-final case class JectCommand(commandNames: List[String], dictionaryPath: Path) extends Command[Unit] {
+final case class JectCommand(commandNames: List[String], luceneIndex: WordReader, showScore: Boolean)
+    extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
   val title: String            = "Ject"
-  val luceneIndex: WordIndex   = new WordIndex(dictionaryPath.resolve("word"))
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
@@ -36,12 +36,12 @@ final case class JectCommand(commandNames: List[String], dictionaryPath: Path) e
         Preview.unit
           .score(Scores.high(searchInput.context))
           .onRun(Tools.setClipboard(input))
-          .view(renderWord(word))
+          .view(renderWord(word.doc, word.score))
       },
       10
     )
 
-  def renderWord(word: WordDocument): fansi.Str = {
+  def renderWord(word: WordDoc, score: Double): fansi.Str = {
     val kanjiTerms = (word.kanjiTerms.headOption.map { k =>
       fansi.Color.Green(k)
     }.toList ++ word.kanjiTerms.drop(1).map { k =>
@@ -65,7 +65,8 @@ final case class JectCommand(commandNames: List[String], dictionaryPath: Path) e
     // TODO: Consider creating a StrBuilder class to make this nicer
     (if (kanjiTerms.length == 0) fansi.Str("") else kanjiTerms ++ " ") ++
       (if (readingTerms.length == 0) fansi.Str("") else readingTerms ++ " ") ++
-      partsOfSpeech ++ "\n" ++ definitions
+      partsOfSpeech ++ (if (showScore) fansi.Color.DarkGray(" %1.2f".format(score)) else "") ++ "\n" ++
+      definitions
   }
 
 }
@@ -73,10 +74,10 @@ final case class JectCommand(commandNames: List[String], dictionaryPath: Path) e
 object JectCommand extends CommandPlugin[JectCommand] {
   def make(config: Config): TaskManaged[JectCommand] =
     // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
-    ZManaged.fromEither(
-      for {
-        commandNames   <- config.get[Option[List[String]]]("commandNames")
-        dictionaryPath <- config.get[Path]("dictionaryPath")
-      } yield JectCommand(commandNames.getOrElse(List("ject", "j")), dictionaryPath)
-    )
+    for {
+      commandNames   <- ZIO.fromEither(config.get[Option[List[String]]]("commandNames")).toManaged_
+      dictionaryPath <- ZIO.fromEither(config.get[Path]("dictionaryPath")).toManaged_
+      luceneIndex    <- WordReader.make(dictionaryPath.resolve("word"))
+      showScore      <- ZIO.fromEither(config.get[Option[Boolean]]("showScore")).toManaged_
+    } yield JectCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
 }

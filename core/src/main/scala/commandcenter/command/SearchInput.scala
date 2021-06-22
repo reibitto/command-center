@@ -13,7 +13,7 @@ final case class SearchInput(
 ) {
 
   /**
-   * Parses the search input into tokenized arguments. For example, "myCommand -a 1 "some subcommand" will be parsed into
+   * Parses the search input into tokenized arguments. For example, "myCommand -a 1 "some subcommand" will be parsed as
    * ["-a", "1", "some subcommand"]. Note that the command name is a separate field and isn't considered an argument.
    *
    * Returns Some if the user input matches the command name (also taking into account custom aliases), otherwise None.
@@ -34,7 +34,7 @@ final case class SearchInput(
 
   /**
    * Parses the search input into 2 tokens: a matching prefix and the rest of the input. For example,
-   * "myCommand one two three" will be parsed into ["myCommand", "one two three"].
+   * "myCommand one two three" will be parsed as ["myCommand", "one two three"].
    *
    * Returns Some if the user input matches the prefix (also taking into account custom aliases), otherwise None.
    */
@@ -53,7 +53,13 @@ final case class SearchInput(
       }
     }.headOption
 
-  def asPrefixedNoSpace(prefixes: String*): Option[CommandInput.Prefixed] =
+  /**
+   * Parses the search input into 2 tokens: a matching prefix and the rest of the input (separated by no space). For
+   * example, "!one two three" will be parsed as ["!", "one two three"].
+   *
+   * Returns Some if the user input matches one of prefixes (also taking into account custom aliases), otherwise None.
+   */
+  def asPrefixedQuick(prefixes: String*): Option[CommandInput.Prefixed] =
     prefixes.collectFirst {
       case prefix if input.startsWith(prefix) =>
         val rest = input.substring(prefix.length)

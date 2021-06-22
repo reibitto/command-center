@@ -186,7 +186,7 @@ lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-o
 
 lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
   .dependsOn(core)
-  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.1.0"))
+  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.2.0"))
 
 lazy val extras     = project
   .in(file("extras"))
