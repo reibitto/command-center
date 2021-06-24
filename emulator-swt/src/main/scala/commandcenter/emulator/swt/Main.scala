@@ -28,7 +28,9 @@ object Main {
                                _ <- terminal.activate
                              } yield ()).ignore
                            )
-                      _ <- log.debug("Ready to accept input")
+                      _ <- log.info(
+                             s"Ready to accept input. Press `${config.keyboard.openShortcut}` to open the terminal."
+                           )
                       _ <- GlobalActions.setupCommon(config.globalActions)
                     } yield ()).toManaged_
       } yield ()).useForever.exitCode

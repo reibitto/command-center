@@ -23,7 +23,8 @@ import javax.swing.text.{ DefaultStyledDocument, SimpleAttributeSet, StyleConsta
 final case class SwingTerminal(
   commandCursorRef: Ref[Int],
   searchResultsRef: Ref[SearchResults[Any]],
-  searchDebouncer: Debouncer[Env, Nothing, Unit]
+  searchDebouncer: Debouncer[Env, Nothing, Unit],
+  closePromise: Promise[Nothing, Unit]
 )(implicit runtime: Runtime[Env])
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swing
@@ -296,7 +297,7 @@ final case class SwingTerminal(
             cursorIndex     <- commandCursorRef.get
             resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
             _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                                 UIO(System.exit(0))
+                                 closePromise.succeed(())
                                }
           } yield ()
 
@@ -439,7 +440,11 @@ object SwingTerminal {
       searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-      swingTerminal     = new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer)(runtime)
+      closePromise     <- Promise.makeManaged[Nothing, Unit]
+      swingTerminal    <-
+        ZManaged.make(
+          UIO(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
+        )(t => UIO(t.frame.dispose()))
       _                <- swingTerminal.init.toManaged_
     } yield swingTerminal
 }
