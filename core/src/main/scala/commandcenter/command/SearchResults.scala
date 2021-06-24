@@ -3,9 +3,9 @@ package commandcenter.command
 import commandcenter.view.Rendered
 import zio.Chunk
 
-final case class SearchResults[R](
+final case class SearchResults[A](
   searchTerm: String,
-  previews: Chunk[PreviewResult[R]],
+  previews: Chunk[PreviewResult[A]],
   errors: Chunk[CommandError] = Chunk.empty
 ) {
   lazy val rendered: Chunk[Rendered] = previews.map(_.renderFn())
@@ -15,5 +15,5 @@ final case class SearchResults[R](
 }
 
 object SearchResults {
-  def empty[R]: SearchResults[R] = SearchResults("", Chunk.empty)
+  def empty[A]: SearchResults[A] = SearchResults("", Chunk.empty)
 }
