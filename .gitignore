@@ -26,3 +26,4 @@ server.pid
 local.conf
 /logs
 **/plugins/*.jar
+node_modules

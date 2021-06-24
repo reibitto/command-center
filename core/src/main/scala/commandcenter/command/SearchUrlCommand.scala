@@ -1,9 +1,5 @@
 package commandcenter.command
 
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import java.util.Locale
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.codec.Codecs.localeDecoder
@@ -12,6 +8,10 @@ import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
 import commandcenter.view.DefaultView
 import zio._
+
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.util.Locale
 
 final case class SearchUrlCommand(
   title: String,
