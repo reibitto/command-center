@@ -14,7 +14,7 @@ import zio.stream.{ ZSink, ZStream }
 
 import java.util.Locale
 
-trait Command[+R] extends ViewInstances {
+trait Command[+A] extends ViewInstances {
   val commandType: CommandType
 
   def commandNames: List[String]
@@ -23,10 +23,10 @@ trait Command[+R] extends ViewInstances {
   def supportedOS: Set[OS]             = Set.empty
   def shortcuts: Set[KeyboardShortcut] = Set.empty
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[R]]
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[A]]
 
   object Preview {
-    def apply[A >: R](a: A): PreviewResult[A] =
+    def apply[A1 >: A](a: A1): PreviewResult[A1] =
       new PreviewResult(
         Command.this,
         a,
@@ -37,7 +37,7 @@ trait Command[+R] extends ViewInstances {
         () => DefaultView(title, a.toString).render
       )
 
-    def unit[A >: R](implicit ev: Command[A] =:= Command[Unit]): PreviewResult[Unit] =
+    def unit[A1 >: A](implicit ev: Command[A1] =:= Command[Unit]): PreviewResult[Unit] =
       new PreviewResult(
         ev(Command.this),
         (),
@@ -48,7 +48,7 @@ trait Command[+R] extends ViewInstances {
         () => DefaultView(title, "").render
       )
 
-    def help[A >: R](help: Help)(implicit ev: Command[A] =:= Command[Unit]): PreviewResult[Unit] =
+    def help[A1 >: A](help: Help)(implicit ev: Command[A1] =:= Command[Unit]): PreviewResult[Unit] =
       new PreviewResult(
         ev(Command.this),
         (),

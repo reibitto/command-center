@@ -21,35 +21,35 @@ object RunOption {
 
 // TODO: Make source optional?
 // TODO: Add optional Render. If None, use the default instance
-final case class PreviewResult[+R](
-  source: Command[R],
-  result: R,
+final case class PreviewResult[+A](
+  source: Command[A],
+  result: A,
   onRun: RIO[Env, Unit],
   runOption: RunOption,
   moreResults: MoreResults,
   score: Double,
   renderFn: () => Rendered
 ) {
-  def runOption(runOption: RunOption): PreviewResult[R] = copy(runOption = runOption)
+  def runOption(runOption: RunOption): PreviewResult[A] = copy(runOption = runOption)
 
-  def moreResults(moreResults: MoreResults): PreviewResult[R] = copy(moreResults = moreResults)
+  def moreResults(moreResults: MoreResults): PreviewResult[A] = copy(moreResults = moreResults)
 
-  def score(score: Double): PreviewResult[R] = copy(score = score)
+  def score(score: Double): PreviewResult[A] = copy(score = score)
 
-  def onRun(onRun: RIO[Env, Unit]): PreviewResult[R] = copy(onRun = onRun)
+  def onRun(onRun: RIO[Env, Unit]): PreviewResult[A] = copy(onRun = onRun)
 
-  def rendered(rendered: => Rendered): PreviewResult[R]   = copy(renderFn = () => rendered)
-  def renderFn(renderFn: R => Rendered): PreviewResult[R] = copy(renderFn = () => renderFn(result))
+  def rendered(rendered: => Rendered): PreviewResult[A]   = copy(renderFn = () => rendered)
+  def renderFn(renderFn: A => Rendered): PreviewResult[A] = copy(renderFn = () => renderFn(result))
 
-  def render[A: View](renderFn: R => A): PreviewResult[R] =
-    copy(renderFn = () => implicitly[View[A]].render(renderFn(result)))
+  def render[V: View](renderFn: A => V): PreviewResult[A] =
+    copy(renderFn = () => implicitly[View[V]].render(renderFn(result)))
 
-  def view[A: View](view: A): PreviewResult[R] = copy(renderFn = () => implicitly[View[A]].render(view))
+  def view[V: View](view: V): PreviewResult[A] = copy(renderFn = () => implicitly[View[V]].render(view))
 }
 
 object PreviewResult {
-  def of[R: View](source: Command[R], result: R): PreviewResult[R] =
-    new PreviewResult[R](
+  def of[V: View](source: Command[V], result: V): PreviewResult[V] =
+    new PreviewResult[V](
       source,
       result,
       Task.unit,

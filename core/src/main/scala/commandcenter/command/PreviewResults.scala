@@ -1,31 +1,32 @@
 package commandcenter.command
 
+import commandcenter.CCRuntime.Env
 import zio.Chunk
 import zio.stream.ZStream
 
-sealed trait PreviewResults[+R]
+sealed trait PreviewResults[+A]
 
 object PreviewResults {
-  def one[R](result: PreviewResult[R]): PreviewResults[R] =
+  def one[A](result: PreviewResult[A]): PreviewResults[A] =
     PreviewResults.Single(result)
 
-  def fromIterable[R](results: Iterable[PreviewResult[R]]): PreviewResults[R] =
+  def fromIterable[A](results: Iterable[PreviewResult[A]]): PreviewResults[A] =
     PreviewResults.Multiple(Chunk.fromIterable(results))
 
   def paginated[A](
-    stream: ZStream[Any, CommandError, PreviewResult[A]],
+    stream: ZStream[Env, CommandError, PreviewResult[A]],
     pageSize: Int,
     totalRemaining: Option[Long] = None
   ): PreviewResults[A] =
     PreviewResults.Paginated(stream, pageSize, totalRemaining)
 
-  final case class Single[R](result: PreviewResult[R]) extends PreviewResults[R]
+  final case class Single[A](result: PreviewResult[A]) extends PreviewResults[A]
 
-  final case class Multiple[R](results: Chunk[PreviewResult[R]]) extends PreviewResults[R]
+  final case class Multiple[A](results: Chunk[PreviewResult[A]]) extends PreviewResults[A]
 
-  final case class Paginated[R](
-    results: ZStream[Any, CommandError, PreviewResult[R]],
+  final case class Paginated[A](
+    results: ZStream[Env, CommandError, PreviewResult[A]],
     pageSize: Int,
     totalRemaining: Option[Long]
-  ) extends PreviewResults[R]
+  ) extends PreviewResults[A]
 }

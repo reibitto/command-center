@@ -2,43 +2,64 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.command.SearchCratesCommand.CrateResult
+import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
 import io.circe.{ Decoder, Json }
 import sttp.client._
 import sttp.client.circe._
 import sttp.client.httpclient.zio._
-import zio.{ IO, TaskManaged, ZIO, ZManaged }
+import zio.stream.ZStream
+import zio.{ Chunk, IO, TaskManaged, ZIO, ZManaged }
 
 import java.time.OffsetDateTime
 
 final case class SearchCratesCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchCratesCommand
   val title: String            = "Crates"
+  val pageSize: Int            = 10
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input    <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
-      request   = basicRequest
-                    .get(uri"https://crates.io/api/v1/crates?page=1&per_page=20&q=${input.rest}")
-                    .response(asJson[Json])
-      response <- SttpClient
-                    .send(request)
-                    .map(_.body)
-                    .absolve
-                    .mapError(CommandError.UnexpectedException)
-      results  <- IO.fromEither(
-                    response.hcursor.downField("crates").as[List[CrateResult]]
-                  ).mapError(CommandError.UnexpectedException)
-    } yield PreviewResults.fromIterable(results.map { result =>
-      Preview.unit
-        .onRun(Tools.setClipboard(result.render))
-        .score(Scores.high(input.context))
-        .view(result.renderColored)
-    })
+      input       <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
+      cratesStream = ZStream.paginateChunkM(1) { page =>
+                       val request = basicRequest
+                         .get(uri"https://crates.io/api/v1/crates?page=$page&per_page=$pageSize&q=${input.rest}")
+                         .response(asJson[Json])
+                       for {
+                         response <- SttpClient
+                                       .send(request)
+                                       .map(_.body)
+                                       .absolve
+                                       .mapError(CommandError.UnexpectedException)
+                         results  <- IO.fromEither(response.as[CrateResults]).mapError(CommandError.UnexpectedException)
+                       } yield (results.crates, results.meta.nextPage.map(_ => page + 1))
+                     }
+    } yield PreviewResults.paginated(
+      cratesStream.map { result =>
+        Preview.unit
+          .onRun(Tools.setClipboard(result.render))
+          .score(Scores.high(input.context))
+          .view(result.renderColored)
+      },
+      pageSize
+    )
 }
 
 object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
+  final case class CrateResults(crates: Chunk[CrateResult], meta: MetaResult)
+
+  object CrateResults {
+    implicit val decoder: Decoder[CrateResults] =
+      Decoder.forProduct2("crates", "meta")(CrateResults.apply)
+  }
+
+  final case class MetaResult(total: Int, nextPage: Option[String])
+
+  object MetaResult {
+    implicit val decoder: Decoder[MetaResult] =
+      Decoder.forProduct2("total", "next_page")(MetaResult.apply)
+  }
+
   final case class CrateResult(
     id: String,
     name: String,
@@ -52,13 +73,13 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
     def descriptionSanitized: String = description.replace("\n", "").trim
 
     def render: String =
-      s"$name = $maxVersion"
+      s"""$name = "$maxVersion""""
 
     def renderColored: fansi.Str =
       fansi.Str.join(
-        fansi.Color.Green(name),
+        fansi.Color.Cyan(name),
         fansi.Color.LightGray(" = "),
-        fansi.Color.Cyan(maxVersion),
+        fansi.Color.Green(s""""$maxVersion""""),
         fansi.Color.LightGray(s" # $descriptionSanitized")
       )
   }
@@ -74,9 +95,7 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
         "downloads",
         "recent_downloads",
         "max_version"
-      )(
-        CrateResult.apply
-      )
+      )(CrateResult.apply)
   }
 
   def make(config: Config): TaskManaged[SearchCratesCommand] =
