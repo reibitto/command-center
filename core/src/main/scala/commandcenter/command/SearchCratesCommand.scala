@@ -4,12 +4,12 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
-import io.circe.{ Decoder, Json }
+import io.circe.Decoder
 import sttp.client._
 import sttp.client.circe._
 import sttp.client.httpclient.zio._
 import zio.stream.ZStream
-import zio.{ Chunk, IO, TaskManaged, ZIO, ZManaged }
+import zio.{ Chunk, TaskManaged, ZIO, ZManaged }
 
 import java.time.OffsetDateTime
 
@@ -24,15 +24,13 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
       cratesStream = ZStream.paginateChunkM(1) { page =>
                        val request = basicRequest
                          .get(uri"https://crates.io/api/v1/crates?page=$page&per_page=$pageSize&q=${input.rest}")
-                         .response(asJson[Json])
-                       for {
-                         response <- SttpClient
-                                       .send(request)
-                                       .map(_.body)
-                                       .absolve
-                                       .mapError(CommandError.UnexpectedException)
-                         results  <- IO.fromEither(response.as[CrateResults]).mapError(CommandError.UnexpectedException)
-                       } yield (results.crates, results.meta.nextPage.map(_ => page + 1))
+                         .response(asJson[CrateResults])
+
+                       SttpClient
+                         .send(request)
+                         .map(_.body)
+                         .absolve
+                         .bimap(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))
                      }
     } yield PreviewResults.paginated(
       cratesStream.map { result =>
