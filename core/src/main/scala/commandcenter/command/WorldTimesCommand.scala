@@ -9,7 +9,7 @@ import io.circe.Decoder
 import zio.{ TaskManaged, ZIO, ZManaged }
 
 import java.time.format.DateTimeFormatter
-import java.time.{ OffsetDateTime, ZoneId, ZonedDateTime }
+import java.time.{ ZoneId, ZonedDateTime }
 
 final case class WorldTimesCommand(commandNames: List[String], dateTimeFormat: String, zones: List[TimeZone])
     extends Command[Unit] {
@@ -22,7 +22,7 @@ final case class WorldTimesCommand(commandNames: List[String], dateTimeFormat: S
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      now    = OffsetDateTime.now
+      now   <- zio.clock.currentDateTime.!
       times  = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.atZoneSameInstant(tz.zoneId)))
       _      = times.map(time => displayFormatter.format(time.dateTime))
     } yield PreviewResults.fromIterable(
