@@ -1,7 +1,5 @@
 package commandcenter.command
 
-import java.io.File
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
@@ -9,7 +7,9 @@ import commandcenter.command.util.PathUtil
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
 import zio.process.{ Command => PCommand }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
+
+import java.io.File
 
 final case class FindFileCommand(commandNames: List[String]) extends Command[File] {
   val commandType: CommandType = CommandType.FindFileCommand
@@ -43,10 +43,8 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
 }
 
 object FindFileCommand extends CommandPlugin[FindFileCommand] {
-  def make(config: Config): TaskManaged[FindFileCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield FindFileCommand(commandNames.getOrElse(List("find")))
-    )
+  def make(config: Config): Managed[CommandPluginError, FindFileCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield FindFileCommand(commandNames.getOrElse(List("find")))
 }

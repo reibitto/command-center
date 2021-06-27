@@ -131,9 +131,9 @@ object Command {
     }
   }
 
-  def parse(config: Config): RManaged[PartialEnv, Command[_]] =
+  def parse(config: Config): ZManaged[PartialEnv, CommandPluginError, Command[_]] =
     for {
-      typeName <- Task(config.getString("type")).toManaged_
+      typeName <- Task(config.getString("type")).mapError(CommandPluginError.UnexpectedException).toManaged_
       command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
                     case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
                     case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)

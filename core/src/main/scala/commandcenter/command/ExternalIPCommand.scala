@@ -6,7 +6,7 @@ import commandcenter.tools.Tools
 import commandcenter.util.OS
 import zio.blocking.Blocking
 import zio.process.{ Command => PCommand }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 final case class ExternalIPCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.ExternalIPCommand
@@ -39,10 +39,8 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
 }
 
 object ExternalIPCommand extends CommandPlugin[ExternalIPCommand] {
-  def make(config: Config): TaskManaged[ExternalIPCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield ExternalIPCommand(commandNames.getOrElse(List("externalip")))
-    )
+  def make(config: Config): Managed[CommandPluginError, ExternalIPCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield ExternalIPCommand(commandNames.getOrElse(List("externalip")))
 }

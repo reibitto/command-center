@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 // TODO: Work in progress
 final case class TerminalCommand(commandNames: List[String]) extends Command[Unit] {
@@ -17,10 +17,8 @@ final case class TerminalCommand(commandNames: List[String]) extends Command[Uni
 }
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {
-  def make(config: Config): TaskManaged[TerminalCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield TerminalCommand(commandNames.getOrElse(List("$", ">")))
-    )
+  def make(config: Config): Managed[CommandPluginError, TerminalCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield TerminalCommand(commandNames.getOrElse(List("$", ">")))
 }

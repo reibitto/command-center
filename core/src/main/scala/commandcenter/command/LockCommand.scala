@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
 import zio.process.{ Command => PCommand }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 // TODO: Sleep vs lock distinction?
 // /System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend
@@ -29,10 +29,8 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
 }
 
 object LockCommand extends CommandPlugin[LockCommand] {
-  def make(config: Config): TaskManaged[LockCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield LockCommand(commandNames.getOrElse(List("lock")))
-    )
+  def make(config: Config): Managed[CommandPluginError, LockCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield LockCommand(commandNames.getOrElse(List("lock")))
 }

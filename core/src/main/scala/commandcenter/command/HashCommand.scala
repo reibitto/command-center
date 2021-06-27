@@ -9,7 +9,7 @@ import commandcenter.command.util.HashUtil
 import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.{ IO, TaskManaged, ZIO, ZManaged }
+import zio.{ IO, Managed, ZIO, ZManaged }
 
 final case class HashCommand(algorithm: String) extends Command[String] {
   val commandType: CommandType   = CommandType.HashCommand
@@ -36,5 +36,6 @@ final case class HashCommand(algorithm: String) extends Command[String] {
 object HashCommand extends CommandPlugin[HashCommand] {
   implicit val decoder: Decoder[HashCommand] = Decoder.forProduct1("algorithm")(HashCommand.apply)
 
-  def make(config: Config): TaskManaged[HashCommand] = ZManaged.fromEither(config.as[HashCommand])
+  def make(config: Config): Managed[CommandPluginError, HashCommand] =
+    ZManaged.fromEither(config.as[HashCommand]).mapError(CommandPluginError.UnexpectedException)
 }

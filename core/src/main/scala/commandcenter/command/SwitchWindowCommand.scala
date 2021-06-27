@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.util.{ OS, WindowManager }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 final case class SwitchWindowCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SwitchWindowCommand
@@ -29,10 +29,8 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
 }
 
 object SwitchWindowCommand extends CommandPlugin[SwitchWindowCommand] {
-  def make(config: Config): TaskManaged[SwitchWindowCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield SwitchWindowCommand(commandNames.getOrElse(List("window", "w")))
-    )
+  def make(config: Config): Managed[CommandPluginError, SwitchWindowCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield SwitchWindowCommand(commandNames.getOrElse(List("window", "w")))
 }

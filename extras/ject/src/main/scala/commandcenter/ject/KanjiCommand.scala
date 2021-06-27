@@ -8,7 +8,7 @@ import commandcenter.tools.Tools
 import commandcenter.view.Rendered
 import ject.docs.KanjiDoc
 import ject.lucene.KanjiReader
-import zio.{ TaskManaged, ZIO }
+import zio.{ Managed, ZIO }
 
 import java.nio.file.Path
 
@@ -58,14 +58,14 @@ final case class KanjiCommand(
 }
 
 object KanjiCommand extends CommandPlugin[KanjiCommand] {
-  def make(config: Config): TaskManaged[KanjiCommand] =
+  def make(config: Config): Managed[CommandPluginError, KanjiCommand] =
     // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
     for {
-      commandNames   <- ZIO.fromEither(config.get[Option[List[String]]]("commandNames")).toManaged_
-      dictionaryPath <- ZIO.fromEither(config.get[Path]("dictionaryPath")).toManaged_
-      luceneIndex    <- KanjiReader.make(dictionaryPath.resolve("kanji"))
-      showScore      <- ZIO.fromEither(config.get[Option[Boolean]]("showScore")).toManaged_
-      quickPrefixes  <- ZIO.fromEither(config.get[Option[List[String]]]("quickPrefixes")).toManaged_
+      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
+      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
+      luceneIndex    <- KanjiReader.make(dictionaryPath.resolve("kanji")).mapError(CommandPluginError.UnexpectedException)
+      showScore      <- config.getManaged[Option[Boolean]]("showScore")
+      quickPrefixes  <- config.getManaged[Option[List[String]]]("quickPrefixes")
     } yield KanjiCommand(
       commandNames.getOrElse(List("kanji", "k")),
       luceneIndex,

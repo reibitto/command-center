@@ -56,20 +56,18 @@ final case class SearchUrlCommand(
 }
 
 object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
-  def make(config: Config): TaskManaged[SearchUrlCommand] =
-    ZManaged.fromEither(
-      for {
-        title        <- config.get[String]("title")
-        urlTemplate  <- config.get[String]("urlTemplate")
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-        locales      <- config.get[Option[Set[Locale]]]("locales")
-        shortcuts    <- config.get[Option[Set[KeyboardShortcut]]]("shortcuts")
-      } yield SearchUrlCommand(
-        title,
-        urlTemplate,
-        commandNames.getOrElse(Nil),
-        locales.getOrElse(Set.empty),
-        shortcuts.getOrElse(Set.empty)
-      )
+  def make(config: Config): Managed[CommandPluginError, SearchUrlCommand] =
+    for {
+      title        <- config.getManaged[String]("title")
+      urlTemplate  <- config.getManaged[String]("urlTemplate")
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      locales      <- config.getManaged[Option[Set[Locale]]]("locales")
+      shortcuts    <- config.getManaged[Option[Set[KeyboardShortcut]]]("shortcuts")
+    } yield SearchUrlCommand(
+      title,
+      urlTemplate,
+      commandNames.getOrElse(Nil),
+      locales.getOrElse(Set.empty),
+      shortcuts.getOrElse(Set.empty)
     )
 }

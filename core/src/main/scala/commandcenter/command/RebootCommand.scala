@@ -6,7 +6,7 @@ import commandcenter.util.{ AppleScript, OS }
 import commandcenter.view.DefaultView
 import zio.blocking.Blocking
 import zio.process.{ Command => PCommand, CommandError => PCommandError }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 final case class RebootCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.RebootCommand
@@ -31,12 +31,10 @@ final case class RebootCommand(commandNames: List[String]) extends Command[Unit]
 }
 
 object RebootCommand extends CommandPlugin[RebootCommand] {
-  def make(config: Config): TaskManaged[RebootCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield RebootCommand(commandNames.getOrElse(List("reboot", "restart")))
-    )
+  def make(config: Config): Managed[CommandPluginError, RebootCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield RebootCommand(commandNames.getOrElse(List("reboot", "restart")))
 
   def reboot: ZIO[Blocking, Throwable, Unit] =
     ZIO.whenCase(OS.os) {

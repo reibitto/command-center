@@ -9,7 +9,7 @@ import sttp.client._
 import sttp.client.circe._
 import sttp.client.httpclient.zio._
 import zio.stream.ZStream
-import zio.{ Chunk, TaskManaged, ZIO, ZManaged }
+import zio.{ Chunk, Managed, ZIO }
 
 import java.time.OffsetDateTime
 
@@ -96,10 +96,8 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
       )(CrateResult.apply)
   }
 
-  def make(config: Config): TaskManaged[SearchCratesCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield SearchCratesCommand(commandNames.getOrElse(List("crate", "crates")))
-    )
+  def make(config: Config): Managed[CommandPluginError, SearchCratesCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield SearchCratesCommand(commandNames.getOrElse(List("crate", "crates")))
 }

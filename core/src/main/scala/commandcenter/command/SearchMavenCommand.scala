@@ -9,7 +9,7 @@ import io.circe.{ Decoder, Json }
 import sttp.client._
 import sttp.client.circe._
 import sttp.client.httpclient.zio._
-import zio.{ IO, TaskManaged, ZIO, ZManaged }
+import zio.{ IO, Managed, ZIO }
 
 import java.time.{ Instant, LocalDate, ZoneId }
 import scala.math.Ordering
@@ -110,10 +110,8 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
     }
   }
 
-  def make(config: Config): TaskManaged[SearchMavenCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield SearchMavenCommand(commandNames.getOrElse(List("maven", "mvn")))
-    )
+  def make(config: Config): Managed[CommandPluginError, SearchMavenCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield SearchMavenCommand(commandNames.getOrElse(List("maven", "mvn")))
 }

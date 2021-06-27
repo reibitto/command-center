@@ -11,7 +11,7 @@ import commandcenter.view.DefaultView
 import zio.blocking.Blocking
 import zio.logging.log
 import zio.process.{ Command => PCommand }
-import zio.{ RIO, RManaged, ZIO, ZManaged }
+import zio.{ RIO, ZIO, ZManaged }
 
 final case class SuspendProcessCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
@@ -45,10 +45,10 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 }
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
-  def make(config: Config): RManaged[PartialEnv, SuspendProcessCommand] =
+  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, SuspendProcessCommand] =
     for {
-      commandNames    <- ZManaged.fromEither(config.get[Option[List[String]]]("commandNames"))
-      suspendShortcut <- ZManaged.fromEither(config.get[Option[KeyboardShortcut]]("suspendShortcut"))
+      commandNames    <- config.getManaged[Option[List[String]]]("commandNames")
+      suspendShortcut <- config.getManaged[Option[KeyboardShortcut]]("suspendShortcut")
       _               <- ZIO
                            .foreach(suspendShortcut) { suspendShortcut =>
                              Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
@@ -59,6 +59,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                                } yield ()).ignore
                              )
                            }
+                           .mapError(CommandPluginError.UnexpectedException)
                            .toManaged_
     } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")))
 

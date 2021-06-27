@@ -7,7 +7,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 import scala.util.Try
 
@@ -52,10 +52,8 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
 }
 
 object RadixCommand extends CommandPlugin[RadixCommand] {
-  def make(config: Config): TaskManaged[RadixCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield RadixCommand(commandNames.getOrElse(List("radix", "base")))
-    )
+  def make(config: Config): Managed[CommandPluginError, RadixCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield RadixCommand(commandNames.getOrElse(List("radix", "base")))
 }

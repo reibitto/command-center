@@ -10,7 +10,7 @@ import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.command.native.win.PowrProf
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
-import zio.{ Task, TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, Task, ZIO }
 
 final case class SystemCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SystemCommand
@@ -98,12 +98,10 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 }
 
 object SystemCommand extends CommandPlugin[SystemCommand] {
-  def make(config: Config): TaskManaged[SystemCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield SystemCommand(commandNames.getOrElse(List("system")))
-    )
+  def make(config: Config): Managed[CommandPluginError, SystemCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield SystemCommand(commandNames.getOrElse(List("system")))
 
   sealed trait SystemSubcommand
 

@@ -5,7 +5,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
 import zio.blocking.Blocking
 import zio.process.{ Command => PCommand, CommandError => PCommandError }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleHiddenFilesCommand
@@ -62,10 +62,8 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
 }
 
 object ToggleHiddenFilesCommand extends CommandPlugin[ToggleHiddenFilesCommand] {
-  def make(config: Config): TaskManaged[ToggleHiddenFilesCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield ToggleHiddenFilesCommand(commandNames.getOrElse(List("hidden")))
-    )
+  def make(config: Config): Managed[CommandPluginError, ToggleHiddenFilesCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield ToggleHiddenFilesCommand(commandNames.getOrElse(List("hidden")))
 }

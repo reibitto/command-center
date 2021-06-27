@@ -1,14 +1,14 @@
 package commandcenter.command
 
-import java.io.File
-
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
 import zio.process.{ Command => PCommand }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
+
+import java.io.File
 
 final case class FindInFileCommand(commandNames: List[String]) extends Command[File] {
   val commandType: CommandType = CommandType.FindInFileCommand
@@ -40,10 +40,8 @@ final case class FindInFileCommand(commandNames: List[String]) extends Command[F
 }
 
 object FindInFileCommand extends CommandPlugin[FindInFileCommand] {
-  def make(config: Config): TaskManaged[FindInFileCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield FindInFileCommand(commandNames.getOrElse(List("in")))
-    )
+  def make(config: Config): Managed[CommandPluginError, FindInFileCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield FindInFileCommand(commandNames.getOrElse(List("in")))
 }

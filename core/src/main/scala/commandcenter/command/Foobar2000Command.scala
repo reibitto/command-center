@@ -9,7 +9,7 @@ import commandcenter.util.OS
 import commandcenter.view.DefaultView
 import zio.process.{ Command => PCommand }
 import zio.system.System
-import zio.{ system, RManaged, UIO, ZIO, ZManaged }
+import zio.{ system, UIO, ZIO, ZManaged }
 
 import java.io.File
 import java.nio.file.Paths
@@ -57,7 +57,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
                        case Some(Opt.Rewind)        => UIO(fansi.Str("Rewind current track to the beginning"))
                        case Some(Opt.DeleteTrack)   => UIO(fansi.Str(deleteTrackCommand.header))
                        case Some(Opt.Help)          => UIO(fansi.Str(foobarCommand.showHelp))
-                       case Some(Opt.Show) | None   => UIO(fansi.Str("Show foobar2000 window"))
+                       case Some(Opt.Show) | None   => UIO(fansi.Str("Show window"))
                      }
                    )
     } yield {
@@ -95,28 +95,32 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
 }
 
 object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
-  def make(config: Config): RManaged[PartialEnv, Foobar2000Command] = {
+  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, Foobar2000Command] = {
     import commandcenter.config.Decoders._
 
     for {
-      commandNames  <- ZManaged.fromEither(config.get[Option[List[String]]]("commandNames"))
-      foobarPathOpt <- ZManaged
-                         .fromEither(config.get[Option[File]]("foobarPath"))
+      commandNames  <- config.getManaged[Option[List[String]]]("commandNames")
+      foobarPathOpt <- config.getManaged[Option[File]]("foobarPath")
       foobarPath    <- UIO(foobarPathOpt).someOrElseM(findFoobarPath).toManaged_
     } yield Foobar2000Command(commandNames.getOrElse(List("foobar", "fb")), foobarPath)
   }
 
-  private def findFoobarPath: ZIO[System, Exception, File] =
+  private def findFoobarPath: ZIO[System, CommandPluginError, File] =
     system
       .env("ProgramFiles(x86)")
-      .map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe")))
+      .map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe").toFile).filter(_.exists))
       .some
       .orElse {
-        system.env("ProgramFiles").map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe"))).some
+        system
+          .env("ProgramFiles")
+          .map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe").toFile).filter(_.exists))
+          .some
       }
       .optional
-      .someOrFail(new Exception("Path to foobar2000 not found"))
-      .map(_.toFile)
+      .mapError(CommandPluginError.UnexpectedException)
+      .someOrFail(
+        CommandPluginError.PluginNotApplicable(CommandType.Foobar2000Command, "Path to foobar2000 executable not found")
+      )
 
   sealed trait Opt
   case object Opt {
