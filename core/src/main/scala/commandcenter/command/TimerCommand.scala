@@ -10,7 +10,7 @@ import commandcenter.util.{ AppleScript, OS, PowerShellScript }
 import commandcenter.view.DefaultView
 import zio.cache.{ Cache, Lookup }
 import zio.duration._
-import zio.{ TaskManaged, UIO, ZIO, ZManaged }
+import zio.{ Managed, UIO, ZIO }
 
 import scala.io.Source
 
@@ -60,20 +60,16 @@ final case class TimerCommand(commandNames: List[String], cache: Cache[String, N
 }
 
 object TimerCommand extends CommandPlugin[TimerCommand] {
-  def make(config: Config): TaskManaged[TimerCommand] =
+  def make(config: Config): Managed[CommandPluginError, TimerCommand] =
     for {
-      cache   <- Cache
-                   .make(
-                     1024,
-                     Duration.Infinity,
-                     Lookup((resource: String) => UIO(Source.fromResource(resource)).map(_.mkString))
-                   )
-                   .toManaged_
-      command <- ZManaged.fromEither(
-                   for {
-                     commandNames <- config.get[Option[List[String]]]("commandNames")
-                   } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), cache)
-                 )
-    } yield command
+      cache        <- Cache
+                        .make(
+                          1024,
+                          Duration.Infinity,
+                          Lookup((resource: String) => UIO(Source.fromResource(resource)).map(_.mkString))
+                        )
+                        .toManaged_
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), cache)
 
 }

@@ -9,7 +9,7 @@ import commandcenter.tools.Tools
 import ject.SearchPattern
 import ject.docs.WordDoc
 import ject.lucene.WordReader
-import zio.{ TaskManaged, UIO, ZIO }
+import zio.{ Managed, UIO, ZIO }
 
 import java.nio.file.Path
 
@@ -72,12 +72,12 @@ final case class JectCommand(commandNames: List[String], luceneIndex: WordReader
 }
 
 object JectCommand extends CommandPlugin[JectCommand] {
-  def make(config: Config): TaskManaged[JectCommand] =
+  def make(config: Config): Managed[CommandPluginError, JectCommand] =
     // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
     for {
-      commandNames   <- ZIO.fromEither(config.get[Option[List[String]]]("commandNames")).toManaged_
-      dictionaryPath <- ZIO.fromEither(config.get[Path]("dictionaryPath")).toManaged_
-      luceneIndex    <- WordReader.make(dictionaryPath.resolve("word"))
-      showScore      <- ZIO.fromEither(config.get[Option[Boolean]]("showScore")).toManaged_
+      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
+      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
+      luceneIndex    <- WordReader.make(dictionaryPath.resolve("word")).mapError(CommandPluginError.UnexpectedException)
+      showScore      <- config.getManaged[Option[Boolean]]("showScore")
     } yield JectCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
 }

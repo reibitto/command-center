@@ -5,7 +5,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import zio.blocking._
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 import java.net.{ Inet4Address, NetworkInterface }
 import scala.jdk.CollectionConverters._
@@ -36,10 +36,8 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
 }
 
 object LocalIPCommand extends CommandPlugin[LocalIPCommand] {
-  def make(config: Config): TaskManaged[LocalIPCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield LocalIPCommand(commandNames.getOrElse(List("localip")))
-    )
+  def make(config: Config): Managed[CommandPluginError, LocalIPCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield LocalIPCommand(commandNames.getOrElse(List("localip")))
 }

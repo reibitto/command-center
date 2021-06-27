@@ -47,10 +47,8 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
 }
 
 object EpochMillisCommand extends CommandPlugin[EpochMillisCommand] {
-  def make(config: Config): TaskManaged[EpochMillisCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield EpochMillisCommand(commandNames.getOrElse(List("epochmillis")))
-    )
+  def make(config: Config): Managed[CommandPluginError, EpochMillisCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield EpochMillisCommand(commandNames.getOrElse(List("epochmillis")))
 }

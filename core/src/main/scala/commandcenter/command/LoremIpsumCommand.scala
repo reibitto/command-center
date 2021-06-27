@@ -71,10 +71,13 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
     case object Paragraph extends ChunkType
   }
 
-  def make(config: Config): TaskManaged[LoremIpsumCommand] =
+  def make(config: Config): Managed[CommandPluginError, LoremIpsumCommand] =
     for {
-      commandNames <- ZManaged.fromEither(config.get[Option[List[String]]]("commandNames"))
-      lipsum       <- ZManaged.fromAutoCloseable(Task(Source.fromResource("lipsum"))).mapEffect(_.getLines().mkString("\n"))
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      lipsum       <- ZManaged
+                        .fromAutoCloseable(Task(Source.fromResource("lipsum")))
+                        .mapEffect(_.getLines().mkString("\n"))
+                        .mapError(CommandPluginError.UnexpectedException)
     } yield LoremIpsumCommand(commandNames.getOrElse(List("lipsum", "lorem", "ipsum")), lipsum)
 
 }

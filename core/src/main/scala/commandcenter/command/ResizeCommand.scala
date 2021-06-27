@@ -6,7 +6,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.view.DefaultView
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 final case class ResizeCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand
@@ -45,10 +45,8 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
 }
 
 object ResizeCommand extends CommandPlugin[ResizeCommand] {
-  def make(config: Config): TaskManaged[ResizeCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield ResizeCommand(commandNames.getOrElse(List("resize", "size")))
-    )
+  def make(config: Config): Managed[CommandPluginError, ResizeCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield ResizeCommand(commandNames.getOrElse(List("resize", "size")))
 }

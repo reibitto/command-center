@@ -131,9 +131,9 @@ object Command {
     }
   }
 
-  def parse(config: Config): RManaged[PartialEnv, Command[_]] =
+  def parse(config: Config): ZManaged[PartialEnv, CommandPluginError, Command[_]] =
     for {
-      typeName <- Task(config.getString("type")).toManaged_
+      typeName <- Task(config.getString("type")).mapError(CommandPluginError.UnexpectedException).toManaged_
       command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
                     case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
                     case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
@@ -144,6 +144,7 @@ object Command {
                     case CommandType.EpochUnixCommand          => EpochUnixCommand.make(config)
                     case CommandType.ExitCommand               => ExitCommand.make(config)
                     case CommandType.ExternalIPCommand         => ExternalIPCommand.make(config)
+                    case CommandType.Foobar2000Command         => Foobar2000Command.make(config)
                     case CommandType.FileNavigationCommand     => FileNavigationCommand.make(config)
                     case CommandType.FindFileCommand           => FindFileCommand.make(config)
                     case CommandType.FindInFileCommand         => FindInFileCommand.make(config)

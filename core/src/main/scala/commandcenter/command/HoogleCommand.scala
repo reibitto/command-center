@@ -8,7 +8,7 @@ import io.circe.{ Decoder, Json }
 import sttp.client._
 import sttp.client.circe._
 import sttp.client.httpclient.zio._
-import zio.{ IO, TaskManaged, ZIO, ZManaged }
+import zio.{ IO, Managed, ZIO }
 
 final case class HoogleCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.HoogleCommand
@@ -69,10 +69,8 @@ object HoogleCommand extends CommandPlugin[HoogleCommand] {
     implicit val decoder: Decoder[HoogleReference] = Decoder.forProduct2("name", "url")(HoogleReference.apply)
   }
 
-  def make(config: Config): TaskManaged[HoogleCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield HoogleCommand(commandNames.getOrElse(List("hoogle", "h")))
-    )
+  def make(config: Config): Managed[CommandPluginError, HoogleCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield HoogleCommand(commandNames.getOrElse(List("hoogle", "h")))
 }

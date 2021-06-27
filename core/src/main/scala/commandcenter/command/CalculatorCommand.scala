@@ -10,7 +10,7 @@ import commandcenter.command.util.CalculatorUtil
 import commandcenter.tools.Tools
 import commandcenter.view.DefaultView
 import io.circe.Decoder
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 import java.text.{ DecimalFormat, DecimalFormatSymbols }
 import java.util.Locale
@@ -59,7 +59,8 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
 }
 
 object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
-  def make(config: Config): TaskManaged[CalculatorCommand] = ZManaged.fromEither(config.as[CalculatorCommand])
+  def make(config: Config): Managed[CommandPluginError, CalculatorCommand] =
+    ZIO.fromEither(config.as[CalculatorCommand]).mapError(CommandPluginError.UnexpectedException).toManaged_
 
   implicit val decoder: Decoder[CalculatorCommand] = Decoder.instance { c =>
     val decimalFormat        = new DecimalFormat()

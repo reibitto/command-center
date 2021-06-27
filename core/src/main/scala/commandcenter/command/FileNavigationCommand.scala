@@ -80,7 +80,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
 }
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
-  def make(config: Config): RManaged[PartialEnv, FileNavigationCommand] =
+  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, FileNavigationCommand] =
     (for {
       homeDirectory <- zio.system.property("user.home").catchAll { t =>
                          log.throwable("Could not obtain location of home directory", t) *> ZIO.none

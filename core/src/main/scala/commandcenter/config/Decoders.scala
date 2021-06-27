@@ -3,6 +3,7 @@ package commandcenter.config
 import io.circe.Decoder
 
 import java.awt.Font
+import java.io.File
 import java.nio.file.{ Path, Paths }
 import scala.util.Try
 
@@ -17,6 +18,10 @@ object Decoders {
 
   implicit val pathDecoder: Decoder[Path] = Decoder.decodeString.emap { s =>
     Try(Paths.get(s)).toEither.left.map(_.getMessage)
+  }
+
+  implicit val fileDecoder: Decoder[File] = Decoder.decodeString.emap { s =>
+    Try(new File(s)).toEither.left.map(_.getMessage)
   }
 
   implicit val scalaDurationDecoder: Decoder[scala.concurrent.duration.Duration] = Decoder.decodeString.emap { s =>

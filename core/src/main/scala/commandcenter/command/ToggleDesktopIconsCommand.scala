@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
 import zio.process.{ Command => PCommand }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleDesktopIconsCommand
@@ -28,10 +28,8 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
 }
 
 object ToggleDesktopIconsCommand extends CommandPlugin[ToggleDesktopIconsCommand] {
-  def make(config: Config): TaskManaged[ToggleDesktopIconsCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield ToggleDesktopIconsCommand(commandNames.getOrElse(List("icons")))
-    )
+  def make(config: Config): Managed[CommandPluginError, ToggleDesktopIconsCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield ToggleDesktopIconsCommand(commandNames.getOrElse(List("icons")))
 }

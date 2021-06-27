@@ -5,7 +5,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command._
 import commandcenter.tools.Tools
 import commandcenter.view.{ Rendered, Style, StyledText }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 final case class StrokeOrderCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
@@ -29,10 +29,8 @@ final case class StrokeOrderCommand(commandNames: List[String]) extends Command[
 }
 
 object StrokeOrderCommand extends CommandPlugin[StrokeOrderCommand] {
-  def make(config: Config): TaskManaged[StrokeOrderCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield StrokeOrderCommand(commandNames.getOrElse(List("stroke", "strokeorder")))
-    )
+  def make(config: Config): Managed[CommandPluginError, StrokeOrderCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield StrokeOrderCommand(commandNames.getOrElse(List("stroke", "strokeorder")))
 }

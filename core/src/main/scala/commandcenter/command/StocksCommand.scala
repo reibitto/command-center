@@ -7,7 +7,7 @@ import io.circe.{ Decoder, Json }
 import sttp.client.circe.asJson
 import sttp.client.httpclient.zio.SttpClient
 import sttp.client.{ basicRequest, UriContext }
-import zio.{ IO, TaskManaged, ZIO, ZManaged }
+import zio.{ IO, Managed, ZIO }
 
 final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]) extends Command[Unit] {
   val commandType: CommandType = CommandType.StocksCommand
@@ -77,11 +77,9 @@ object StocksCommand extends CommandPlugin[StocksCommand] {
       "regularMarketChangePercent"
     )(StocksResult.apply)
 
-  def make(config: Config): TaskManaged[StocksCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-        tickers      <- config.get[List[Ticker]]("tickers")
-      } yield StocksCommand(commandNames.getOrElse(List("stock", "stocks")), tickers)
-    )
+  def make(config: Config): Managed[CommandPluginError, StocksCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      tickers      <- config.getManaged[List[Ticker]]("tickers")
+    } yield StocksCommand(commandNames.getOrElse(List("stock", "stocks")), tickers)
 }

@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 import java.util.UUID
 
@@ -21,10 +21,8 @@ final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
 }
 
 object UUIDCommand extends CommandPlugin[UUIDCommand] {
-  def make(config: Config): TaskManaged[UUIDCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield UUIDCommand(commandNames.getOrElse(List("uuid", "guid")))
-    )
+  def make(config: Config): Managed[CommandPluginError, UUIDCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield UUIDCommand(commandNames.getOrElse(List("uuid", "guid")))
 }

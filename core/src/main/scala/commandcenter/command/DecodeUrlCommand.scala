@@ -27,10 +27,8 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
 }
 
 object DecodeUrlCommand extends CommandPlugin[DecodeUrlCommand] {
-  def make(config: Config): TaskManaged[DecodeUrlCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield DecodeUrlCommand(commandNames.getOrElse(List("decodeurl")))
-    )
+  def make(config: Config): Managed[CommandPluginError, DecodeUrlCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield DecodeUrlCommand(commandNames.getOrElse(List("decodeurl")))
 }

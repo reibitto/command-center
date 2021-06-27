@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonOpts._
 import commandcenter.tools.Tools
-import zio.{ IO, TaskManaged, ZIO, ZManaged }
+import zio.{ IO, Managed, ZIO }
 
 import java.util.Base64
 
@@ -27,10 +27,8 @@ final case class EncodeBase64Command(commandNames: List[String]) extends Command
 }
 
 object EncodeBase64Command extends CommandPlugin[EncodeBase64Command] {
-  def make(config: Config): TaskManaged[EncodeBase64Command] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield EncodeBase64Command(commandNames.getOrElse(List("decodeurl")))
-    )
+  def make(config: Config): Managed[CommandPluginError, EncodeBase64Command] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield EncodeBase64Command(commandNames.getOrElse(List("decodeurl")))
 }

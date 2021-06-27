@@ -12,16 +12,25 @@ trait CommandPlugin[A <: Command[_]] extends ConfigParserExtensions {
 }
 
 object CommandPlugin {
-  def loadAll(config: Config, path: String): RManaged[PartialEnv, List[Command[Any]]] = {
+  def loadAll(config: Config, path: String): ZManaged[PartialEnv, CommandPluginError, List[Command[Any]]] = {
     import scala.jdk.CollectionConverters._
 
     for {
-      commandConfigs <- Task(config.getConfigList(path).asScala.toList).toManaged_
+      commandConfigs <-
+        Task(config.getConfigList(path).asScala.toList).mapError(CommandPluginError.UnexpectedException).toManaged_
       commands       <- ZManaged.foreach(commandConfigs) { c =>
                           Command
                             .parse(c)
                             .foldM(
                               {
+                                case CommandPluginError.PluginNotApplicable(commandType, reason) =>
+                                  log
+                                    .debug(
+                                      s"Skipping loading `$commandType` plugin because it's not applicable: $reason"
+                                    )
+                                    .toManaged_ *>
+                                    ZManaged.succeed(None)
+
                                 case CommandPluginError.PluginNotFound(typeName, _) =>
                                   log.warn(s"Plugin '$typeName' not found").toManaged_ *>
                                     ZManaged.succeed(None)
@@ -34,8 +43,9 @@ object CommandPlugin {
                                     .toManaged_ *>
                                     ZManaged.succeed(None)
 
-                                case other =>
-                                  ZManaged.fail(other)
+                                case error: CommandPluginError.UnexpectedException =>
+                                  ZManaged.fail(error)
+
                               },
                               c => ZManaged.succeed(Some(c))
                             )
@@ -65,7 +75,8 @@ object CommandPlugin {
 sealed abstract class CommandPluginError(cause: Throwable) extends Exception(cause) with Product with Serializable
 
 object CommandPluginError {
-  final case class PluginNotFound(typeName: String, cause: Throwable) extends CommandPluginError(cause)
-  final case class PluginsNotSupported(typeName: String)              extends CommandPluginError(null)
-  final case class UnexpectedException(cause: Throwable)              extends CommandPluginError(cause)
+  final case class PluginNotApplicable(commandType: CommandType, reason: String) extends CommandPluginError(null)
+  final case class PluginNotFound(typeName: String, cause: Throwable)            extends CommandPluginError(cause)
+  final case class PluginsNotSupported(typeName: String)                         extends CommandPluginError(null)
+  final case class UnexpectedException(cause: Throwable)                         extends CommandPluginError(cause)
 }

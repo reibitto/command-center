@@ -1,8 +1,10 @@
 package commandcenter.config
 
 import com.typesafe.config._
+import commandcenter.command.CommandPluginError
 import io.circe.config.parser
 import io.circe.{ Decoder, Json }
+import zio.{ IO, ZIO, ZManaged }
 
 import scala.jdk.CollectionConverters._
 
@@ -56,6 +58,12 @@ trait ConfigParserExtensions {
 
       implicitly[Decoder[A]].decodeJson(json)
     }
+
+    def getZIO[A: Decoder](path: String): IO[CommandPluginError, A] =
+      ZIO.fromEither(get(path)).mapError(CommandPluginError.UnexpectedException)
+
+    def getManaged[A: Decoder](path: String): ZManaged[Any, CommandPluginError.UnexpectedException, A] =
+      ZManaged.fromEither(get(path)).mapError(CommandPluginError.UnexpectedException)
   }
 }
 

@@ -14,6 +14,7 @@ object CommandType extends Enum[CommandType] {
   case object EpochUnixCommand          extends CommandType
   case object ExitCommand               extends CommandType
   case object ExternalIPCommand         extends CommandType
+  case object Foobar2000Command         extends CommandType
   case object FileNavigationCommand     extends CommandType
   case object FindFileCommand           extends CommandType
   case object FindInFileCommand         extends CommandType

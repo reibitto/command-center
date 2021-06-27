@@ -6,7 +6,7 @@ import commandcenter.tools.Tools
 import commandcenter.util.OS
 import commandcenter.view.DefaultView
 import zio.process.{ Command => PCommand }
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ Managed, ZIO }
 
 import scala.util.matching.Regex
 
@@ -50,12 +50,10 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
 }
 
 object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {
-  def make(config: Config): TaskManaged[ProcessIdCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames <- config.get[Option[List[String]]]("commandNames")
-      } yield ProcessIdCommand(commandNames.getOrElse(List("pid", "process")))
-    )
+  def make(config: Config): Managed[CommandPluginError, ProcessIdCommand] =
+    for {
+      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+    } yield ProcessIdCommand(commandNames.getOrElse(List("pid", "process")))
 
   final case class ProcessInfo(pid: Long, name: String)
 }

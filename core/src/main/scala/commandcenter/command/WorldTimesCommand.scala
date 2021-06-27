@@ -1,12 +1,12 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
+import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.CommandContext
 import commandcenter.tools.Tools
 import commandcenter.view.Rendered
 import io.circe.Decoder
-import zio.{ TaskManaged, ZIO, ZManaged }
+import zio.{ ZIO, ZManaged }
 
 import java.time.format.DateTimeFormatter
 import java.time.{ ZoneId, ZonedDateTime }
@@ -40,14 +40,12 @@ final case class WorldTimesCommand(commandNames: List[String], dateTimeFormat: S
 }
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
-  def make(config: Config): TaskManaged[WorldTimesCommand] =
-    ZManaged.fromEither(
-      for {
-        commandNames   <- config.get[Option[List[String]]]("commandNames")
-        dateTimeFormat <- config.get[String]("dateTimeFormat")
-        zones          <- config.get[List[TimeZone]]("zones")
-      } yield WorldTimesCommand(commandNames.getOrElse(List("time", "times")), dateTimeFormat, zones)
-    )
+  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, WorldTimesCommand] =
+    for {
+      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
+      dateTimeFormat <- config.getManaged[String]("dateTimeFormat")
+      zones          <- config.getManaged[List[TimeZone]]("zones")
+    } yield WorldTimesCommand(commandNames.getOrElse(List("time", "times")), dateTimeFormat, zones)
 }
 
 final case class WorldTimesResults(dateTimeFormat: String, results: List[WorldTimesResult], context: CommandContext)
