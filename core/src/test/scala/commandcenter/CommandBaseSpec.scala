@@ -18,7 +18,7 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
     ZLayer.fromMagic[TestPartialEnv](
       testEnvironment,
       CCLogging.make(TerminalType.Test),
-      ToolsLive.make.orDie,
+      ToolsLive.make.!,
       Shortcuts.unsupported,
       HttpClientZioBackend.layer()
     ) ++ ConfigFake.layer
@@ -31,5 +31,5 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
     List(TestAspect.timeoutWarning(60.seconds))
 
   override def runner: TestRunner[TestEnv, Any] =
-    TestRunner(TestExecutor.default(testEnv.orDie))
+    TestRunner(TestExecutor.default(testEnv.!))
 }

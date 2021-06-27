@@ -11,7 +11,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     val runtime = new CCRuntime {
       def terminalType: TerminalType             = TerminalType.Swt
-      def shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).orDie
+      def shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).!
     }
 
     val config      = runtime.unsafeRun(Conf.config)

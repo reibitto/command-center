@@ -37,7 +37,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
 
       PreviewResults.one(
         Preview.unit
-          .onRun(run.orDie)
+          .onRun(run.!)
           .score(Scores.high(input.context))
           .view(DefaultView(title, message))
       )

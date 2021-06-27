@@ -10,7 +10,7 @@ import zio.logging.log
 
 object Main extends CCApp {
   val terminalType: TerminalType             = TerminalType.Swing
-  val shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).orDie
+  val shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).!
 
   def run(args: List[String]): URIO[Env, ExitCode] =
     (for {

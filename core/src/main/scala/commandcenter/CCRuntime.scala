@@ -31,10 +31,10 @@ trait CCRuntime extends Runtime[Env] {
       ZLayer.fromMagic[PartialEnv](
         ZEnv.live,
         CCLogging.make(terminalType),
-        ToolsLive.make.orDie,
+        ToolsLive.make.!,
         shortcutsLayer,
         HttpClientZioBackend.layer()
-      ) >+> ConfigLive.layer.orDie,
+      ) >+> ConfigLive.layer.!,
       platform
     )
   }

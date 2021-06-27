@@ -37,7 +37,7 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 
       PreviewResults.one(
         Preview.unit
-          .onRun(run.orDie)
+          .onRun(run.!)
           .score(Scores.high(input.context))
           .view(DefaultView(title, message))
       )
