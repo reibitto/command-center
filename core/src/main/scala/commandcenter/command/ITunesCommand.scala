@@ -5,11 +5,11 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.ITunesCommand.Opt
-import commandcenter.util.{ AppleScript, OS, TTS }
+import commandcenter.util.{ AppleScript, OS }
 import commandcenter.view.DefaultView
 import zio.cache.{ Cache, Lookup }
-import zio.{ TaskManaged, UIO, ZIO, ZManaged }
 import zio.duration._
+import zio.{ TaskManaged, UIO, ZIO, ZManaged }
 
 import scala.io.Source
 
@@ -107,7 +107,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
                  case Opt.NextTrack     => nextTrackFn
                  case Opt.PreviousTrack => previousTrackFn
                  case Opt.Rewind        => seekFn(-100000) // TODO: Is there a nicer way to do this?
-                 case Opt.Seek(seconds) => TTS.say(seconds.toString) *> seekFn(seconds)
+                 case Opt.Seek(seconds) => seekFn(seconds)
                  case Opt.Rate(n)       => rateTrackFn(n)
                  case Opt.DeleteTrack   => deleteTrackFn
                  case Opt.Help          => ZIO.unit

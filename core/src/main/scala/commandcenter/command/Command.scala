@@ -144,6 +144,7 @@ object Command {
                     case CommandType.EpochUnixCommand          => EpochUnixCommand.make(config)
                     case CommandType.ExitCommand               => ExitCommand.make(config)
                     case CommandType.ExternalIPCommand         => ExternalIPCommand.make(config)
+                    case CommandType.Foobar2000Command         => Foobar2000Command.make(config)
                     case CommandType.FileNavigationCommand     => FileNavigationCommand.make(config)
                     case CommandType.FindFileCommand           => FindFileCommand.make(config)
                     case CommandType.FindInFileCommand         => FindInFileCommand.make(config)
