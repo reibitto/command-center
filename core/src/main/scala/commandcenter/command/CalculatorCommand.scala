@@ -8,7 +8,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.CalculatorCommand.{ FunctionsList, Parameters, ParametersList }
 import commandcenter.command.util.CalculatorUtil
 import commandcenter.tools.Tools
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import io.circe.Decoder
 import zio.{ Managed, ZIO }
 
@@ -42,7 +42,9 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
                                   helpType => (helpType.title, CalculatorCommand.helpMessageByType(helpType))
                                 )
     } yield PreviewResults.one(
-      Preview(BigDecimal(0.0)).score(Scores.high(searchInput.context)).view(DefaultView(helpTitle, message))
+      Preview(BigDecimal(0.0))
+        .score(Scores.high(searchInput.context))
+        .rendered(Renderer.renderDefault(helpTitle, message))
     )
 
   private def previewEvaluation(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
@@ -52,7 +54,7 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
                           .orElseFail(CommandError.NotApplicable)
     } yield PreviewResults.one(
       Preview(evaluatedValue)
-        .render(parameters.format)
+        .renderedAnsi(parameters.format(evaluatedValue))
         .onRun(Tools.setClipboard(parameters.format(evaluatedValue)))
         .score(Scores.high(searchInput.context))
     )

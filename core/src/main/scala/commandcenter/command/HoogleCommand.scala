@@ -32,7 +32,7 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
       Preview.unit
         .onRun(ProcessUtil.openBrowser(result.url))
         .score(Scores.high(input.context))
-        .view(
+        .renderedAnsi(
           fansi.Color.Magenta(result.item) ++ " " ++ fansi.Color.Yellow(result.module.name) ++ " " ++ fansi.Color
             .Cyan(result.`package`.name) ++ "\n" ++ result.docs
         )

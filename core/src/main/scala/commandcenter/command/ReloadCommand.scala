@@ -2,7 +2,7 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.{ Managed, ZIO }
 
 final case class ReloadCommand(commandNames: List[String]) extends Command[Unit] {
@@ -16,7 +16,7 @@ final case class ReloadCommand(commandNames: List[String]) extends Command[Unit]
       Preview.unit
         .onRun(input.context.terminal.reload.!)
         .score(Scores.high(input.context))
-        .view(DefaultView(title, ""))
+        .rendered(Renderer.renderDefault(title, ""))
     )
 }
 

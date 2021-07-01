@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.blocking._
 import zio.{ Managed, ZIO }
 
@@ -31,7 +31,9 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
       Preview(localIp)
         .onRun(Tools.setClipboard(localIp))
         .score(Scores.high(input.context))
-        .view(DefaultView(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp)))
+        .rendered(
+          Renderer.renderDefault(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp))
+        )
     })
 }
 

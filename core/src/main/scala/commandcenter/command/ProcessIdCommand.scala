@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
 import commandcenter.util.OS
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.process.{ Command => PCommand }
 import zio.{ Managed, ZIO }
 
@@ -44,7 +44,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
 
       Preview.unit
         .onRun(run)
-        .view(DefaultView(processName, "Copy PID to clipboard"))
+        .rendered(Renderer.renderDefault(processName, "Copy PID to clipboard"))
         .score(Scores.high(input.context))
     })
 }

@@ -7,7 +7,7 @@ import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{ OS, ProcessUtil }
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.blocking.Blocking
 import zio.logging.log
 import zio.process.{ Command => PCommand }
@@ -39,7 +39,7 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
         Preview.unit
           .onRun(run.!)
           .score(Scores.high(input.context))
-          .view(DefaultView(title, message))
+          .rendered(Renderer.renderDefault(title, message))
       )
     }
 }

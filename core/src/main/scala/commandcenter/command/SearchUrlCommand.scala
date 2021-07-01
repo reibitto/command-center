@@ -6,7 +6,7 @@ import commandcenter.codec.Codecs.localeDecoder
 import commandcenter.command.CommandError._
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio._
 
 import java.net.URLEncoder
@@ -32,7 +32,7 @@ final case class SearchUrlCommand(
         Preview.unit
           .score(Scores.high * localeBoost)
           .onRun(ProcessUtil.openBrowser(url))
-          .view(DefaultView(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
+          .rendered(Renderer.renderDefault(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
       )
 
     def rawInputPreview: ZIO[Env, CommandError, PreviewResults[Unit]] =
@@ -46,7 +46,9 @@ final case class SearchUrlCommand(
             Preview.unit
               .score(Scores.high * 0.35)
               .onRun(ProcessUtil.openBrowser(url))
-              .view(DefaultView(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(searchInput.input)))
+              .rendered(
+                Renderer.renderDefault(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(searchInput.input))
+              )
           )
         )
       }

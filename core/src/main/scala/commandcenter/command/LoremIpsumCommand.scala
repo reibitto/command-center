@@ -8,7 +8,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.LoremIpsumCommand.ChunkType
 import commandcenter.tools.Tools
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio._
 
 import scala.io.Source
@@ -57,7 +57,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
         Preview.unit
           .onRun(run)
           .score(Scores.high(input.context))
-          .view(DefaultView("Lorem Ipsum", message))
+          .rendered(Renderer.renderDefault("Lorem Ipsum", message))
       )
     }
 }

@@ -42,7 +42,7 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
       Preview(renderedCoordinates)
         .onRun(Tools.setClipboard(renderedCoordinates))
         .score(Scores.high(input.context))
-        .view(artifact.renderColored)
+        .renderedAnsi(artifact.renderColored)
     })
 
   private def bucket(mavenArtifacts: List[MavenArtifact], searchTerm: Option[String]): List[BucketedMavenArtifact] =

@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{ AppleScript, OS }
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.cache.{ Cache, Lookup }
 import zio.duration._
 import zio.{ Managed, UIO, ZIO }
@@ -118,7 +118,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
         Preview.unit
           .onRun(run)
           .score(Scores.high(input.context))
-          .view(DefaultView(title, message))
+          .rendered(Renderer.renderDefault(title, message))
       )
     }
 }

@@ -7,7 +7,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommonArgs._
 import commandcenter.util.{ AppleScript, OS, PowerShellScript }
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.cache.{ Cache, Lookup }
 import zio.duration._
 import zio.{ Managed, UIO, ZIO }
@@ -53,7 +53,7 @@ final case class TimerCommand(commandNames: List[String], cache: Cache[String, N
         Preview.unit
           .onRun(run)
           .score(Scores.high(input.context))
-          .view(DefaultView(title, message))
+          .rendered(Renderer.renderDefault(title, message))
       )
     }
 

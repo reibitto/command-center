@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.tools.Tools
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.{ UManaged, ZIO, ZManaged }
 
 import scala.util.matching.Regex
@@ -42,7 +42,7 @@ final case class TemperatureCommand() extends Command[Double] {
     } yield PreviewResults.one(
       Preview(temperature)
         .score(Scores.high(searchInput.context))
-        .view(DefaultView(title, temperatureFormatted))
+        .rendered(Renderer.renderDefault(title, temperatureFormatted))
         .onRun(Tools.setClipboard(temperatureFormatted))
     )
 }

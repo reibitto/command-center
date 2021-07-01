@@ -36,7 +36,7 @@ final case class JectCommand(commandNames: List[String], luceneIndex: WordReader
         Preview.unit
           .score(Scores.high(searchInput.context))
           .onRun(Tools.setClipboard(input))
-          .view(renderWord(word.doc, word.score))
+          .renderedAnsi(renderWord(word.doc, word.score))
       },
       10
     )

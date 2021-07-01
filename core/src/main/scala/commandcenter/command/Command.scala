@@ -6,15 +6,14 @@ import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.CommandContext
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.{ JavaVM, OS }
-import commandcenter.view.syntax._
-import commandcenter.view.{ DefaultView, ViewInstances }
+import commandcenter.view.{ Rendered, Renderer }
 import zio._
 import zio.logging._
 import zio.stream.{ ZSink, ZStream }
 
 import java.util.Locale
 
-trait Command[+A] extends ViewInstances {
+trait Command[+A] {
   val commandType: CommandType
 
   def commandNames: List[String]
@@ -27,36 +26,36 @@ trait Command[+A] extends ViewInstances {
 
   object Preview {
     def apply[A1 >: A](a: A1): PreviewResult[A1] =
-      new PreviewResult(
+      PreviewResult.Some(
         Command.this,
         a,
         UIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
-        () => DefaultView(title, a.toString).render
+        () => Renderer.renderDefault(title, a.toString)
       )
 
     def unit[A1 >: A](implicit ev: Command[A1] =:= Command[Unit]): PreviewResult[Unit] =
-      new PreviewResult(
+      PreviewResult.Some(
         ev(Command.this),
         (),
         UIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
-        () => DefaultView(title, "").render
+        () => Renderer.renderDefault(title, "")
       )
 
     def help[A1 >: A](help: Help)(implicit ev: Command[A1] =:= Command[Unit]): PreviewResult[Unit] =
-      new PreviewResult(
+      PreviewResult.Some(
         ev(Command.this),
         (),
         UIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
-        () => DefaultView(title, HelpMessage.formatted(help)).render
+        () => Renderer.renderDefault(title, HelpMessage.formatted(help))
       )
   }
 
@@ -92,10 +91,10 @@ object Command {
                           } yield results match {
                             case beforeLast :+ last if results.length >= pageSize =>
                               beforeLast :+ last :+
-                                last
-                                  .view(fansi.Color.Yellow("More..."))
+                                PreviewResult
+                                  .nothing(Rendered.Ansi(fansi.Color.Yellow("More...")))
                                   .runOption(RunOption.RemainOpen)
-                                  .onRun(ZIO.unit)
+                                  .score(last.score)
                                   .moreResults(
                                     MoreResults.Remaining(
                                       p.copy(
@@ -118,7 +117,11 @@ object Command {
       case Right(r) => r.map(Right(_))
     }.partitionMap(identity) match {
       case (errors, successes) =>
-        val results = successes.sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
+        val errorsWithMessages = errors.collect { case e: CommandError.ShowMessage =>
+          e.previewResult
+        }
+
+        val results = (successes ++ errorsWithMessages).sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
 
         SearchResults(input, results, errors)
     }).tap { r =>

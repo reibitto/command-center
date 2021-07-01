@@ -2,7 +2,7 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.{ Managed, ZIO }
 
 final case class ExitCommand(commandNames: List[String]) extends Command[Unit] {
@@ -13,7 +13,10 @@ final case class ExitCommand(commandNames: List[String]) extends Command[Unit] {
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
     } yield PreviewResults.one(
-      Preview.unit.view(DefaultView(title, "")).score(Scores.high(input.context)).runOption(RunOption.Exit)
+      Preview.unit
+        .rendered(Renderer.renderDefault(title, ""))
+        .score(Scores.high(input.context))
+        .runOption(RunOption.Exit)
     )
 }
 
