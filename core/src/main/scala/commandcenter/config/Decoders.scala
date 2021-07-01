@@ -5,6 +5,7 @@ import io.circe.Decoder
 import java.awt.Font
 import java.io.File
 import java.nio.file.{ Path, Paths }
+import java.time.format.{ DateTimeFormatter, FormatStyle }
 import scala.util.Try
 
 object Decoders {
@@ -28,5 +29,13 @@ object Decoders {
     Try {
       scala.concurrent.duration.Duration(s)
     }.toEither.left.map(_.getMessage)
+  }
+
+  implicit val dateTimeFormatterDecoder: Decoder[DateTimeFormatter] = Decoder.decodeString.emap { s =>
+    if (s.equalsIgnoreCase("short")) Right(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT))
+    else if (s.equalsIgnoreCase("medium")) Right(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
+    else if (s.equalsIgnoreCase("long")) Right(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG))
+    else if (s.equalsIgnoreCase("full")) Right(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL))
+    else Try(DateTimeFormatter.ofPattern(s)).toEither.left.map(_.getMessage)
   }
 }
