@@ -112,7 +112,7 @@ final case class SwtTerminal(
                 previousResults <- searchResultsRef.get
                 shortcutPressed  = KeyboardShortcutUtil.fromKeyEvent(e)
                 eligibleResults  = previousResults.previews.filter { p =>
-                                     p.source.shortcuts.contains(shortcutPressed)
+                                     p.shortcuts.contains(shortcutPressed)
                                    }
                 bestMatch        = eligibleResults.maxByOption(_.score)
                 _               <- ZIO.foreach_(bestMatch) { preview =>

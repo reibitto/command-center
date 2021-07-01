@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.util.{ AppleScript, OS }
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.blocking.Blocking
 import zio.process.{ Command => PCommand, CommandError => PCommandError }
 import zio.{ Managed, ZIO }
@@ -20,12 +20,14 @@ final case class RebootCommand(commandNames: List[String]) extends Command[Unit]
         Preview.unit
           .onRun(RebootCommand.reboot)
           .score(Scores.high(input.context))
-          .view(DefaultView(title, "Restart your computer"))
+          .rendered(Renderer.renderDefault(title, "Restart your computer"))
       ) ++ Vector(
         Preview.unit
           .onRun(RebootCommand.rebootIntoBios)
           .score(Scores.high(input.context))
-          .view(DefaultView(s"$title (into BIOS setup)", "Restart your computer and enter BIOS upon startup"))
+          .rendered(
+            Renderer.renderDefault(s"$title (into BIOS setup)", "Restart your computer and enter BIOS upon startup")
+          )
       ).filter(_ => OS.os == OS.Windows || OS.os == OS.Linux)
     )
 }

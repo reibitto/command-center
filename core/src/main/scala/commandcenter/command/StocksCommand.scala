@@ -32,7 +32,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
     } yield PreviewResults.fromIterable(stocks.map { stock =>
       Preview.unit
         .score(Scores.high(input.context))
-        .view(
+        .renderedAnsi(
           fansi.Str.join(
             fansi.Color.Cyan(stock.ticker),
             fansi.Color.LightCyan(s" (${stock.name}) "),

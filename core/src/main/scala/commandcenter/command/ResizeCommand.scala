@@ -5,7 +5,7 @@ import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.{ Managed, ZIO }
 
 final case class ResizeCommand(commandNames: List[String]) extends Command[Unit] {
@@ -39,7 +39,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
         Preview.unit
           .onRun(run.!)
           .score(Scores.high(input.context))
-          .view(DefaultView(title, message))
+          .rendered(Renderer.renderDefault(title, message))
       )
     }
 }

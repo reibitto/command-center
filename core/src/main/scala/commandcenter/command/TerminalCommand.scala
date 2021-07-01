@@ -2,7 +2,7 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.{ Managed, ZIO }
 
 // TODO: Work in progress
@@ -13,7 +13,9 @@ final case class TerminalCommand(commandNames: List[String]) extends Command[Uni
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-    } yield PreviewResults.one(Preview.unit.view(DefaultView("Terminal", input.rest)).score(Scores.high(input.context)))
+    } yield PreviewResults.one(
+      Preview.unit.rendered(Renderer.renderDefault("Terminal", input.rest)).score(Scores.high(input.context))
+    )
 }
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {

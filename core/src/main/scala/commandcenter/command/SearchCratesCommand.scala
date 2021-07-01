@@ -37,7 +37,7 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
         Preview.unit
           .onRun(Tools.setClipboard(result.render))
           .score(Scores.high(input.context))
-          .view(result.renderColored)
+          .renderedAnsi(result.renderColored)
       },
       pageSize
     )

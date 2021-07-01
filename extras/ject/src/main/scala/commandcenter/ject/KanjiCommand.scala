@@ -5,7 +5,6 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command._
 import commandcenter.config.Decoders.pathDecoder
 import commandcenter.tools.Tools
-import commandcenter.view.Rendered
 import ject.docs.KanjiDoc
 import ject.lucene.KanjiReader
 import zio.{ Managed, ZIO }
@@ -39,9 +38,9 @@ final case class KanjiCommand(
         Preview.unit
           .score(Scores.high(searchInput.context) * 1.5)
           .onRun(Tools.setClipboard(kanji.doc.kanji))
-          .rendered(Rendered.Ansi(render(kanji.doc, kanji.score)))
+          .renderedAnsi(render(kanji.doc, kanji.score))
       },
-      20
+      pageSize = 20
     )
 
   // TODO: Consider creating a StrBuilder class to make this nicer

@@ -9,7 +9,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.command.native.win.PowrProf
 import commandcenter.util.OS
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.{ Managed, Task, ZIO }
 
 final case class SystemCommand(commandNames: List[String]) extends Command[Unit] {
@@ -44,10 +44,10 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                    .fold(
                      h => Preview.help(h).score(Scores.high(input.context)),
                      subcommand => {
-                       val (view, run) = subcommand match {
+                       val (rendered, run) = subcommand match {
                          case SystemSubcommand.Sleep =>
                            Tuple2(
-                             DefaultView("Sleep", "Put computer to sleep"),
+                             Renderer.renderDefault("Sleep", "Put computer to sleep"),
                              Task {
                                PowrProf
                                  .SetSuspendState(bHibernate = false, bForce = false, bWakeupEventsDisabled = false)
@@ -57,7 +57,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
                          case SystemSubcommand.MonitorOff =>
                            Tuple2(
-                             DefaultView("Turn off monitor", ""),
+                             Renderer.renderDefault("Turn off monitor", ""),
                              Task {
                                User32.INSTANCE.SendMessage(
                                  WinUser.HWND_BROADCAST,
@@ -71,7 +71,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
                          case SystemSubcommand.Screensaver =>
                            Tuple2(
-                             DefaultView("Activate screensaver", ""),
+                             Renderer.renderDefault("Activate screensaver", ""),
                              Task {
                                User32.INSTANCE.SendMessage(
                                  WinUser.HWND_BROADCAST,
@@ -85,13 +85,13 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
                          case SystemSubcommand.Help =>
                            Tuple2(
-                             DefaultView(title, HelpMessage.formatted(Help.fromCommand(systemCommand))),
+                             Renderer.renderDefault(title, HelpMessage.formatted(Help.fromCommand(systemCommand))),
                              ZIO.unit
                            )
 
                        }
 
-                       Preview.unit.onRun(run).view(view).score(Scores.high(input.context))
+                       Preview.unit.onRun(run).rendered(rendered).score(Scores.high(input.context))
                      }
                    )
     } yield PreviewResults.one(preview)

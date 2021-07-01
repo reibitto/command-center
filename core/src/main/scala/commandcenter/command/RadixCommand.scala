@@ -6,7 +6,7 @@ import com.monovore.decline.{ Help, Opts }
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.{ Managed, ZIO }
 
 import scala.util.Try
@@ -41,7 +41,7 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
                          Preview.unit
                            .score(Scores.high(input.context))
                            .onRun(Tools.setClipboard(message.plainText))
-                           .view(DefaultView(title, message))
+                           .rendered(Renderer.renderDefault(title, message))
                        }.getOrElse {
                          Preview.help(Help.fromCommand(radixCommand)).score(Scores.high(input.context))
                        }

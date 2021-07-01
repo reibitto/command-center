@@ -24,7 +24,7 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
       Preview.unit
         .onRun(WindowManager.giveWindowFocus(w.window))
         .score(Scores.high(input.context))
-        .view(fansi.Color.Cyan(w.title))
+        .renderedAnsi(fansi.Color.Cyan(w.title))
     })
 }
 

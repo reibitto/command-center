@@ -64,12 +64,12 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
           ZStream.succeed(
             Preview(file)
               .score(score)
-              .view(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
+              .renderedAnsi(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
               .onRun(ProcessUtil.browseFile(file))
           ) ++ (sameLevel ++ children).map { f =>
             Preview(f)
               .score(score)
-              .view(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
+              .renderedAnsi(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
               .onRun(ProcessUtil.browseFile(f))
           },
           pageSize = 10

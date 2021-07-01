@@ -5,7 +5,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.command.util.PathUtil
 import commandcenter.util.OS
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.process.{ Command => PCommand }
 import zio.{ Managed, ZIO }
 
@@ -34,7 +34,7 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
                         val shortenedPath = PathUtil.shorten(file.getAbsolutePath)
 
                         Preview(file)
-                          .view(DefaultView(shortenedPath, "Open file"))
+                          .rendered(Renderer.renderDefault(shortenedPath, "Open file"))
                           .onRun(PCommand("open", file.getAbsolutePath).exitCode.unit)
                           .score(Scores.high(input.context))
                       }

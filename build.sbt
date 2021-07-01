@@ -91,8 +91,7 @@ lazy val cli = module("cli")
     fork := true,
     run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
-      "org.scalameta" %% "svm-subs" % Version.graal,
-      "org.zeromq"     % "jeromq"   % "0.5.2"
+      "org.scalameta" %% "svm-subs" % Version.graal
     ),
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % Version.jna).filter(_ => OS.os == OS.Windows),

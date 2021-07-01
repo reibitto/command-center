@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.command.Foobar2000Command.Opt
 import commandcenter.util.OS
-import commandcenter.view.DefaultView
+import commandcenter.view.{ Rendered, Renderer }
 import zio.process.{ Command => PCommand }
 import zio.system.System
 import zio.{ system, UIO, ZIO, ZManaged }
@@ -42,56 +42,51 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      parsed   = foobarCommand.parse(input.args)
-      message <- ZIO
-                   .fromEither(parsed)
-                   .foldM(
-                     help => UIO(HelpMessage.formatted(help)),
-                     {
-                       case Some(Opt.Play)          => UIO(fansi.Str(playCommand.header))
-                       case Some(Opt.Pause)         => UIO(fansi.Str(pauseCommand.header))
-                       case Some(Opt.Stop)          => UIO(fansi.Str(stopCommand.header))
-                       case Some(Opt.NextTrack)     => UIO(fansi.Str(nextTrackCommand.header))
-                       case Some(Opt.PreviousTrack) => UIO(fansi.Str(previousTrackCommand.header))
-                       case Some(Opt.Rewind)        => UIO(fansi.Str("Rewind current track to the beginning"))
-                       case Some(Opt.DeleteTrack)   => UIO(fansi.Str(deleteTrackCommand.header))
-                       case Some(Opt.Help)          => UIO(fansi.Str(foobarCommand.showHelp))
-                       case Some(Opt.Show) | None   => UIO(fansi.Str("Show window"))
-                     }
-                   )
-    } yield {
-      val run = for {
-        opt <- ZIO.fromEither(parsed).bimap(RunError.CliError, _.getOrElse(Opt.Show))
-        _   <- opt match {
-                 case Opt.Play          => PCommand(foobarPath.getCanonicalPath, "/play").successfulExitCode
-                 case Opt.Pause         => PCommand(foobarPath.getCanonicalPath, "/pause").successfulExitCode
-                 case Opt.Stop          => PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode
-                 case Opt.NextTrack     => PCommand(foobarPath.getCanonicalPath, "/next").successfulExitCode
-                 case Opt.PreviousTrack => PCommand(foobarPath.getCanonicalPath, "/prev").successfulExitCode
-                 case Opt.Rewind        =>
-                   PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode *> PCommand(
-                     foobarPath.getCanonicalPath,
-                     "/play"
-                   ).successfulExitCode
-                 case Opt.DeleteTrack   =>
-                   PCommand(
-                     foobarPath.getCanonicalPath,
-                     "/playing_command:File Operations/Delete file(s)"
-                   ).successfulExitCode
-                 case Opt.Show          =>
-                   PCommand(foobarPath.getCanonicalPath, "/show").successfulExitCode
-                 case Opt.Help          => ZIO.unit
-               }
-      } yield ()
-
-      PreviewResults.one(
-        Preview.unit
-          .onRun(run)
-          .score(Scores.high(input.context))
-          .view(DefaultView(title, message))
-      )
-    }
+      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      opt    <-
+        ZIO
+          .fromEither(foobarCommand.parse(input.args))
+          .bimap(
+            help => CommandError.ShowMessage(Rendered.Ansi(HelpMessage.formatted(help)), Scores.high(input.context)),
+            _.getOrElse(Opt.Show)
+          )
+      run     = opt match {
+                  case Opt.Play          => PCommand(foobarPath.getCanonicalPath, "/play").successfulExitCode
+                  case Opt.Pause         => PCommand(foobarPath.getCanonicalPath, "/pause").successfulExitCode
+                  case Opt.Stop          => PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode
+                  case Opt.NextTrack     => PCommand(foobarPath.getCanonicalPath, "/next").successfulExitCode
+                  case Opt.PreviousTrack => PCommand(foobarPath.getCanonicalPath, "/prev").successfulExitCode
+                  case Opt.Rewind        =>
+                    PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode *> PCommand(
+                      foobarPath.getCanonicalPath,
+                      "/play"
+                    ).successfulExitCode
+                  case Opt.DeleteTrack   =>
+                    PCommand(
+                      foobarPath.getCanonicalPath,
+                      "/playing_command:File Operations/Delete file(s)"
+                    ).successfulExitCode
+                  case Opt.Show          =>
+                    PCommand(foobarPath.getCanonicalPath, "/show").successfulExitCode
+                  case Opt.Help          => ZIO.unit
+                }
+      message = opt match {
+                  case Opt.Play          => fansi.Str(playCommand.header)
+                  case Opt.Pause         => fansi.Str(pauseCommand.header)
+                  case Opt.Stop          => fansi.Str(stopCommand.header)
+                  case Opt.NextTrack     => fansi.Str(nextTrackCommand.header)
+                  case Opt.PreviousTrack => fansi.Str(previousTrackCommand.header)
+                  case Opt.Rewind        => fansi.Str("Rewind current track to the beginning")
+                  case Opt.DeleteTrack   => fansi.Str(deleteTrackCommand.header)
+                  case Opt.Help          => fansi.Str(foobarCommand.showHelp)
+                  case Opt.Show          => fansi.Str("Show window")
+                }
+    } yield PreviewResults.one(
+      Preview.unit
+        .onRun(run.unit)
+        .score(Scores.high(input.context))
+        .rendered(Renderer.renderDefault(title, message))
+    )
 }
 
 object Foobar2000Command extends CommandPlugin[Foobar2000Command] {

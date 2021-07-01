@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.CommandError._
 import commandcenter.util.OS
-import commandcenter.view.DefaultView
+import commandcenter.view.Renderer
 import zio.process.{ Command => PCommand }
 import zio.{ Managed, ZIO }
 
@@ -31,7 +31,7 @@ final case class FindInFileCommand(commandNames: List[String]) extends Command[F
                     // `take(N)` though.
                     results = files.map { file =>
                                 Preview(file)
-                                  .view(DefaultView(file.getAbsolutePath, "Open file"))
+                                  .rendered(Renderer.renderDefault(file.getAbsolutePath, "Open file"))
                                   .onRun(PCommand("open", file.getAbsolutePath).exitCode.unit)
                                   .score(Scores.high(input.context))
                               }

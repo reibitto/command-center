@@ -18,13 +18,13 @@ final case class StrokeOrderCommand(commandNames: List[String]) extends Command[
       Preview.unit
         .score(Scores.high(searchInput.context))
         .onRun(Tools.setClipboard(input.rest))
-        .renderFn { _ =>
+        .rendered(
           Rendered.Styled(
             Vector(
               StyledText(input.rest, Set(Style.FontFamily("KanjiStrokeOrders"), Style.FontSize(175)))
             )
           )
-        }
+        )
     )
 }
 

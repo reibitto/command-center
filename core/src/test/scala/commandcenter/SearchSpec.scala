@@ -4,7 +4,6 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command._
 import zio.ZIO
 import zio.duration._
-import zio.test.Assertion._
 import zio.test._
 import zio.test.environment.TestClock
 
@@ -29,7 +28,7 @@ object SearchSpec extends CommandBaseSpec {
         for {
           _        <- TestClock.setTime(1.second)
           previews <- results.map(_.previews)
-        } yield assert(previews)(hasFirst(hasField("result", _.result, equalTo("1000".asInstanceOf[Any]))))
+        } yield assertTrue(previews.head.asInstanceOf[PreviewResult.Some[Any]].result == "1000")
       }
     )
 }
