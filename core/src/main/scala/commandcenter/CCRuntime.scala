@@ -4,7 +4,7 @@ import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.{ Tools, ToolsLive }
 import commandcenter.util.OS
-import sttp.client.httpclient.zio.{ HttpClientZioBackend, SttpClient }
+import sttp.client3.httpclient.zio.{ HttpClientZioBackend, SttpClient }
 import zio.internal.Platform
 import zio.logging.Logging
 import zio.{ Has, Runtime, ULayer, ZEnv, ZLayer }

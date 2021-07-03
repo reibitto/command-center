@@ -5,9 +5,9 @@ import commandcenter.CCRuntime.Env
 import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
 import io.circe.Decoder
-import sttp.client._
-import sttp.client.circe._
-import sttp.client.httpclient.zio._
+import sttp.client3._
+import sttp.client3.circe._
+import sttp.client3.httpclient.zio._
 import zio.stream.ZStream
 import zio.{ Chunk, Managed, ZIO }
 
@@ -26,8 +26,7 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
                          .get(uri"https://crates.io/api/v1/crates?page=$page&per_page=$pageSize&q=${input.rest}")
                          .response(asJson[CrateResults])
 
-                       SttpClient
-                         .send(request)
+                       send(request)
                          .map(_.body)
                          .absolve
                          .bimap(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))

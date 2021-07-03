@@ -2,7 +2,7 @@ package commandcenter
 
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
-import sttp.client.httpclient.zio.SttpClient
+import sttp.client3.httpclient.zio.SttpClient
 import zio.logging.Logging
 import zio.test.environment._
 import zio.test.{ Annotations, Sized }

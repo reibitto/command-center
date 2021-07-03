@@ -3,7 +3,7 @@ package commandcenter
 import commandcenter.TestRuntime.{ TestEnv, TestPartialEnv }
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.ToolsLive
-import sttp.client.httpclient.zio.HttpClientZioBackend
+import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio.duration._
 import zio.test.environment.testEnvironment
 import zio.test.{ RunnableSpec, TestAspect, TestExecutor, TestRunner }

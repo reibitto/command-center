@@ -4,9 +4,9 @@ import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
 import commandcenter.command.StocksCommand.{ StocksResult, Ticker }
 import io.circe.{ Decoder, Json }
-import sttp.client.circe.asJson
-import sttp.client.httpclient.zio.SttpClient
-import sttp.client.{ basicRequest, UriContext }
+import sttp.client3.circe.asJson
+import sttp.client3.httpclient.zio._
+import sttp.client3.{ basicRequest, UriContext }
 import zio.{ IO, Managed, ZIO }
 
 final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]) extends Command[Unit] {
@@ -21,8 +21,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       request   = basicRequest
                     .get(uri"$stocksUrl$symbols")
                     .response(asJson[Json])
-      response <- SttpClient
-                    .send(request)
+      response <- send(request)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
