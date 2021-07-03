@@ -27,3 +27,4 @@ local.conf
 /logs
 **/plugins/*.jar
 node_modules
+Scratch.scala

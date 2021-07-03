@@ -2,14 +2,18 @@ package commandcenter.command
 
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.sun.jna.Pointer
+import com.sun.jna.platform.win32.User32
+import com.sun.jna.platform.win32.WinDef.HWND
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.command.Foobar2000Command.Opt
 import commandcenter.util.OS
+import commandcenter.util.WindowManager.fromCString
 import commandcenter.view.{ Rendered, Renderer }
 import zio.process.{ Command => PCommand }
 import zio.system.System
-import zio.{ system, UIO, ZIO, ZManaged }
+import zio.{ system, Task, UIO, ZIO, ZManaged }
 
 import java.io.File
 import java.nio.file.Paths
@@ -42,51 +46,77 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      opt    <-
+      input   <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      opt     <-
         ZIO
           .fromEither(foobarCommand.parse(input.args))
           .bimap(
             help => CommandError.ShowMessage(Rendered.Ansi(HelpMessage.formatted(help)), Scores.high(input.context)),
             _.getOrElse(Opt.Show)
           )
-      run     = opt match {
-                  case Opt.Play          => PCommand(foobarPath.getCanonicalPath, "/play").successfulExitCode
-                  case Opt.Pause         => PCommand(foobarPath.getCanonicalPath, "/pause").successfulExitCode
-                  case Opt.Stop          => PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode
-                  case Opt.NextTrack     => PCommand(foobarPath.getCanonicalPath, "/next").successfulExitCode
-                  case Opt.PreviousTrack => PCommand(foobarPath.getCanonicalPath, "/prev").successfulExitCode
-                  case Opt.Rewind        =>
-                    PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode *> PCommand(
-                      foobarPath.getCanonicalPath,
-                      "/play"
-                    ).successfulExitCode
-                  case Opt.DeleteTrack   =>
-                    PCommand(
-                      foobarPath.getCanonicalPath,
-                      "/playing_command:File Operations/Delete file(s)"
-                    ).successfulExitCode
-                  case Opt.Show          =>
-                    PCommand(foobarPath.getCanonicalPath, "/show").successfulExitCode
-                  case Opt.Help          => ZIO.unit
-                }
-      message = opt match {
-                  case Opt.Play          => fansi.Str(playCommand.header)
-                  case Opt.Pause         => fansi.Str(pauseCommand.header)
-                  case Opt.Stop          => fansi.Str(stopCommand.header)
-                  case Opt.NextTrack     => fansi.Str(nextTrackCommand.header)
-                  case Opt.PreviousTrack => fansi.Str(previousTrackCommand.header)
-                  case Opt.Rewind        => fansi.Str("Rewind current track to the beginning")
-                  case Opt.DeleteTrack   => fansi.Str(deleteTrackCommand.header)
-                  case Opt.Help          => fansi.Str(foobarCommand.showHelp)
-                  case Opt.Show          => fansi.Str("Show window")
-                }
+      run      = opt match {
+                   case Opt.Play          => PCommand(foobarPath.getCanonicalPath, "/play").successfulExitCode
+                   case Opt.Pause         => PCommand(foobarPath.getCanonicalPath, "/pause").successfulExitCode
+                   case Opt.Stop          => PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode
+                   case Opt.NextTrack     => PCommand(foobarPath.getCanonicalPath, "/next").successfulExitCode
+                   case Opt.PreviousTrack => PCommand(foobarPath.getCanonicalPath, "/prev").successfulExitCode
+                   case Opt.Rewind        =>
+                     PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode *> PCommand(
+                       foobarPath.getCanonicalPath,
+                       "/play"
+                     ).successfulExitCode
+                   case Opt.DeleteTrack   =>
+                     PCommand(
+                       foobarPath.getCanonicalPath,
+                       "/playing_command:File Operations/Delete file(s)"
+                     ).successfulExitCode
+                   case Opt.Show          =>
+                     PCommand(foobarPath.getCanonicalPath, "/show").successfulExitCode
+                   case Opt.Help          => ZIO.unit
+                 }
+      message <- opt match {
+                   case Opt.Play          => UIO(fansi.Str(playCommand.header))
+                   case Opt.Pause         => UIO(fansi.Str(pauseCommand.header))
+                   case Opt.Stop          => UIO(fansi.Str(stopCommand.header))
+                   case Opt.NextTrack     => UIO(fansi.Str(nextTrackCommand.header))
+                   case Opt.PreviousTrack => UIO(fansi.Str(previousTrackCommand.header))
+                   case Opt.Rewind        => UIO(fansi.Str("Rewind current track to the beginning"))
+                   case Opt.DeleteTrack   => UIO(fansi.Str(deleteTrackCommand.header))
+                   case Opt.Help          => UIO(fansi.Str(foobarCommand.showHelp))
+                   case Opt.Show          =>
+                     for {
+                       trackInfo <- trackInfoFromWindow.catchAll(_ => UIO.none)
+                     } yield trackInfo
+                       .map(t => fansi.Color.Magenta(t))
+                       .getOrElse(fansi.Str("Show window"))
+
+                 }
     } yield PreviewResults.one(
       Preview.unit
         .onRun(run.unit)
         .score(Scores.high(input.context))
         .rendered(Renderer.renderDefault(title, message))
     )
+
+  private def trackInfoFromWindow: Task[Option[String]] =
+    Task.effectAsync { cb =>
+      User32.INSTANCE.EnumWindows(
+        (window: HWND, _: Pointer) => {
+          val windowTitle = fromCString(256)(a => User32.INSTANCE.GetWindowText(window, a, a.length))
+
+          if (windowTitle.contains("[foobar2000]")) {
+            cb(UIO.some(windowTitle.replace("[foobar2000]", "").trim))
+            false
+          } else {
+            true
+          }
+        },
+        Pointer.NULL
+      )
+
+      cb(UIO.none)
+
+    }
 }
 
 object Foobar2000Command extends CommandPlugin[Foobar2000Command] {

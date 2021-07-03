@@ -300,7 +300,7 @@ object WindowManager {
 
   }
 
-  private def fromCString(bufferSize: Int)(fn: Array[Char] => Int) = {
+  def fromCString(bufferSize: Int)(fn: Array[Char] => Int): String = {
     val buffer = Array.ofDim[Char](bufferSize)
     val size   = fn(buffer)
     new String(buffer, 0, size)
