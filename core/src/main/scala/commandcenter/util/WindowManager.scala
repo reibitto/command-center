@@ -53,6 +53,28 @@ object WindowManager {
     User32.INSTANCE.SetWindowPos(window, null, x, y, monitorWidth, monitorHeight, WinUser.SWP_NOZORDER)
   }
 
+  def resizeFullHeightMaintainAspectRatio: Task[Unit] = Task {
+    val window  = User32.INSTANCE.GetForegroundWindow()
+    val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
+
+    val monitorInfo = new MONITORINFO()
+    User32.INSTANCE.GetMonitorInfo(monitor, monitorInfo)
+
+    val windowRect = new RECT()
+    User32.INSTANCE.GetWindowRect(window, windowRect)
+
+    val monitorWidth  = monitorInfo.rcWork.right - monitorInfo.rcWork.left
+    val monitorHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top
+
+    val windowRatio = (windowRect.right - windowRect.left) / (windowRect.bottom - windowRect.top).toDouble
+    val windowWidth = Math.round(monitorHeight * windowRatio).toInt min monitorWidth
+
+    val x = (monitorWidth - windowWidth) / 2
+    val y = monitorInfo.rcWork.top
+
+    User32.INSTANCE.SetWindowPos(window, null, x, y, windowWidth, monitorHeight, WinUser.SWP_NOZORDER)
+  }
+
   def minimizeWindow: Task[Unit] = Task {
     val window = User32.INSTANCE.GetForegroundWindow()
 

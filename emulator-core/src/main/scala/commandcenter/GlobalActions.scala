@@ -10,13 +10,15 @@ object GlobalActions {
       cycleWindowStateRef <- Ref.make(Option.empty[CycleWindowState])
       _                   <- ZIO.foreach_(actions) { action =>
                                val run = action.id match {
-                                 case GlobalActionId.MinimizeWindow       => WindowManager.minimizeWindow
-                                 case GlobalActionId.MaximizeWindow       => WindowManager.maximizeWindow
-                                 case GlobalActionId.ToggleMaximizeWindow => WindowManager.toggleMaximizeWindow
-                                 case GlobalActionId.CenterWindow         => WindowManager.centerScreen
-                                 case GlobalActionId.MoveToPreviousScreen => WindowManager.moveToPreviousDisplay
-                                 case GlobalActionId.MoveToNextScreen     => WindowManager.moveToNextDisplay
-                                 case GlobalActionId.ResizeToScreenSize   => WindowManager.resizeToScreenSize
+                                 case GlobalActionId.MinimizeWindow                      => WindowManager.minimizeWindow
+                                 case GlobalActionId.MaximizeWindow                      => WindowManager.maximizeWindow
+                                 case GlobalActionId.ToggleMaximizeWindow                => WindowManager.toggleMaximizeWindow
+                                 case GlobalActionId.CenterWindow                        => WindowManager.centerScreen
+                                 case GlobalActionId.MoveToPreviousScreen                => WindowManager.moveToPreviousDisplay
+                                 case GlobalActionId.MoveToNextScreen                    => WindowManager.moveToNextDisplay
+                                 case GlobalActionId.ResizeToScreenSize                  => WindowManager.resizeToScreenSize
+                                 case GlobalActionId.ResizeFullHeightMaintainAspectRatio =>
+                                   WindowManager.resizeFullHeightMaintainAspectRatio
 
                                  case id @ GlobalActionId.CycleWindowSizeLeft =>
                                    WindowManager
