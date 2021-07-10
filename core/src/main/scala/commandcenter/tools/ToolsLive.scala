@@ -43,6 +43,8 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File], blocking: Blockin
           Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(text), null)
         }
     }
+
+  def beep: Task[Unit] = Task(Toolkit.getDefaultToolkit.beep())
 }
 
 object ToolsLive {

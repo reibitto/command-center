@@ -9,6 +9,7 @@ trait Tools {
   def activate: Task[Unit]
   def hide: Task[Unit]
   def setClipboard(text: String): Task[Unit]
+  def beep: Task[Unit]
 }
 
 object Tools {
@@ -23,4 +24,7 @@ object Tools {
 
   def setClipboard(text: String): RIO[Has[Tools], Unit] =
     ZIO.serviceWith[Tools](_.setClipboard(text))
+
+  def beep: RIO[Has[Tools], Unit] =
+    ZIO.serviceWith[Tools](_.beep)
 }

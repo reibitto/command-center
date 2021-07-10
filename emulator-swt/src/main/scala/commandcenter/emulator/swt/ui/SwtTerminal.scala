@@ -66,6 +66,7 @@ final case class SwtTerminal(
           case SWT.CR =>
             runtime.unsafeRunAsync_ {
               for {
+                _               <- searchDebouncer.triggerNowAwait
                 previousResults <- searchResultsRef.get
                 cursorIndex     <- commandCursorRef.get
                 resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
@@ -247,35 +248,41 @@ final case class SwtTerminal(
   }
 
   def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
-    ZIO.foreach(results.previews.lift(cursorIndex)) { preview =>
-      for {
-        _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
-        _ <- searchDebouncer.triggerNowAwait
-        _ <- preview.moreResults match {
-               case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
-                   if totalRemaining.forall(_ > 0) =>
-                 for {
-                   _                     <- preview.onRun.absorb.forkDaemon
-                   (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
-                   _                     <- showMore(
-                                              results,
-                                              preview.moreResults(
-                                                MoreResults.Remaining(
-                                                  p.copy(
-                                                    results = restStream,
-                                                    totalRemaining = p.totalRemaining.map(_ - pageSize)
-                                                  )
-                                                )
-                                              ),
-                                              pageSize
-                                            )
-                 } yield ()
+    results.previews.lift(cursorIndex) match {
+      case None =>
+        for {
+          _ <- hide
+          _ <- deactivate.ignore
+        } yield None
 
-               case _ =>
-                 // TODO: Log defects
-                 preview.onRun.absorb.forkDaemon *> reset
-             }
-      } yield preview
+      case previewOpt @ Some(preview) =>
+        for {
+          _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
+          _ <- preview.moreResults match {
+                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
+                     if totalRemaining.forall(_ > 0) =>
+                   for {
+                     _                     <- preview.onRun.absorb.forkDaemon
+                     (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
+                     _                     <- showMore(
+                                                results,
+                                                preview.moreResults(
+                                                  MoreResults.Remaining(
+                                                    p.copy(
+                                                      results = restStream,
+                                                      totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                                    )
+                                                  )
+                                                ),
+                                                pageSize
+                                              )
+                   } yield ()
+
+                 case _ =>
+                   // TODO: Log defects
+                   preview.onRun.absorb.forkDaemon *> reset
+               }
+        } yield previewOpt
     }
 
   def showMore[A](

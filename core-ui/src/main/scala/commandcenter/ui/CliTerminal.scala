@@ -49,9 +49,10 @@ final case class CliTerminal[T <: Terminal](
   def defaultKeyHandlers: Map[KeyStroke, URIO[Env, EventResult]] =
     Map(
       new KeyStroke(KeyType.Enter)      -> (for {
-        index              <- commandCursorRef.get
+        _                  <- searchDebouncer.triggerNowAwait
         previousResults    <- searchResultsRef.get
-        maybePreviewResult <- runSelected(previousResults, index)
+        cursorIndex        <- commandCursorRef.get
+        maybePreviewResult <- runSelected(previousResults, cursorIndex)
       } yield maybePreviewResult.map(_.runOption) match {
         case Some(RunOption.Exit)       => EventResult.Exit
         case Some(RunOption.RemainOpen) => EventResult.RemainOpen
@@ -175,7 +176,6 @@ final case class CliTerminal[T <: Terminal](
   def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
     ZIO.foreach(results.previews.lift(cursorIndex)) { preview =>
       for {
-        _ <- searchDebouncer.triggerNowAwait
         _ <- preview.moreResults match {
                case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                    if totalRemaining.forall(_ > 0) =>
