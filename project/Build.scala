@@ -11,7 +11,7 @@ object Build {
     val zio        = "1.0.9"
     val enumeratum = "1.7.0"
     val circe      = "0.14.1"
-    val sttp       = "3.3.11"
+    val sttp       = "3.3.12"
     val graal      = "20.2.0"
     val swt        = "3.116.100"
     val jna        = "5.8.0"
