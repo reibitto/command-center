@@ -188,7 +188,7 @@ lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
   .dependsOn(core)
   .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.2.0"))
 
-lazy val extras = project
+lazy val extras     = project
   .in(file("extras"))
   .aggregate(strokeOrderPlugin, jectPlugin)
 
