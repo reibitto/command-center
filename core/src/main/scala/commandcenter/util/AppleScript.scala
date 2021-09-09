@@ -17,22 +17,20 @@ object AppleScript {
     } yield result
 
   def loadFunction1[A](cache: Cache[String, Nothing, String])(resource: String): A => RIO[Blocking with Clock, String] =
-    p => {
+    p =>
       for {
         script <- cache.get(s"applescript/$resource")
         // TODO: Escape properly
         result <- Command("osascript", "-e", script.replace("{0}", p.toString)).string
       } yield result
-    }
 
   def loadFunction2[A, A2](
     cache: Cache[String, Nothing, String]
   )(resource: String): (A, A2) => RIO[Blocking with Clock, String] =
-    (a, a2) => {
+    (a, a2) =>
       for {
         script <- cache.get(s"applescript/$resource")
         // TODO: Escape properly
         result <- Command("osascript", "-e", script.replace("{0}", a.toString).replace("{1}", a2.toString)).string
       } yield result
-    }
 }

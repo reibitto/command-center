@@ -16,7 +16,7 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       (isPrefixed, snippetSearch) <-
-        ZIO.fromOption(searchInput.asPrefixed).bimap(_ => (false, searchInput.input), s => (true, s.rest)).merge
+        ZIO.fromOption(searchInput.asPrefixed).mapBoth(_ => (false, searchInput.input), s => (true, s.rest)).merge
 
     } yield PreviewResults.fromIterable(snippets.map { snip =>
       val score =

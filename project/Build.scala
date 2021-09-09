@@ -8,7 +8,7 @@ object Build {
   val CommandCenterVersion = "0.0.1"
 
   object Version {
-    val zio        = "1.0.9"
+    val zio        = "1.0.11"
     val enumeratum = "1.7.0"
     val circe      = "0.14.1"
     val sttp       = "3.3.11"
@@ -45,10 +45,10 @@ object Build {
     "-Ywarn-extra-implicit"          // Warn when more than one implicit parameter section is defined.
   ) ++
     Seq(
-      "-Ywarn-unused:imports",       // Warn if an import selector is not referenced.
-      "-Ywarn-unused:locals",        // Warn if a local definition is unused.
-      "-Ywarn-unused:privates",      // Warn if a private member is unused.
-      "-Ywarn-unused:implicits"      // Warn if an implicit parameter is unused.
+      "-Ywarn-unused:imports",  // Warn if an import selector is not referenced.
+      "-Ywarn-unused:locals",   // Warn if a local definition is unused.
+      "-Ywarn-unused:privates", // Warn if a private member is unused.
+      "-Ywarn-unused:implicits" // Warn if an implicit parameter is unused.
     ).filter(_ => shouldWarnForUnusedCode) ++
     Seq(
       "-opt:l:inline",
@@ -57,23 +57,23 @@ object Build {
 
   def defaultSettings(projectName: String) =
     Seq(
-      name := projectName,
-      version := CommandCenterVersion,
+      name                     := projectName,
+      version                  := CommandCenterVersion,
       Test / javaOptions += "-Duser.timezone=UTC",
-      scalacOptions := ScalacOptions,
+      scalacOptions            := ScalacOptions,
       ThisBuild / scalaVersion := ScalaVersion,
-      unmanagedBase := baseDirectory.value / "plugins",
+      unmanagedBase            := baseDirectory.value / "plugins",
       libraryDependencies ++= Plugins.BaseCompilerPlugins,
       libraryDependencies ++= Seq(
         "dev.zio" %% "zio-test"     % Version.zio % Test,
         "dev.zio" %% "zio-test-sbt" % Version.zio % Test
       ),
       incOptions ~= (_.withLogRecompileOnMacro(false)),
-      autoAPIMappings := true,
-      resolvers := Resolvers,
-      testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
-      Test / fork := true,
-      Test / logBuffered := false
+      autoAPIMappings          := true,
+      resolvers                := Resolvers,
+      testFrameworks           := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
+      Test / fork              := true,
+      Test / logBuffered       := false
     )
 
   lazy val Resolvers = Seq(

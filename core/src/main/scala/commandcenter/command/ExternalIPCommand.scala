@@ -34,7 +34,7 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
           .someOrFail(CommandError.InternalError("Could not parse nslookup results"))
       case _          =>
         PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
-          .bimap(CommandError.UnexpectedException, _.trim)
+          .mapBoth(CommandError.UnexpectedException, _.trim)
     }
 }
 

@@ -29,7 +29,7 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
                        send(request)
                          .map(_.body)
                          .absolve
-                         .bimap(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))
+                         .mapBoth(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))
                      }
     } yield PreviewResults.paginated(
       cratesStream.map { result =>

@@ -36,19 +36,16 @@ trait ConfigParserExtensions {
           }
       }
 
-    /**
-     * Read config settings into the specified type.
-     */
+    /** Read config settings into the specified type.
+      */
     def as[A: Decoder]: Either[io.circe.Error, A] = parser.decode[A](config)
 
-    /**
-     * Read config settings at given path into the specified type.
-     */
+    /** Read config settings at given path into the specified type.
+      */
     def as[A: Decoder](path: String): Either[io.circe.Error, A] = parser.decodePath[A](config, path)
 
-    /**
-     * Get the value at given path into the specified type.
-     */
+    /** Get the value at given path into the specified type.
+      */
     def get[A: Decoder](path: String): Either[io.circe.Error, A] = {
       val json =
         if (config.hasPath(path))

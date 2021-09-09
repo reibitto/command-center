@@ -1,6 +1,6 @@
 package commandcenter
 
-import com.typesafe.config.{ ConfigFactory, Config => TypesafeConfig }
+import com.typesafe.config.{ Config => TypesafeConfig, ConfigFactory }
 import commandcenter.CCRuntime.PartialEnv
 import commandcenter.command.{ Command, CommandPlugin }
 import commandcenter.config.ConfigParserExtensions._

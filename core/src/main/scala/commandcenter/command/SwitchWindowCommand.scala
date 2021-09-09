@@ -16,7 +16,7 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
     for {
       input   <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       // TODO: Consider adding more info than just the title. Like "File Explorer" and so on.
-      windows <- WindowManager.topLevelWindows.bimap(
+      windows <- WindowManager.topLevelWindows.mapBoth(
                    CommandError.UnexpectedException,
                    _.tail.filter(_.title.contains(input.rest))
                  )

@@ -39,7 +39,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
                    .fold(
                      HelpMessage.formatted,
                      { case (i, chunkType) =>
-                       fansi.Str(s"Will generate ${i} ${chunkType.toString}s to the clipboard")
+                       fansi.Str(s"Will generate $i ${chunkType.toString}s to the clipboard")
                      }
                    )
     } yield {
