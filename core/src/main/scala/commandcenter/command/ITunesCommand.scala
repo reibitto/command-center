@@ -80,7 +80,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
                        case Some(Opt.Seek(seconds)) if seconds >= 0 =>
                          UIO(fansi.Str(s"Skip forward by $seconds seconds"))
                        case Some(Opt.Seek(seconds))                 => UIO(fansi.Str(s"Skip backward by $seconds seconds"))
-                       case Some(Opt.Rate(rating))                  => UIO(fansi.Str(s"Rate track ${rating} stars"))
+                       case Some(Opt.Rate(rating))                  => UIO(fansi.Str(s"Rate track $rating stars"))
                        case Some(Opt.DeleteTrack)                   => UIO(fansi.Str(deleteTrackCommand.header))
                        case Some(Opt.Help)                          => UIO(fansi.Str(itunesCommand.showHelp))
                        case None                                    =>

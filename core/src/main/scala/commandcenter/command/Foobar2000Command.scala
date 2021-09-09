@@ -50,7 +50,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
       opt     <-
         ZIO
           .fromEither(foobarCommand.parse(input.args))
-          .bimap(
+          .mapBoth(
             help => CommandError.ShowMessage(Rendered.Ansi(HelpMessage.formatted(help)), Scores.high(input.context)),
             _.getOrElse(Opt.Show)
           )

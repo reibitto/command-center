@@ -12,12 +12,11 @@ final case class SearchInput(
   context: CommandContext
 ) {
 
-  /**
-   * Parses the search input into tokenized arguments. For example, "myCommand -a 1 "some subcommand" will be parsed as
-   * ["-a", "1", "some subcommand"]. Note that the command name is a separate field and isn't considered an argument.
-   *
-   * Returns Some if the user input matches the command name (also taking into account custom aliases), otherwise None.
-   */
+  /** Parses the search input into tokenized arguments. For example, "myCommand -a 1 "some subcommand" will be parsed as
+    * ["-a", "1", "some subcommand"]. Note that the command name is a separate field and isn't considered an argument.
+    *
+    * Returns Some if the user input matches the command name (also taking into account custom aliases), otherwise None.
+    */
   def asArgs: Option[CommandInput.Args] =
     // TODO: Optimize this. Possibly with collectFirst + an extractor
     (input :: aliasedInputs).flatMap { input =>
@@ -32,12 +31,11 @@ final case class SearchInput(
         None
     }.headOption
 
-  /**
-   * Parses the search input into 2 tokens: a matching prefix and the rest of the input. For example,
-   * "myCommand one two three" will be parsed as ["myCommand", "one two three"].
-   *
-   * Returns Some if the user input matches the prefix (also taking into account custom aliases), otherwise None.
-   */
+  /** Parses the search input into 2 tokens: a matching prefix and the rest of the input. For example, "myCommand one
+    * two three" will be parsed as ["myCommand", "one two three"].
+    *
+    * Returns Some if the user input matches the prefix (also taking into account custom aliases), otherwise None.
+    */
   def asPrefixed: Option[CommandInput.Prefixed] =
     // TODO: Optimize this. Possibly with collectFirst + an extractor
     (input :: aliasedInputs).flatMap { input =>
@@ -53,12 +51,11 @@ final case class SearchInput(
       }
     }.headOption
 
-  /**
-   * Parses the search input into 2 tokens: a matching prefix and the rest of the input (separated by no space). For
-   * example, "!one two three" will be parsed as ["!", "one two three"].
-   *
-   * Returns Some if the user input matches one of prefixes (also taking into account custom aliases), otherwise None.
-   */
+  /** Parses the search input into 2 tokens: a matching prefix and the rest of the input (separated by no space). For
+    * example, "!one two three" will be parsed as ["!", "one two three"].
+    *
+    * Returns Some if the user input matches one of prefixes (also taking into account custom aliases), otherwise None.
+    */
   def asPrefixedQuick(prefixes: String*): Option[CommandInput.Prefixed] =
     prefixes.collectFirst {
       case prefix if input.startsWith(prefix) =>
@@ -67,13 +64,12 @@ final case class SearchInput(
         CommandInput.Prefixed(prefix, rest, context)
     }
 
-  /**
-   * Parses the search input as 1 keyword. This is useful for commands that don't take in arguments, such as "exit".
-   * Prefixes are also matched, but with a lower score. For example, if the command is "exit" and the user types "ex",
-   * this will match but with a lower score than if the user typed "exi" or "exit".
-   *
-   * Returns Some if the user input matches the keyword (also taking into account custom aliases), otherwise None.
-   */
+  /** Parses the search input as 1 keyword. This is useful for commands that don't take in arguments, such as "exit".
+    * Prefixes are also matched, but with a lower score. For example, if the command is "exit" and the user types "ex",
+    * this will match but with a lower score than if the user typed "exi" or "exit".
+    *
+    * Returns Some if the user input matches the keyword (also taking into account custom aliases), otherwise None.
+    */
   def asKeyword: Option[CommandInput.Keyword] =
     scoreInput(input).collect {
       case score if score > 0 => CommandInput.Keyword(input, context.matchScore(score))

@@ -50,7 +50,7 @@ object ProcessUtil {
 
         command.successfulExitCode.unit
 
-      case OS.Windows             =>
+      case OS.Windows =>
         val arg =
           if (file.isDirectory) file.getCanonicalPath
           else s"/select,${file.getAbsolutePath}"
