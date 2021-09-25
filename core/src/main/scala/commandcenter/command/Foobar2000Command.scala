@@ -98,7 +98,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
         .rendered(Renderer.renderDefault(title, message))
     )
 
-  private def trackInfoFromWindow: Task[Option[String]] =
+  private def trackInfoFromWindow: Task[Option[String]]                               =
     Task.effectAsync { cb =>
       User32.INSTANCE.EnumWindows(
         (window: HWND, _: Pointer) => {
@@ -130,7 +130,7 @@ object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
     } yield Foobar2000Command(commandNames.getOrElse(List("foobar", "fb")), foobarPath)
   }
 
-  private def findFoobarPath: ZIO[System, CommandPluginError, File] =
+  private def findFoobarPath: ZIO[System, CommandPluginError, File]                     =
     system
       .env("ProgramFiles(x86)")
       .map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe").toFile).filter(_.exists))

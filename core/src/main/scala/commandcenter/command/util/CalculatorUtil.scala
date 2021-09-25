@@ -31,9 +31,9 @@ final class CalculatorUtil(parameters: Parameters) {
       case _                 => None
     }
 
-  private def expression[_: P]: P[BigDecimal] = P(addSub ~ End)
+  private def expression[_: P]: P[BigDecimal]     = P(addSub ~ End)
 
-  private def addSub[_: P]: P[BigDecimal] =
+  private def addSub[_: P]: P[BigDecimal]         =
     P(unaryPlusMinus ~ (CharIn("+\\-").! ~/ unaryPlusMinus).rep).map(evaluateOperatorSequence)
 
   private def unaryPlusMinus[_: P]: P[BigDecimal] =
@@ -42,17 +42,17 @@ final class CalculatorUtil(parameters: Parameters) {
       case (_, value)         => value
     }
 
-  private def mulDivMod[_: P]: P[BigDecimal] =
+  private def mulDivMod[_: P]: P[BigDecimal]      =
     P(power ~ (CharIn("*/%").! ~/ power).rep).map(evaluateOperatorSequence)
 
   // FIXME evaluating over double, because with pow(BigDecimal, BigDecimal) spire can go into infinite loop
-  private def power[_: P]: P[BigDecimal] =
+  private def power[_: P]: P[BigDecimal]          =
     P((function ~ ("^" ~/ function).?).map {
       case (base, Some(exp)) => math.pow(base.doubleValue, exp.doubleValue)
       case (base, _)         => base
     })
 
-  private def function[_: P]: P[BigDecimal] =
+  private def function[_: P]: P[BigDecimal]       =
     P(
       startsWithTerm | acos | asin | atan2 | atan | ceil | choosePrefixed | cosh | cos | exp | floor | gcd | hypot |
         ln | log | max | min | random | round | sinh | sin | sqrt | tanh | tan | toDeg | toRad
@@ -68,7 +68,7 @@ final class CalculatorUtil(parameters: Parameters) {
                   P(Pass).map(_ => value1)
     } yield value2)
 
-  private def acos[_: P]: P[BigDecimal] = P("acos" ~/ term).map(spire.math.acos(_))
+  private def acos[_: P]: P[BigDecimal]           = P("acos" ~/ term).map(spire.math.acos(_))
 
   private def asin[_: P]: P[BigDecimal] = P("asin" ~/ term).map(spire.math.asin(_))
 
@@ -79,7 +79,7 @@ final class CalculatorUtil(parameters: Parameters) {
       spire.math.atan2(y, x)
     }
 
-  private def ceil[_: P]: P[BigDecimal] = P("ceil" ~/ term).map(spire.math.ceil)
+  private def ceil[_: P]: P[BigDecimal]  = P("ceil" ~/ term).map(spire.math.ceil)
 
   private def choosePrefixed[_: P]: P[BigDecimal] =
     P("choose" ~/ multipleParametersParser(2)).filter { case Seq(n, r) =>
@@ -88,7 +88,7 @@ final class CalculatorUtil(parameters: Parameters) {
       binomial(n, r)
     }
 
-  private def cos[_: P]: P[BigDecimal] = P("cos" ~/ term).map(spire.math.cos(_))
+  private def cos[_: P]: P[BigDecimal]            = P("cos" ~/ term).map(spire.math.cos(_))
 
   private def cosh[_: P]: P[BigDecimal] = P("cosh" ~/ term).map(spire.math.cosh(_))
 
@@ -96,7 +96,7 @@ final class CalculatorUtil(parameters: Parameters) {
 
   private def floor[_: P]: P[BigDecimal] = P("floor" ~/ term).map(spire.math.floor)
 
-  private def gcd[_: P]: P[BigDecimal] =
+  private def gcd[_: P]: P[BigDecimal]   =
     P("gcd" ~/ multipleParametersParser(2)).filter { case Seq(a, b) =>
       a.isWhole && b.isWhole
     }.map { case Seq(a, b) =>
@@ -128,7 +128,7 @@ final class CalculatorUtil(parameters: Parameters) {
     } |
       P("random").map(_ => Uniform(BigDecimal(0.0), BigDecimal(1.0)).apply(randomGenerator))
 
-  private def round[_: P]: P[BigDecimal] = P("round" ~/ term).map(spire.math.round)
+  private def round[_: P]: P[BigDecimal]  = P("round" ~/ term).map(spire.math.round)
 
   private def sin[_: P]: P[BigDecimal] = P("sin" ~/ term).map(spire.math.sin(_))
 
@@ -155,7 +155,7 @@ final class CalculatorUtil(parameters: Parameters) {
       case number: java.math.BigDecimal => BigDecimal(number)
     })
 
-  private def const[_: P]: P[BigDecimal] = P(IgnoreCase("pi").map(_ => spire.math.pi))
+  private def const[_: P]: P[BigDecimal]  = P(IgnoreCase("pi").map(_ => spire.math.pi))
 
   private def parens[_: P]: P[BigDecimal] = P("(" ~/ addSub ~ ")")
 
@@ -177,7 +177,7 @@ object CalculatorUtil {
       "random"
     ).mkString("\n")
 
-  def helpMessageParametersList: String =
+  def helpMessageParametersList: String                                                           =
     List(
       "",
       "decimalSeparator:      Char    (e.g. \",\")",
@@ -201,7 +201,7 @@ object CalculatorUtil {
     }
   }
 
-  private def isWholeNonNegative(b: BigDecimal) = b.isWhole && b >= 0
+  private def isWholeNonNegative(b: BigDecimal)                                                   = b.isWhole && b >= 0
 
   private def binomial(n: BigDecimal, r: BigDecimal): BigDecimal = {
     @tailrec
@@ -213,7 +213,7 @@ object CalculatorUtil {
     BigDecimal(binomialRec(n.toBigInt, r2.toBigInt, 0, 1))
   }
 
-  private def factorial(b: BigDecimal): BigDecimal = {
+  private def factorial(b: BigDecimal): BigDecimal               = {
     @tailrec
     def factorialRec(b: BigInt, acc: BigInt): BigInt = if (b <= 1) acc else factorialRec(b - 1, b * acc)
 

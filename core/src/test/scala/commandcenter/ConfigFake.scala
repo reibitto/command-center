@@ -6,7 +6,7 @@ import zio.duration._
 import zio.{ Has, RIO, UIO, ULayer, ZLayer }
 
 final case class ConfigFake() extends Conf {
-  def config: UIO[CCConfig] = UIO(
+  def config: UIO[CCConfig]                      = UIO(
     CCConfig(
       commands = Vector.empty,
       aliases = Map.empty,

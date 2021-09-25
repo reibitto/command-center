@@ -79,7 +79,7 @@ final case class SwingTerminal(
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
 
   outputScrollPane.getVerticalScrollBar.setUI(new BasicScrollBarUI() {
-    val emptyButton: JButton = {
+    val emptyButton: JButton                                     = {
       val button = new JButton()
       button.setPreferredSize(new Dimension(0, 0))
       button.setMinimumSize(new Dimension(0, 0))
@@ -117,7 +117,7 @@ final case class SwingTerminal(
     } yield ()
   }
 
-  def init: RIO[Env, Unit] =
+  def init: RIO[Env, Unit]                                         =
     for {
       opacity <- Conf.get(_.display.opacity)
       _       <- setOpacity(opacity)

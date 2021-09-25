@@ -24,12 +24,12 @@ trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
     ) ++ ConfigFake.layer
   }
 
-  val defaultCommandContext: CommandContext =
+  val defaultCommandContext: CommandContext                              =
     CommandContext(Locale.ENGLISH, TestTerminal, 1.0)
 
   override def aspects: List[TestAspect[Nothing, TestEnv, Nothing, Any]] =
     List(TestAspect.timeoutWarning(60.seconds))
 
-  override def runner: TestRunner[TestEnv, Any] =
+  override def runner: TestRunner[TestEnv, Any]                          =
     TestRunner(TestExecutor.default(testEnv.!))
 }

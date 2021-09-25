@@ -9,7 +9,7 @@ trait Conf {
   def reload: RIO[PartialEnv, CCConfig]
 }
 
-object Conf {
+object Conf      {
   def get[A](f: CCConfig => A): URIO[Has[Conf], A] = config.map(f)
 
   def config: URIO[Has[Conf], CCConfig] = ZIO.serviceWith[Conf](_.config)

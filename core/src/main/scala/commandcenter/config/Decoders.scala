@@ -9,7 +9,7 @@ import java.time.format.{ DateTimeFormatter, FormatStyle }
 import scala.util.Try
 
 object Decoders {
-  implicit val fontDecoder: Decoder[Font] =
+  implicit val fontDecoder: Decoder[Font]                                        =
     Decoder.instance { c =>
       for {
         name <- c.get[String]("name")
@@ -17,11 +17,11 @@ object Decoders {
       } yield new Font(name, Font.PLAIN, size) // TODO: Also support style
     }
 
-  implicit val pathDecoder: Decoder[Path] = Decoder.decodeString.emap { s =>
+  implicit val pathDecoder: Decoder[Path]                                        = Decoder.decodeString.emap { s =>
     Try(Paths.get(s)).toEither.left.map(_.getMessage)
   }
 
-  implicit val fileDecoder: Decoder[File] = Decoder.decodeString.emap { s =>
+  implicit val fileDecoder: Decoder[File]                                        = Decoder.decodeString.emap { s =>
     Try(new File(s)).toEither.left.map(_.getMessage)
   }
 
@@ -31,7 +31,7 @@ object Decoders {
     }.toEither.left.map(_.getMessage)
   }
 
-  implicit val dateTimeFormatterDecoder: Decoder[DateTimeFormatter] = Decoder.decodeString.emap { s =>
+  implicit val dateTimeFormatterDecoder: Decoder[DateTimeFormatter]              = Decoder.decodeString.emap { s =>
     if (s.equalsIgnoreCase("short")) Right(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT))
     else if (s.equalsIgnoreCase("medium")) Right(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
     else if (s.equalsIgnoreCase("long")) Right(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG))

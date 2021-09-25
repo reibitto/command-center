@@ -21,7 +21,7 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
       Preview.unit.onRun(pCommand.exitCode.unit).score(Scores.high(input.context))
     )
 
-  private def pCommand: PCommand =
+  private def pCommand: PCommand                                                      =
     OS.os match {
       case OS.MacOS => PCommand("pmset", "displaysleepnow")
       case _        => PCommand("rundll32", "user32.dll,LockWorkStation")

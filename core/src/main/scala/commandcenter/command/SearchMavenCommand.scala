@@ -21,7 +21,7 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
 
   val scalaArtifactRegex: Regex = "(.+?)(_[02].\\d+)".r
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]]                            =
     for {
       input          <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
       request         = basicRequest

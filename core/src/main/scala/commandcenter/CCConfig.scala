@@ -66,14 +66,14 @@ object CCConfig {
       _    <- effectBlocking(ConfigFactory.parseFile(file))
     } yield ()
 
-  private def envConfigFile: ZIO[System, Option[SecurityException], File] =
+  private def envConfigFile: ZIO[System, Option[SecurityException], File]     =
     for {
       configPathOpt <- zio.system.env("COMMAND_CENTER_CONFIG_PATH").asSomeError
       configPath    <- ZIO.fromOption(configPathOpt)
       file           = new File(configPath)
     } yield if (file.isDirectory) new File(file, "application.conf") else file
 
-  private def homeConfigFile: ZIO[System, Option[Throwable], File] =
+  private def homeConfigFile: ZIO[System, Option[Throwable], File]            =
     for {
       userHome     <- zio.system.propertyOrElse("user.home", "").asSomeError
       potentialFile = new File(userHome, "/.command-center/application.conf")

@@ -25,7 +25,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
       PreviewResults.one(Preview.unit.onRun(run).score(Scores.high(input.context)))
     }
 
-  private def runMacOS: ZIO[Blocking, PCommandError, Unit] =
+  private def runMacOS: ZIO[Blocking, PCommandError, Unit]                            =
     for {
       showingAll <- PCommand("defaults", "read", "com.apple.finder", "AppleShowAllFiles").string.map(_.trim == "1")
       _          <- PCommand(
@@ -39,7 +39,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
       _          <- PCommand("killall", "Finder").exitCode
     } yield ()
 
-  private def runWindows: ZIO[Blocking, PCommandError, Unit] =
+  private def runWindows: ZIO[Blocking, PCommandError, Unit]                          =
     for {
       showingAllFlag <-
         PCommand(

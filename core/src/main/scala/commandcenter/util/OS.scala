@@ -12,7 +12,7 @@ object OS extends Enum[OS] {
   case object Linux                    extends OS
   final case class Other(name: String) extends OS
 
-  lazy val os: OS = {
+  lazy val os: OS                 = {
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
 
     if (osName.contains("mac") || osName.contains("darwin"))

@@ -70,7 +70,7 @@ final case class SearchInput(
     *
     * Returns Some if the user input matches the keyword (also taking into account custom aliases), otherwise None.
     */
-  def asKeyword: Option[CommandInput.Keyword] =
+  def asKeyword: Option[CommandInput.Keyword]          =
     scoreInput(input).collect {
       case score if score > 0 => CommandInput.Keyword(input, context.matchScore(score))
     }

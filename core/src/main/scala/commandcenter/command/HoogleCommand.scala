@@ -48,7 +48,7 @@ object HoogleCommand extends CommandPlugin[HoogleCommand] {
   )
 
   object HoogleResult {
-    implicit val decoder: Decoder[HoogleResult] = Decoder.instance { c =>
+    implicit val decoder: Decoder[HoogleResult]    = Decoder.instance { c =>
       for {
         url       <- c.get[String]("url")
         item      <- c.get[String]("item")

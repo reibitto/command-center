@@ -45,7 +45,7 @@ object KeyboardShortcut {
           Invalid(NonEmptyList.fromListUnsafe(errors.toList))
     }
 
-  implicit val keyboardShortcutDecoder: Decoder[KeyboardShortcut] = Decoder.decodeString.emap { s =>
+  implicit val keyboardShortcutDecoder: Decoder[KeyboardShortcut]          = Decoder.decodeString.emap { s =>
     if (s.isEmpty)
       Right(KeyboardShortcut.empty)
     else

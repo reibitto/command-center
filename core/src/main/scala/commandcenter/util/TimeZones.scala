@@ -6,7 +6,7 @@ import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 object TimeZones {
-  def get(zone: String): Option[ZoneId] = {
+  def get(zone: String): Option[ZoneId]         = {
     val zoneNormalized = zone.toLowerCase(Locale.ENGLISH)
 
     all.get(zoneNormalized).orElse {
@@ -23,7 +23,7 @@ object TimeZones {
     }
   }
 
-  private lazy val all: Map[String, ZoneId] =
+  private lazy val all: Map[String, ZoneId]     =
     ZoneId.getAvailableZoneIds.asScala.map { z =>
       z.toLowerCase(Locale.ENGLISH) -> ZoneId.of(z)
     }.toMap ++ aliases

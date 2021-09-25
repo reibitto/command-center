@@ -3,7 +3,7 @@ import sbt.Keys._
 import sbt._
 import sbtwelcome._
 
-lazy val root = project
+lazy val root                        = project
   .in(file("."))
   .aggregate(
     core,
@@ -45,7 +45,7 @@ lazy val root = project
     )
   )
 
-lazy val core = module("core")
+lazy val core                        = module("core")
   .settings(
     libraryDependencies ++= Seq(
       "dev.zio"                       %% "zio"                    % Version.zio,
@@ -77,7 +77,7 @@ lazy val core = module("core")
   )
   .enablePlugins(BuildInfoPlugin)
 
-lazy val coreUI = module("core-ui")
+lazy val coreUI                      = module("core-ui")
   .dependsOn(core)
   .settings(
     libraryDependencies ++= Seq(
@@ -85,7 +85,7 @@ lazy val coreUI = module("core-ui")
     )
   )
 
-lazy val cli = module("cli")
+lazy val cli                         = module("cli")
   .dependsOn(coreUI)
   .settings(
     fork                             := true,
@@ -130,7 +130,7 @@ def optionalPlugin(project: Project): Option[ClasspathDependency] = {
   cp
 }
 
-lazy val emulatorCore = module("emulator-core")
+lazy val emulatorCore                                             = module("emulator-core")
   .dependsOn(coreUI)
   .dependsOn(
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
@@ -144,7 +144,7 @@ lazy val emulatorCore = module("emulator-core")
     )
   )
 
-lazy val emulatorSwt = module("emulator-swt")
+lazy val emulatorSwt                                              = module("emulator-swt")
   .dependsOn(emulatorCore)
   .dependsOn(
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
@@ -164,7 +164,7 @@ lazy val emulatorSwt = module("emulator-swt")
     libraryDependencies ++= swtDependencies
   )
 
-lazy val emulatorSwing = module("emulator-swing")
+lazy val emulatorSwing                                            = module("emulator-swing")
   .dependsOn(emulatorCore)
   .dependsOn(
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
@@ -181,14 +181,14 @@ lazy val emulatorSwing = module("emulator-swing")
     }
   )
 
-lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
+lazy val strokeOrderPlugin                                        = module("stroke-order-plugin", Some("extras/stroke-order"))
   .dependsOn(core)
 
-lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
+lazy val jectPlugin                                               = module("ject-plugin", Some("extras/ject"))
   .dependsOn(core)
   .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.2.0"))
 
-lazy val extras     = project
+lazy val extras                                                   = project
   .in(file("extras"))
   .aggregate(strokeOrderPlugin, jectPlugin)
 

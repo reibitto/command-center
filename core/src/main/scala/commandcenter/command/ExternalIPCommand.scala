@@ -22,7 +22,7 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
         .onRun(Tools.setClipboard(externalIP))
     )
 
-  private def getExternalIP: ZIO[Blocking, CommandError, String] =
+  private def getExternalIP: ZIO[Blocking, CommandError, String]                        =
     OS.os match {
       case OS.Windows =>
         val prefix = "Address:"

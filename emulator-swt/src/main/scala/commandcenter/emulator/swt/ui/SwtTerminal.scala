@@ -129,7 +129,7 @@ final case class SwtTerminal(
     })
   }
 
-  private def renderSelectionCursor(cursorDelta: Int): UIO[Unit] =
+  private def renderSelectionCursor(cursorDelta: Int): UIO[Unit]               =
     for {
       commandCursor <- commandCursorRef.get
       textIndex      = smartBuffer.lineStartIndices(commandCursor)

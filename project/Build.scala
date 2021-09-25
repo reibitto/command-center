@@ -76,7 +76,7 @@ object Build {
       Test / logBuffered       := false
     )
 
-  lazy val Resolvers = Seq(
+  lazy val Resolvers                       = Seq(
     // Order of resolvers affects resolution time. More general purpose repositories should come first.
     Resolver.sonatypeRepo("releases"),
     Resolver.typesafeRepo("releases"),
@@ -99,7 +99,7 @@ object Build {
     flagValue
   }
 
-  lazy val shouldOptimize: Boolean = compilerFlag("scalac.optimize", false)
+  lazy val shouldOptimize: Boolean                         = compilerFlag("scalac.optimize", false)
 
   lazy val shouldWarnForUnusedCode: Boolean = compilerFlag("scalac.unused.enabled", false)
 

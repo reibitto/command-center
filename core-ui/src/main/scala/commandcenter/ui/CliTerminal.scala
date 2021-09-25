@@ -298,7 +298,7 @@ final case class CliTerminal[T <: Terminal](
 }
 
 object CliTerminal {
-  def createNative: RManaged[Has[Conf], CliTerminal[Terminal]] =
+  def createNative: RManaged[Has[Conf], CliTerminal[Terminal]]                                                   =
     create {
       val terminalFactory = new DefaultTerminalFactory()
 

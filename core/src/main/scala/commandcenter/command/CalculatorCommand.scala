@@ -28,10 +28,10 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
     case arg                               => Validated.invalidNel(s"$arg is not valid: should be 'functions' or 'parameters'.")
   }
 
-  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
+  def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]]                   =
     previewHelp(searchInput) <> previewEvaluation(searchInput)
 
-  private def previewHelp(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
+  private def previewHelp(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]]       =
     for {
       input                <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed                = decline.Command(title, title)(helpTypeOpt).parse(input.args)
@@ -64,7 +64,7 @@ object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
   def make(config: Config): Managed[CommandPluginError, CalculatorCommand] =
     ZIO.fromEither(config.as[CalculatorCommand]).mapError(CommandPluginError.UnexpectedException).toManaged_
 
-  implicit val decoder: Decoder[CalculatorCommand] = Decoder.instance { c =>
+  implicit val decoder: Decoder[CalculatorCommand]                         = Decoder.instance { c =>
     val decimalFormat        = new DecimalFormat()
     val decimalFormatSymbols = decimalFormat.getDecimalFormatSymbols
     for {
@@ -96,7 +96,7 @@ object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
     val title: String
   }
 
-  case object FunctionsList extends HelpType {
+  case object FunctionsList  extends HelpType {
     override val title: String = "List of all operators/functions"
   }
 
