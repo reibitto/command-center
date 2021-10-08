@@ -10,6 +10,6 @@ object CommonArgs {
       try Validated.valid(Duration.fromScala(scala.concurrent.duration.Duration(string)))
       catch { case _: IllegalArgumentException => Validated.invalidNel(s"Invalid Duration: $string") }
 
-    override def defaultMetavar: String                               = "duration"
+    override def defaultMetavar: String = "duration"
   }
 }
