@@ -50,16 +50,16 @@ lazy val core = module("core")
     libraryDependencies ++= Seq(
       "dev.zio"                       %% "zio"                    % Version.zio,
       "dev.zio"                       %% "zio-streams"            % Version.zio,
-      "dev.zio"                       %% "zio-prelude"            % "1.0.0-RC6",
+      "dev.zio"                       %% "zio-prelude"            % "1.0.0-RC8",
       "dev.zio"                       %% "zio-process"            % "0.5.0",
-      "dev.zio"                       %% "zio-logging"            % "0.5.12",
+      "dev.zio"                       %% "zio-logging"            % "0.5.14",
       "dev.zio"                       %% "zio-cache"              % "0.1.0",
-      "io.github.kitlangton"          %% "zio-magic"              % "0.3.8",
-      "org.scala-lang"                 % "scala-reflect"          % "2.13.6",
+      "io.github.kitlangton"          %% "zio-magic"              % "0.3.11",
+      "org.scala-lang"                 % "scala-reflect"          % "2.13.7",
       "io.circe"                      %% "circe-core"             % Version.circe,
       "io.circe"                      %% "circe-parser"           % Version.circe,
       "io.circe"                      %% "circe-config"           % "0.8.0",
-      "com.monovore"                  %% "decline"                % "2.1.0",
+      "com.monovore"                  %% "decline"                % "2.2.0",
       "com.lihaoyi"                   %% "fansi"                  % "0.2.14",
       "com.beachape"                  %% "enumeratum"             % Version.enumeratum,
       "com.beachape"                  %% "enumeratum-circe"       % Version.enumeratum,
@@ -188,7 +188,7 @@ lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
   .dependsOn(core)
   .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.2.0"))
 
-lazy val extras     = project
+lazy val extras = project
   .in(file("extras"))
   .aggregate(strokeOrderPlugin, jectPlugin)
 
