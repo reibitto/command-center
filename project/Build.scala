@@ -13,7 +13,7 @@ object Build {
     val circe      = "0.14.1"
     val sttp       = "3.3.17"
     val graal      = "20.2.0"
-    val swt        = "3.117.0"
+    val swt        = "3.118.0"
     val jna        = "5.10.0"
 
     // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
