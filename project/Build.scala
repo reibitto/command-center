@@ -3,7 +3,7 @@ import Keys._
 import scala.Console
 
 object Build {
-  val ScalaVersion = "2.13.5"
+  val ScalaVersion = "2.13.8"
 
   val CommandCenterVersion = "0.0.1"
 
