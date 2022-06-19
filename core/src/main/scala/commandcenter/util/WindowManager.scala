@@ -99,7 +99,7 @@ object WindowManager {
     val windowPlacement = new WINDOWPLACEMENT()
     User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
 
-    if (windowPlacement.showCmd == WinUser.SW_SHOWMINIMIZED || windowPlacement.showCmd == WinUser.SW_MINIMIZE) {
+    if (windowPlacement.showCmd == WinUser.SW_SHOWMAXIMIZED) {
       User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
     } else {
       User32.INSTANCE.ShowWindow(window, WinUser.SW_MAXIMIZE)
@@ -164,7 +164,7 @@ object WindowManager {
 
   def moveToPreviousDisplay: Task[Unit] = moveToDisplay(-1)
 
-  def moveToDisplay(step: Int): Task[Unit] = Task {
+  def moveToDisplay(delta: Int): Task[Unit] = Task {
     val window  = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -192,11 +192,7 @@ object WindowManager {
 
     val currentMonitorIndex = monitors.indexWhere(m => util.Arrays.equals(m.szDevice, currentMonitor.szDevice))
 
-    val nextMonitorIndex = if (step > 0) {
-      (currentMonitorIndex + step) % monitors.length
-    } else {
-      (monitors.length - currentMonitorIndex - step) % monitors.length
-    }
+    val nextMonitorIndex = (currentMonitorIndex + delta + monitors.length) % monitors.length
 
     val nextMonitor = monitors(nextMonitorIndex)
 
