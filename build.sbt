@@ -52,7 +52,7 @@ lazy val core = module("core")
       "dev.zio"                       %% "zio-streams"            % Version.zio,
       "dev.zio"                       %% "zio-prelude"            % "1.0.0-RC8",
       "dev.zio"                       %% "zio-process"            % "0.6.1",
-      "dev.zio"                       %% "zio-logging"            % "0.5.14",
+      "dev.zio"                       %% "zio-logging"            % "2.0.0",
       "dev.zio"                       %% "zio-cache"              % "0.1.1",
       "io.github.kitlangton"          %% "zio-magic"              % "0.3.11",
       "org.scala-lang"                 % "scala-reflect"          % "2.13.7",
