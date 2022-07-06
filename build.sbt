@@ -67,7 +67,7 @@ lazy val core = module("core")
       "com.softwaremill.sttp.client3" %% "circe"                  % Version.sttp,
       "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Version.sttp,
       "com.lihaoyi"                   %% "fastparse"              % "2.3.3",
-      "org.typelevel"                 %% "spire"                  % "0.17.0",
+      "org.typelevel"                 %% "spire"                  % "0.18.0",
       "net.java.dev.jna"               % "jna"                    % Version.jna,
       "net.java.dev.jna"               % "jna-platform"           % Version.jna,
       "org.ocpsoft.prettytime"         % "prettytime-nlp"         % "5.0.2.Final"
