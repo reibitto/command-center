@@ -53,13 +53,13 @@ lazy val core = module("core")
       "dev.zio"                       %% "zio-prelude"            % "1.0.0-RC8",
       "dev.zio"                       %% "zio-process"            % "0.6.1",
       "dev.zio"                       %% "zio-logging"            % "0.5.14",
-      "dev.zio"                       %% "zio-cache"              % "0.1.1",
+      "dev.zio"                       %% "zio-cache"              % "0.1.2",
       "io.github.kitlangton"          %% "zio-magic"              % "0.3.11",
       "org.scala-lang"                 % "scala-reflect"          % "2.13.7",
       "io.circe"                      %% "circe-core"             % Version.circe,
       "io.circe"                      %% "circe-parser"           % Version.circe,
       "io.circe"                      %% "circe-config"           % "0.8.0",
-      "com.monovore"                  %% "decline"                % "2.2.0",
+      "com.monovore"                  %% "decline"                % "2.3.0",
       "com.lihaoyi"                   %% "fansi"                  % "0.2.14",
       "com.beachape"                  %% "enumeratum"             % Version.enumeratum,
       "com.beachape"                  %% "enumeratum-circe"       % Version.enumeratum,
@@ -70,7 +70,7 @@ lazy val core = module("core")
       "org.typelevel"                 %% "spire"                  % "0.17.0",
       "net.java.dev.jna"               % "jna"                    % Version.jna,
       "net.java.dev.jna"               % "jna-platform"           % Version.jna,
-      "org.ocpsoft.prettytime"         % "prettytime-nlp"         % "5.0.2.Final"
+      "org.ocpsoft.prettytime"         % "prettytime-nlp"         % "5.0.3.Final"
     ),
     buildInfoKeys    := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
