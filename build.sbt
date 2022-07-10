@@ -70,7 +70,7 @@ lazy val core = module("core")
       "org.typelevel"                 %% "spire"                  % "0.17.0",
       "net.java.dev.jna"               % "jna"                    % Version.jna,
       "net.java.dev.jna"               % "jna-platform"           % Version.jna,
-      "org.ocpsoft.prettytime"         % "prettytime-nlp"         % "5.0.2.Final"
+      "org.ocpsoft.prettytime"         % "prettytime-nlp"         % "5.0.3.Final"
     ),
     buildInfoKeys    := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
