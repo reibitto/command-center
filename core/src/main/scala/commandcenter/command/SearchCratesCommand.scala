@@ -75,7 +75,7 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
       s"""$name = "$maxVersion""""
 
     def renderColored: fansi.Str =
-      fansi.Str.join(
+      fansi.Str(
         fansi.Color.Cyan(name),
         fansi.Color.LightGray(" = "),
         fansi.Color.Green(s""""$maxVersion""""),

@@ -32,7 +32,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       Preview.unit
         .score(Scores.high(input.context))
         .renderedAnsi(
-          fansi.Str.join(
+          fansi.Str(
             fansi.Color.Cyan(stock.ticker),
             fansi.Color.LightCyan(s" (${stock.name}) "),
             String.format("%.2f", stock.price),

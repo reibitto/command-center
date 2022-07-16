@@ -23,7 +23,7 @@ import scala.annotation.tailrec
 final class CalculatorUtil(parameters: Parameters) {
   import CalculatorUtil.*
 
-  private val randomGenerator = Random.initGenerator()
+  private val randomGenerator = Random.initGenerator
 
   def evaluate(input: String): Option[BigDecimal] =
     parse(input, expression(_)) match {

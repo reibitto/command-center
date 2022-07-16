@@ -102,7 +102,7 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
     def renderColored: fansi.Str = {
       val groupSeparator = if (isScala) " %% " else " % "
 
-      fansi.Str.join(
+      fansi.Str(
         fansi.Color.Green(artifact.groupId),
         fansi.Color.LightGray(groupSeparator),
         fansi.Color.Green(artifactBase),
