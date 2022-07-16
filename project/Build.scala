@@ -3,7 +3,7 @@ import Keys._
 import scala.Console
 
 object Build {
-  val ScalaVersion = "2.13.5"
+  val ScalaVersion = "2.13.8"
 
   val CommandCenterVersion = "0.0.1"
 
@@ -30,6 +30,7 @@ object Build {
     "-language:postfixOps",
     "-language:implicitConversions",
     "-language:higherKinds",
+    "-Xsource:3",
     "-Xfatal-warnings",
     "-Ymacro-annotations",
     "-Xlint:nullary-unit",           // Warn when nullary methods return Unit.
@@ -76,14 +77,10 @@ object Build {
       Test / logBuffered       := false
     )
 
-  lazy val Resolvers = Seq(
-    // Order of resolvers affects resolution time. More general purpose repositories should come first.
-    Resolver.sonatypeRepo("releases"),
-    Resolver.typesafeRepo("releases"),
-    Resolver.jcenterRepo,
-    Resolver.sonatypeRepo("snapshots"),
-    Resolver.mavenLocal
-  )
+  // Order of resolvers affects resolution time. More general purpose repositories should come first.
+  lazy val Resolvers =
+    Resolver.sonatypeOssRepos("releases") ++ Seq(Resolver.typesafeRepo("releases"), Resolver.jcenterRepo) ++ Resolver
+      .sonatypeOssRepos("snapshots") :+ Resolver.mavenLocal
 
   def compilerOption(key: String): Option[String] =
     sys.props.get(key).orElse {
