@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
 import zio.{Managed, ZIO}
-import zio.process.{Command as PCommand}
+import zio.process.Command as PCommand
 
 final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleDesktopIconsCommand

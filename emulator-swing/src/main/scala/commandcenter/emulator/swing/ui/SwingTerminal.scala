@@ -21,10 +21,10 @@ import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.{DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext}
 
 final case class SwingTerminal(
-    commandCursorRef: Ref[Int],
-    searchResultsRef: Ref[SearchResults[Any]],
-    searchDebouncer: Debouncer[Env, Nothing, Unit],
-    closePromise: Promise[Nothing, Unit]
+  commandCursorRef: Ref[Int],
+  searchResultsRef: Ref[SearchResults[Any]],
+  searchDebouncer: Debouncer[Env, Nothing, Unit],
+  closePromise: Promise[Nothing, Unit]
 )(implicit runtime: Runtime[Env])
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swing
@@ -276,9 +276,9 @@ final case class SwingTerminal(
     }
 
   def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
   ): RIO[Env, Unit] =
     for {
       cursorIndex <- commandCursorRef.get

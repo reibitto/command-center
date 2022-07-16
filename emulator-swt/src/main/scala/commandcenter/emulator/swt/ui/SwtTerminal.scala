@@ -22,10 +22,10 @@ import java.awt.Dimension
 import scala.collection.mutable
 
 final case class SwtTerminal(
-    commandCursorRef: Ref[Int],
-    searchResultsRef: Ref[SearchResults[Any]],
-    searchDebouncer: Debouncer[Env, Nothing, Unit],
-    terminal: RawSwtTerminal
+  commandCursorRef: Ref[Int],
+  searchResultsRef: Ref[SearchResults[Any]],
+  searchDebouncer: Debouncer[Env, Nothing, Unit],
+  terminal: RawSwtTerminal
 )(implicit runtime: Runtime[Env])
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swt
@@ -286,9 +286,9 @@ final case class SwtTerminal(
     }
 
   def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
   ): RIO[Env, Unit] =
     for {
       cursorIndex <- commandCursorRef.get

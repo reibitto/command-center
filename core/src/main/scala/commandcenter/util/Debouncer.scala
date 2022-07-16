@@ -5,15 +5,15 @@ import zio.clock.Clock
 import zio.duration.Duration
 
 final case class DebounceState[E, A](
-    running: Fiber[E, A],
-    delay: Promise[Nothing, Unit],
-    completion: Promise[Nothing, Unit],
-    triggered: Boolean
+  running: Fiber[E, A],
+  delay: Promise[Nothing, Unit],
+  completion: Promise[Nothing, Unit],
+  triggered: Boolean
 )
 
 final case class Debouncer[R, E, A](
-    debounceFn: ZIO[R, E, A] => URIO[R with Clock, Fiber[E, A]],
-    stateRef: RefM[Option[DebounceState[E, A]]]
+  debounceFn: ZIO[R, E, A] => URIO[R with Clock, Fiber[E, A]],
+  stateRef: RefM[Option[DebounceState[E, A]]]
 ) {
   def apply(zio: ZIO[R, E, A]): URIO[R with Clock, Fiber[E, A]] = debounceFn(zio)
 

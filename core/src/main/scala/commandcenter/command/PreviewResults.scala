@@ -15,9 +15,9 @@ object PreviewResults {
     PreviewResults.Multiple(Chunk.fromIterable(results))
 
   def paginated[A](
-      stream: ZStream[Env, CommandError, PreviewResult[A]],
-      pageSize: Int,
-      totalRemaining: Option[Long] = None
+    stream: ZStream[Env, CommandError, PreviewResult[A]],
+    pageSize: Int,
+    totalRemaining: Option[Long] = None
   ): PreviewResults[A] =
     PreviewResults.Paginated(stream, pageSize, totalRemaining)
 
@@ -26,8 +26,8 @@ object PreviewResults {
   final case class Multiple[A](results: Chunk[PreviewResult[A]]) extends PreviewResults[A]
 
   final case class Paginated[A](
-      results: ZStream[Env, CommandError, PreviewResult[A]],
-      pageSize: Int,
-      totalRemaining: Option[Long]
+    results: ZStream[Env, CommandError, PreviewResult[A]],
+    pageSize: Int,
+    totalRemaining: Option[Long]
   ) extends PreviewResults[A]
 }

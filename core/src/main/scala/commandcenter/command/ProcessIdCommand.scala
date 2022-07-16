@@ -6,7 +6,7 @@ import commandcenter.util.OS
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.{Managed, ZIO}
-import zio.process.{Command as PCommand}
+import zio.process.Command as PCommand
 
 import scala.util.matching.Regex
 

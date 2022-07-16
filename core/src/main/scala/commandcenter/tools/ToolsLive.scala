@@ -3,7 +3,7 @@ package commandcenter.tools
 import commandcenter.util.AppleScript
 import zio.{Has, Task, TaskLayer, UIO}
 import zio.blocking.Blocking
-import zio.process.{Command as PCommand}
+import zio.process.Command as PCommand
 
 import java.awt.datatransfer.StringSelection
 import java.awt.Toolkit

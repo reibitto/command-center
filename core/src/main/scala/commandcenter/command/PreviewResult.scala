@@ -29,11 +29,11 @@ sealed trait PreviewResult[+A] {
 object PreviewResult {
 
   final case class None(
-      onRun: RIO[Env, Unit],
-      runOption: RunOption,
-      moreResults: MoreResults,
-      score: Double,
-      renderFn: () => Rendered
+    onRun: RIO[Env, Unit],
+    runOption: RunOption,
+    moreResults: MoreResults,
+    score: Double,
+    renderFn: () => Rendered
   ) extends PreviewResult[Nothing] {
     def runOption(runOption: RunOption): PreviewResult[Nothing] = copy(runOption = runOption)
 
@@ -49,13 +49,13 @@ object PreviewResult {
   }
 
   final case class Some[+A](
-      source: Command[A],
-      result: A,
-      onRun: RIO[Env, Unit],
-      runOption: RunOption,
-      moreResults: MoreResults,
-      score: Double,
-      renderFn: () => Rendered
+    source: Command[A],
+    result: A,
+    onRun: RIO[Env, Unit],
+    runOption: RunOption,
+    moreResults: MoreResults,
+    score: Double,
+    renderFn: () => Rendered
   ) extends PreviewResult[A] {
     def runOption(runOption: RunOption): PreviewResult[A] = copy(runOption = runOption)
 

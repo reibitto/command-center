@@ -12,7 +12,7 @@ import commandcenter.util.WindowManager.fromCString
 import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.{Env, PartialEnv}
 import zio.{system, Task, UIO, ZIO, ZManaged}
-import zio.process.{Command as PCommand}
+import zio.process.Command as PCommand
 import zio.system.System
 
 import java.io.File

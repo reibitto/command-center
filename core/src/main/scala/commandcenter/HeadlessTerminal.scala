@@ -23,7 +23,7 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
   def reload: RIO[Env, Unit] = ZIO.unit
 
   def search(commands: Vector[Command[Any]], aliases: Map[String, List[String]])(
-      searchTerm: String
+    searchTerm: String
   ): URIO[Env, SearchResults[Any]] = {
     val context = CommandContext(Language.detect(searchTerm), this, 1.0)
 
@@ -45,9 +45,9 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
     } yield previewResult
 
   def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
   ): RIO[Env, Unit] =
     ZIO.unit
 }

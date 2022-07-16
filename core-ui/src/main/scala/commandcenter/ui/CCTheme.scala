@@ -4,24 +4,24 @@ import java.awt.Color
 
 // TODO: Add scrollbar colors
 final case class CCTheme(
-    background: Color,
-    foreground: Color,
-    black: Color,
-    red: Color,
-    green: Color,
-    yellow: Color,
-    blue: Color,
-    magenta: Color,
-    cyan: Color,
-    lightGray: Color,
-    darkGray: Color,
-    lightRed: Color,
-    lightGreen: Color,
-    lightYellow: Color,
-    lightBlue: Color,
-    lightMagenta: Color,
-    lightCyan: Color,
-    white: Color
+  background: Color,
+  foreground: Color,
+  black: Color,
+  red: Color,
+  green: Color,
+  yellow: Color,
+  blue: Color,
+  magenta: Color,
+  cyan: Color,
+  lightGray: Color,
+  darkGray: Color,
+  lightRed: Color,
+  lightGreen: Color,
+  lightYellow: Color,
+  lightBlue: Color,
+  lightMagenta: Color,
+  lightCyan: Color,
+  white: Color
 ) {
 
   def fromFansiColorCode(colorCode: Int): Option[Color] =

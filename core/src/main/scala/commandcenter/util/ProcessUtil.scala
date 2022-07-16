@@ -2,7 +2,7 @@ package commandcenter.util
 
 import zio.{RIO, UIO, ZIO}
 import zio.blocking.{Blocking, *}
-import zio.process.{Command as PCommand}
+import zio.process.Command as PCommand
 
 import java.awt.Desktop
 import java.io.File

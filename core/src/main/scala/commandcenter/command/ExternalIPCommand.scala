@@ -6,7 +6,7 @@ import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
 import zio.{Managed, ZIO}
 import zio.blocking.Blocking
-import zio.process.{Command as PCommand}
+import zio.process.Command as PCommand
 
 final case class ExternalIPCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.ExternalIPCommand

@@ -4,9 +4,9 @@ import commandcenter.view.Rendered
 import zio.Chunk
 
 final case class SearchResults[A](
-    searchTerm: String,
-    previews: Chunk[PreviewResult[A]],
-    errors: Chunk[CommandError] = Chunk.empty
+  searchTerm: String,
+  previews: Chunk[PreviewResult[A]],
+  errors: Chunk[CommandError] = Chunk.empty
 ) {
   lazy val rendered: Chunk[Rendered] = previews.map(_.renderFn())
 

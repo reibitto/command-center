@@ -6,10 +6,10 @@ import commandcenter.CommandContext
 import scala.collection.mutable.ArrayBuffer
 
 final case class SearchInput(
-    input: String,
-    aliasedInputs: List[String],
-    commandNames: List[String],
-    context: CommandContext
+  input: String,
+  aliasedInputs: List[String],
+  commandNames: List[String],
+  context: CommandContext
 ) {
 
   /**

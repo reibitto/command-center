@@ -14,11 +14,11 @@ import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 final case class SearchUrlCommand(
-    title: String,
-    urlTemplate: String,
-    override val commandNames: List[String] = List.empty,
-    override val locales: Set[Locale] = Set.empty,
-    override val shortcuts: Set[KeyboardShortcut] = Set.empty
+  title: String,
+  urlTemplate: String,
+  override val commandNames: List[String] = List.empty,
+  override val locales: Set[Locale] = Set.empty,
+  override val shortcuts: Set[KeyboardShortcut] = Set.empty
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchUrlCommand
 

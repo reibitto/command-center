@@ -11,7 +11,7 @@ import commandcenter.CCRuntime.{Env, PartialEnv}
 import zio.{RIO, ZIO, ZManaged}
 import zio.blocking.Blocking
 import zio.logging.log
-import zio.process.{Command as PCommand}
+import zio.process.Command as PCommand
 
 final case class SuspendProcessCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand

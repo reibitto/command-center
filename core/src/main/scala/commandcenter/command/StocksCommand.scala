@@ -53,12 +53,12 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
 object StocksCommand extends CommandPlugin[StocksCommand] {
 
   final case class StocksResult(
-      ticker: String,
-      name: String,
-      price: Double,
-      currency: String,
-      change: Double,
-      changePercent: Double
+    ticker: String,
+    name: String,
+    price: Double,
+    currency: String,
+    change: Double,
+    changePercent: Double
   )
 
   final case class Ticker(id: String)

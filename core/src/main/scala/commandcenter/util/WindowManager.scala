@@ -108,7 +108,7 @@ object WindowManager {
   }
 
   def cycleWindowSize(cycleWindowStateRef: Ref[Option[CycleWindowState]])(step: Int, name: String)(
-      boundsList: Vector[WindowBounds]
+    boundsList: Vector[WindowBounds]
   ): RIO[Clock, Unit] =
     for {
       cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))

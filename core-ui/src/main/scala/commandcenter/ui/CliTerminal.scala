@@ -19,16 +19,16 @@ import zio.stream.ZSink
 import java.awt.Dimension
 
 final case class CliTerminal[T <: Terminal](
-    terminal: T,
-    screen: TerminalScreen,
-    graphics: TextGraphics,
-    commandCursorRef: Ref[Int],
-    textCursorRef: Ref[TextCursor],
-    searchResultsRef: Ref[SearchResults[Any]],
-    keyHandlersRef: Ref[Map[KeyStroke, URIO[Env, EventResult]]],
-    searchDebouncer: Debouncer[Env, Nothing, Unit],
-    renderQueue: Queue[SearchResults[Any]],
-    buffer: StringBuilder
+  terminal: T,
+  screen: TerminalScreen,
+  graphics: TextGraphics,
+  commandCursorRef: Ref[Int],
+  textCursorRef: Ref[TextCursor],
+  searchResultsRef: Ref[SearchResults[Any]],
+  keyHandlersRef: Ref[Map[KeyStroke, URIO[Env, EventResult]]],
+  searchDebouncer: Debouncer[Env, Nothing, Unit],
+  renderQueue: Queue[SearchResults[Any]],
+  buffer: StringBuilder
 ) extends CCTerminal {
 
   val prompt: String = "> "
@@ -116,7 +116,7 @@ final case class CliTerminal[T <: Terminal](
     } yield ()
 
   def search(commands: Vector[Command[Any]], aliases: Map[String, List[String]])(
-      searchTerm: String
+    searchTerm: String
   ): URIO[Env, Unit] = {
     val context = CommandContext(Language.detect(searchTerm), this, 1.0)
 
@@ -204,9 +204,9 @@ final case class CliTerminal[T <: Terminal](
     }
 
   def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
+    moreResults: Chunk[PreviewResult[A]],
+    previewSource: PreviewResult[A],
+    pageSize: Int
   ): RIO[Env, Unit] =
     for {
       cursorIndex <- commandCursorRef.get
