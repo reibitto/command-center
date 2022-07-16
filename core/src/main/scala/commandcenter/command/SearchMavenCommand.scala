@@ -1,39 +1,39 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.command.SearchMavenCommand.{ BucketedMavenArtifact, MavenArtifact }
+import commandcenter.command.SearchMavenCommand.{BucketedMavenArtifact, MavenArtifact}
 import commandcenter.tools.Tools
 import commandcenter.util.Orderings
-import io.circe.{ Decoder, Json }
-import sttp.client3._
-import sttp.client3.circe._
-import sttp.client3.httpclient.zio._
-import zio.{ IO, Managed, ZIO }
+import commandcenter.CCRuntime.Env
+import io.circe.{Decoder, Json}
+import sttp.client3.*
+import sttp.client3.circe.*
+import sttp.client3.httpclient.zio.*
+import zio.{IO, Managed, ZIO}
 
-import java.time.{ Instant, LocalDate, ZoneId }
+import java.time.{Instant, LocalDate, ZoneId}
 import scala.math.Ordering
 import scala.util.matching.Regex
 
 final case class SearchMavenCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.SearchMavenCommand
-  val title: String            = "Maven"
+  val title: String = "Maven"
 
   val scalaArtifactRegex: Regex = "(.+?)(_[02].\\d+)".r
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input          <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
-      request         = basicRequest
-                          .get(uri"https://search.maven.org/solrsearch/select?q=${input.rest}&rows=100&wt=json")
-                          .response(asJson[Json])
-      response       <- send(request)
-                          .map(_.body)
-                          .absolve
-                          .mapError(CommandError.UnexpectedException)
-      artifacts      <- IO.fromEither(
-                          response.hcursor.downField("response").downField("docs").as[List[MavenArtifact]]
-                        ).mapError(CommandError.UnexpectedException)
+      input <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
+      request = basicRequest
+                  .get(uri"https://search.maven.org/solrsearch/select?q=${input.rest}&rows=100&wt=json")
+                  .response(asJson[Json])
+      response <- send(request)
+                    .map(_.body)
+                    .absolve
+                    .mapError(CommandError.UnexpectedException)
+      artifacts <- IO.fromEither(
+                     response.hcursor.downField("response").downField("docs").as[List[MavenArtifact]]
+                   ).mapError(CommandError.UnexpectedException)
       scoredArtifacts = bucket(artifacts, Some(input.rest)).take(20)
     } yield PreviewResults.fromIterable(scoredArtifacts.map { artifact =>
       val renderedCoordinates = artifact.render
@@ -64,6 +64,7 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
 }
 
 object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
+
   final case class MavenArtifact(
     groupId: String,
     artifactId: String,
@@ -73,6 +74,7 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
   )
 
   object MavenArtifact {
+
     implicit val decoder: Decoder[MavenArtifact] = Decoder.instance { c =>
       for {
         groupId      <- c.get[String]("g")
@@ -90,6 +92,7 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
     artifact: MavenArtifact,
     isScala: Boolean
   ) {
+
     def render: String = {
       val groupSeparator = if (isScala) "%%" else "%"
 

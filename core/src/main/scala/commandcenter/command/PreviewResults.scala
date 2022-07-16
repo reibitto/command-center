@@ -1,12 +1,13 @@
 package commandcenter.command
 
 import commandcenter.CCRuntime.Env
-import zio.Chunk
 import zio.stream.ZStream
+import zio.Chunk
 
 sealed trait PreviewResults[+A]
 
 object PreviewResults {
+
   def one[A](result: PreviewResult[A]): PreviewResults[A] =
     PreviewResults.Single(result)
 

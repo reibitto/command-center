@@ -1,8 +1,8 @@
 package commandcenter
 
-import commandcenter.CCRuntime.Env
 import commandcenter.command.PreviewResult
-import zio.{ Chunk, RIO, UIO, URIO, ZIO }
+import commandcenter.CCRuntime.Env
+import zio.{Chunk, RIO, UIO, URIO, ZIO}
 
 import java.awt.Dimension
 

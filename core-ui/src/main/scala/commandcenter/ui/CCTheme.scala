@@ -23,6 +23,7 @@ final case class CCTheme(
   lightCyan: Color,
   white: Color
 ) {
+
   def fromFansiColorCode(colorCode: Int): Option[Color] =
     colorCode match {
       case 1  => Some(black)
@@ -46,6 +47,7 @@ final case class CCTheme(
 }
 
 object CCTheme {
+
   val default: CCTheme = CCTheme(
     new Color(0x0f111a),
     new Color(198, 198, 198),

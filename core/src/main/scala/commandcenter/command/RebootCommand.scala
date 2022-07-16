@@ -1,16 +1,16 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.util.{ AppleScript, OS }
+import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
+import commandcenter.CCRuntime.Env
+import zio.{Managed, ZIO}
 import zio.blocking.Blocking
-import zio.process.{ Command => PCommand, CommandError => PCommandError }
-import zio.{ Managed, ZIO }
+import zio.process.{Command as PCommand, CommandError as PCommandError}
 
 final case class RebootCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.RebootCommand
-  val title: String            = "Reboot"
+  val title: String = "Reboot"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
@@ -33,6 +33,7 @@ final case class RebootCommand(commandNames: List[String]) extends Command[Unit]
 }
 
 object RebootCommand extends CommandPlugin[RebootCommand] {
+
   def make(config: Config): Managed[CommandPluginError, RebootCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

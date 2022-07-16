@@ -1,13 +1,13 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.view.Renderer
-import zio.{ Managed, ZIO }
+import commandcenter.CCRuntime.Env
+import zio.{Managed, ZIO}
 
 final case class ReloadCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand
-  val title: String            = "Reload Config"
+  val title: String = "Reload Config"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
@@ -21,6 +21,7 @@ final case class ReloadCommand(commandNames: List[String]) extends Command[Unit]
 }
 
 object ReloadCommand extends CommandPlugin[ReloadCommand] {
+
   def make(config: Config): Managed[CommandPluginError, ReloadCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

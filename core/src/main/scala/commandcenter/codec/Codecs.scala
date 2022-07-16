@@ -1,12 +1,13 @@
 package commandcenter.codec
 
+import cats.syntax.either.*
+import io.circe.*
+
 import java.time.ZoneId
 import java.util.Locale
 
-import cats.syntax.either._
-import io.circe._
-
 object Codecs {
+
   implicit val localeDecoder: Decoder[Locale] = Decoder.decodeString.emap { s =>
     Either.catchNonFatal(Locale.forLanguageTag(s)).leftMap(_.getMessage)
   }
@@ -26,13 +27,13 @@ object Codecs {
         case Some(it) =>
           it.toList match {
             case singleKey :: Nil =>
-              val arg  = (singleKey, c.downField(singleKey))
+              val arg = (singleKey, c.downField(singleKey))
               def fail = Left(DecodingFailure("Unknown subtype: " + singleKey, c.history))
               f.applyOrElse(arg, (_: (String, ACursor)) => fail)
-            case Nil              => Left(DecodingFailure(keyErr, c.history))
-            case keys             => Left(DecodingFailure(s"$keyErr, found multiple: $keys", c.history))
+            case Nil  => Left(DecodingFailure(keyErr, c.history))
+            case keys => Left(DecodingFailure(s"$keyErr, found multiple: $keys", c.history))
           }
-        case None     => Left(DecodingFailure(keyErr, c.history))
+        case None => Left(DecodingFailure(keyErr, c.history))
       }
     }
   }

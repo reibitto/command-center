@@ -1,10 +1,9 @@
 package commandcenter.command
 
-import java.nio.charset.Charset
-
 import cats.data.Validated
 import com.monovore.decline.Opts
 
+import java.nio.charset.Charset
 import scala.util.Try
 
 object CommonOpts {

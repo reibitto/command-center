@@ -4,6 +4,7 @@ import com.monovore.decline.Help
 import fansi.Str
 
 object HelpMessage {
+
   def formatted(help: Help): Str = {
     val errors = fansi.Color.Red(help.errors.mkString("\n"))
 

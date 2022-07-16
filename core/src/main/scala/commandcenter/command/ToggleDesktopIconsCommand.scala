@@ -1,14 +1,14 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
-import zio.process.{ Command => PCommand }
-import zio.{ Managed, ZIO }
+import commandcenter.CCRuntime.Env
+import zio.{Managed, ZIO}
+import zio.process.Command as PCommand
 
 final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleDesktopIconsCommand
-  val title: String            = "Toggle Desktop Icons"
+  val title: String = "Toggle Desktop Icons"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
@@ -18,9 +18,9 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
     } yield {
       val run = for {
         showingIcons <- PCommand("defaults", "read", "com.apple.finder", "CreateDesktop").string.map(_.trim == "1")
-        _            <-
+        _ <-
           PCommand("defaults", "write", "com.apple.finder", "CreateDesktop", "-bool", (!showingIcons).toString).exitCode
-        _            <- PCommand("killall", "Finder").exitCode
+        _ <- PCommand("killall", "Finder").exitCode
       } yield ()
 
       PreviewResults.one(Preview.unit.onRun(run).score(Scores.high(input.context)))
@@ -28,6 +28,7 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
 }
 
 object ToggleDesktopIconsCommand extends CommandPlugin[ToggleDesktopIconsCommand] {
+
   def make(config: Config): Managed[CommandPluginError, ToggleDesktopIconsCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

@@ -1,8 +1,8 @@
 package commandcenter.tools
 
-import zio.prelude.Reader
+import zio.{Has, RIO, Task, ZIO}
 import zio.prelude.fx.ZPure
-import zio.{ Has, RIO, Task, ZIO }
+import zio.prelude.Reader
 
 trait Tools {
   def processId: Long
@@ -13,6 +13,7 @@ trait Tools {
 }
 
 object Tools {
+
   def processId: Reader[Has[Tools], Long] =
     ZPure.access[Has[Tools]](_.get.processId)
 

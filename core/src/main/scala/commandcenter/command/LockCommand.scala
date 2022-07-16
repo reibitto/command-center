@@ -1,16 +1,16 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
-import zio.process.{ Command => PCommand }
-import zio.{ Managed, ZIO }
+import commandcenter.CCRuntime.Env
+import zio.{Managed, ZIO}
+import zio.process.Command as PCommand
 
 // TODO: Sleep vs lock distinction?
 // /System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend
 final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.LockCommand
-  val title: String            = "Lock Computer"
+  val title: String = "Lock Computer"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
 
@@ -29,6 +29,7 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
 }
 
 object LockCommand extends CommandPlugin[LockCommand] {
+
   def make(config: Config): Managed[CommandPluginError, LockCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

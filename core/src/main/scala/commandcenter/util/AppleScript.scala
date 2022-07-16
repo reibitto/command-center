@@ -1,12 +1,13 @@
 package commandcenter.util
 
-import zio.RIO
-import zio.blocking._
+import zio.blocking.*
 import zio.cache.Cache
 import zio.clock.Clock
 import zio.process.Command
+import zio.RIO
 
 object AppleScript {
+
   def runScript(script: String): RIO[Blocking, String] =
     Command("osascript", "-e", script).string
 

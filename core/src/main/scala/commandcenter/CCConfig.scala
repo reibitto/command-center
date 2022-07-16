@@ -1,20 +1,20 @@
 package commandcenter
 
-import com.typesafe.config.{ Config => TypesafeConfig, ConfigFactory }
-import commandcenter.CCRuntime.PartialEnv
-import commandcenter.command.{ Command, CommandPlugin }
-import commandcenter.config.ConfigParserExtensions._
-import commandcenter.config.Decoders._
+import com.typesafe.config.{Config as TypesafeConfig, ConfigFactory}
+import commandcenter.command.{Command, CommandPlugin}
+import commandcenter.config.ConfigParserExtensions.*
+import commandcenter.config.Decoders.*
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.OS
+import commandcenter.CCRuntime.PartialEnv
+import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
-import enumeratum.{ CirceEnum, Enum, EnumEntry }
 import io.circe.Decoder
-import zio.blocking._
-import zio.duration._
-import zio.logging.{ log, Logging }
+import zio.{RManaged, UIO, ZIO, ZManaged}
+import zio.blocking.*
+import zio.duration.*
+import zio.logging.{log, Logging}
 import zio.system.System
-import zio.{ RManaged, UIO, ZIO, ZManaged }
 
 import java.awt.Font
 import java.io.File
@@ -29,6 +29,7 @@ final case class CCConfig(
 )
 
 object CCConfig {
+
   def load: RManaged[PartialEnv, CCConfig] =
     for {
       file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => UIO(new File("application.conf"))).toManaged_
@@ -70,20 +71,21 @@ object CCConfig {
     for {
       configPathOpt <- zio.system.env("COMMAND_CENTER_CONFIG_PATH").asSomeError
       configPath    <- ZIO.fromOption(configPathOpt)
-      file           = new File(configPath)
+      file = new File(configPath)
     } yield if (file.isDirectory) new File(file, "application.conf") else file
 
   private def homeConfigFile: ZIO[System, Option[Throwable], File] =
     for {
-      userHome     <- zio.system.propertyOrElse("user.home", "").asSomeError
+      userHome <- zio.system.propertyOrElse("user.home", "").asSomeError
       potentialFile = new File(userHome, "/.command-center/application.conf")
-      file         <- ZIO.fromOption(Option.when(potentialFile.exists())(potentialFile))
+      file <- ZIO.fromOption(Option.when(potentialFile.exists())(potentialFile))
     } yield file
 }
 
 final case class GeneralConfig(debounceDelay: Duration)
 
 object GeneralConfig {
+
   implicit val decoder: Decoder[GeneralConfig] =
     Decoder.instance { c =>
       for {
@@ -95,6 +97,7 @@ object GeneralConfig {
 final case class DisplayConfig(width: Int, maxHeight: Int, opacity: Float, fonts: List[Font])
 
 object DisplayConfig {
+
   implicit val decoder: Decoder[DisplayConfig] =
     Decoder.forProduct4("width", "maxHeight", "opacity", "fonts")(DisplayConfig.apply)
 }
@@ -102,9 +105,10 @@ object DisplayConfig {
 final case class KeyboardConfig(openShortcut: KeyboardShortcut, suspendShortcut: Option[String])
 
 object KeyboardConfig {
+
   implicit val decoder: Decoder[KeyboardConfig] = Decoder.instance { c =>
     for {
-      openShortcut    <-
+      openShortcut <-
         c.get[KeyboardShortcut](s"openShortcut_${OS.os.entryName}").orElse(c.get[KeyboardShortcut]("openShortcut"))
       suspendShortcut <- c.get[Option[String]]("suspendShortcut")
     } yield KeyboardConfig(openShortcut, suspendShortcut)
@@ -115,6 +119,7 @@ object KeyboardConfig {
 final case class GlobalAction(id: GlobalActionId, shortcut: KeyboardShortcut)
 
 object GlobalAction {
+
   implicit val decoder: Decoder[GlobalAction] = Decoder.instance { c =>
     for {
       id       <- c.get[GlobalActionId]("id")
@@ -126,18 +131,18 @@ object GlobalAction {
 sealed trait GlobalActionId extends EnumEntry with LowerCamelcase
 
 object GlobalActionId extends Enum[GlobalActionId] with CirceEnum[GlobalActionId] {
-  case object MinimizeWindow                      extends GlobalActionId
-  case object MaximizeWindow                      extends GlobalActionId
-  case object ToggleMaximizeWindow                extends GlobalActionId
-  case object CenterWindow                        extends GlobalActionId
-  case object MoveToNextScreen                    extends GlobalActionId
-  case object MoveToPreviousScreen                extends GlobalActionId
-  case object ResizeToScreenSize                  extends GlobalActionId
+  case object MinimizeWindow extends GlobalActionId
+  case object MaximizeWindow extends GlobalActionId
+  case object ToggleMaximizeWindow extends GlobalActionId
+  case object CenterWindow extends GlobalActionId
+  case object MoveToNextScreen extends GlobalActionId
+  case object MoveToPreviousScreen extends GlobalActionId
+  case object ResizeToScreenSize extends GlobalActionId
   case object ResizeFullHeightMaintainAspectRatio extends GlobalActionId
-  case object CycleWindowSizeLeft                 extends GlobalActionId
-  case object CycleWindowSizeRight                extends GlobalActionId
-  case object CycleWindowSizeTop                  extends GlobalActionId
-  case object CycleWindowSizeBottom               extends GlobalActionId
+  case object CycleWindowSizeLeft extends GlobalActionId
+  case object CycleWindowSizeRight extends GlobalActionId
+  case object CycleWindowSizeTop extends GlobalActionId
+  case object CycleWindowSizeBottom extends GlobalActionId
 
   lazy val values: IndexedSeq[GlobalActionId] = findValues
 }

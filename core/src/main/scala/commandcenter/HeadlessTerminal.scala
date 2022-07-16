@@ -1,11 +1,11 @@
 package commandcenter
 
-import java.awt.Dimension
-
-import commandcenter.CCRuntime.Env
-import commandcenter.command.{ Command, PreviewResult, SearchResults }
+import commandcenter.command.{Command, PreviewResult, SearchResults}
 import commandcenter.locale.Language
-import zio._
+import commandcenter.CCRuntime.Env
+import zio.*
+
+import java.awt.Dimension
 
 final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) extends CCTerminal {
   def terminalType: TerminalType = TerminalType.Test
@@ -36,12 +36,12 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
 
   def run(cursorIndex: Int): URIO[Env, Option[PreviewResult[Any]]] =
     for {
-      results      <- searchResultsRef.get
+      results <- searchResultsRef.get
       previewResult = results.previews.lift(cursorIndex)
-      _            <- ZIO.foreach_(previewResult) { preview =>
-                        // TODO: Log defects
-                        preview.onRun.absorb.forkDaemon
-                      }
+      _ <- ZIO.foreach_(previewResult) { preview =>
+             // TODO: Log defects
+             preview.onRun.absorb.forkDaemon
+           }
     } yield previewResult
 
   def showMore[A](
@@ -53,6 +53,7 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
 }
 
 object HeadlessTerminal {
+
   def create: UManaged[HeadlessTerminal] =
     for {
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])

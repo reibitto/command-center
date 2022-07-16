@@ -1,27 +1,29 @@
 package commandcenter
 
 import commandcenter.CCRuntime.Env
+import zio.{ExitCode, IO, URIO}
 import zio.internal.Platform
-import zio.{ ExitCode, IO, URIO }
 
 trait CCApp extends CCRuntime {
   def run(args: List[String]): URIO[Env, ExitCode]
 
   final def main(args0: Array[String]): Unit =
-    try sys.exit(
-      unsafeRun(
-        for {
-          fiber  <- run(args0.toList).fork
-          _      <- IO.effectTotal(java.lang.Runtime.getRuntime.addShutdownHook(new Thread {
-                      override def run(): Unit = {
-                        val _ = unsafeRunSync(fiber.interrupt)
-                      }
-                    }))
-          result <- fiber.join
-          _      <- fiber.interrupt
-        } yield result.code
+    try
+      sys.exit(
+        unsafeRun(
+          for {
+            fiber <- run(args0.toList).fork
+            _ <- IO.effectTotal(java.lang.Runtime.getRuntime.addShutdownHook(new Thread {
+
+                   override def run(): Unit = {
+                     val _ = unsafeRunSync(fiber.interrupt)
+                   }
+                 }))
+            result <- fiber.join
+            _      <- fiber.interrupt
+          } yield result.code
+        )
       )
-    )
     catch { case _: SecurityException => }
 
   override lazy val platform: Platform = runtime.platform.withReportFailure { c =>

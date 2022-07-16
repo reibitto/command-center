@@ -1,8 +1,8 @@
 package commandcenter.command
 
 import commandcenter.CommandBaseSpec
-import zio.duration._
-import zio.test._
+import zio.duration.*
+import zio.test.*
 import zio.test.environment.TestClock
 
 object EpochMillisCommandSpec extends CommandBaseSpec {

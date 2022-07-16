@@ -3,19 +3,19 @@ package commandcenter.command
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.util.{ OS, ProcessUtil }
+import commandcenter.util.{OS, ProcessUtil}
 import commandcenter.view.Renderer
+import commandcenter.CCRuntime.{Env, PartialEnv}
+import zio.{RIO, ZIO, ZManaged}
 import zio.blocking.Blocking
 import zio.logging.log
-import zio.process.{ Command => PCommand }
-import zio.{ RIO, ZIO, ZManaged }
+import zio.process.Command as PCommand
 
 final case class SuspendProcessCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
-  val title: String            = "Suspend/Resume Process"
+  val title: String = "Suspend/Resume Process"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
 
@@ -23,11 +23,11 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input        <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsedCommand = command.parse(input.args)
-      message      <- ZIO
-                        .fromEither(parsedCommand)
-                        .fold(HelpMessage.formatted, p => fansi.Str("PID: ") ++ fansi.Color.Magenta(p.toString))
+      message <- ZIO
+                   .fromEither(parsedCommand)
+                   .fold(HelpMessage.formatted, p => fansi.Str("PID: ") ++ fansi.Color.Magenta(p.toString))
     } yield {
       val run = for {
         pid         <- ZIO.fromEither(parsedCommand).mapError(RunError.CliError)
@@ -45,22 +45,23 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 }
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
+
   def make(config: Config): ZManaged[PartialEnv, CommandPluginError, SuspendProcessCommand] =
     for {
       commandNames    <- config.getManaged[Option[List[String]]]("commandNames")
       suspendShortcut <- config.getManaged[Option[KeyboardShortcut]]("suspendShortcut")
-      _               <- ZIO
-                           .foreach(suspendShortcut) { suspendShortcut =>
-                             Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
-                               (for {
-                                 _   <- log.debug("Toggling suspend for frontmost process...")
-                                 pid <- SuspendProcessCommand.toggleSuspendFrontProcess
-                                 _   <- log.debug(s"Toggled suspend for process $pid")
-                               } yield ()).ignore
-                             )
-                           }
-                           .mapError(CommandPluginError.UnexpectedException)
-                           .toManaged_
+      _ <- ZIO
+             .foreach(suspendShortcut) { suspendShortcut =>
+               Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
+                 (for {
+                   _   <- log.debug("Toggling suspend for frontmost process...")
+                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
+                   _   <- log.debug(s"Toggled suspend for process $pid")
+                 } yield ()).ignore
+               )
+             }
+             .mapError(CommandPluginError.UnexpectedException)
+             .toManaged_
     } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")))
 
   def isProcessSuspended(processId: Long): RIO[Blocking, Boolean] = {

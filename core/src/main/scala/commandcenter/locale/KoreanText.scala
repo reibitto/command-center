@@ -1,6 +1,7 @@
 package commandcenter.locale
 
 object KoreanText {
+
   def isKorean(c: Char): Boolean =
     c match {
       case code if code >= 0xac00 && code <= 0xd7a3 => true

@@ -1,9 +1,9 @@
 package commandcenter.command
 
-import commandcenter.CCRuntime.Env
 import commandcenter.event.KeyboardShortcut
 import commandcenter.view.Rendered
-import zio.{ RIO, ZIO }
+import commandcenter.CCRuntime.Env
+import zio.{RIO, ZIO}
 
 sealed trait PreviewResult[+A] {
   def onRun: RIO[Env, Unit]
@@ -27,6 +27,7 @@ sealed trait PreviewResult[+A] {
 }
 
 object PreviewResult {
+
   final case class None(
     onRun: RIO[Env, Unit],
     runOption: RunOption,
@@ -64,7 +65,7 @@ object PreviewResult {
 
     def onRun(onRun: RIO[Env, Unit]): PreviewResult[A] = copy(onRun = onRun)
 
-    def rendered(rendered: => Rendered): PreviewResult[A]   = copy(renderFn = () => rendered)
+    def rendered(rendered: => Rendered): PreviewResult[A] = copy(renderFn = () => rendered)
     def renderFn(renderFn: A => Rendered): PreviewResult[A] = copy(renderFn = () => renderFn(result))
 
     def shortcuts: Set[KeyboardShortcut] = source.shortcuts

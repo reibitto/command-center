@@ -1,26 +1,26 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
+import commandcenter.CCRuntime.Env
 import io.circe.Decoder
-import sttp.client3._
-import sttp.client3.circe._
-import sttp.client3.httpclient.zio._
+import sttp.client3.*
+import sttp.client3.circe.*
+import sttp.client3.httpclient.zio.*
+import zio.{Chunk, Managed, ZIO}
 import zio.stream.ZStream
-import zio.{ Chunk, Managed, ZIO }
 
 import java.time.OffsetDateTime
 
 final case class SearchCratesCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchCratesCommand
-  val title: String            = "Crates"
-  val pageSize: Int            = 10
+  val title: String = "Crates"
+  val pageSize: Int = 10
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input       <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
+      input <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
       cratesStream = ZStream.paginateChunkM(1) { page =>
                        val request = basicRequest
                          .get(uri"https://crates.io/api/v1/crates?page=$page&per_page=$pageSize&q=${input.rest}")
@@ -46,6 +46,7 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
   final case class CrateResults(crates: Chunk[CrateResult], meta: MetaResult)
 
   object CrateResults {
+
     implicit val decoder: Decoder[CrateResults] =
       Decoder.forProduct2("crates", "meta")(CrateResults.apply)
   }
@@ -53,6 +54,7 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
   final case class MetaResult(total: Int, nextPage: Option[String])
 
   object MetaResult {
+
     implicit val decoder: Decoder[MetaResult] =
       Decoder.forProduct2("total", "next_page")(MetaResult.apply)
   }
@@ -82,6 +84,7 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
   }
 
   object CrateResult {
+
     implicit val decoder: Decoder[CrateResult] =
       Decoder.forProduct8(
         "id",

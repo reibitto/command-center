@@ -1,13 +1,13 @@
 package commandcenter
 
-import commandcenter.CCRuntime.{ Env, PartialEnv }
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.tools.{ Tools, ToolsLive }
+import commandcenter.tools.{Tools, ToolsLive}
 import commandcenter.util.OS
-import sttp.client3.httpclient.zio.{ HttpClientZioBackend, SttpClient }
+import commandcenter.CCRuntime.{Env, PartialEnv}
+import sttp.client3.httpclient.zio.{HttpClientZioBackend, SttpClient}
+import zio.{Has, Runtime, ULayer, ZEnv, ZLayer}
 import zio.internal.Platform
 import zio.logging.Logging
-import zio.{ Has, Runtime, ULayer, ZEnv, ZLayer }
 
 import java.util.concurrent.Executor
 import scala.concurrent.ExecutionContext
@@ -25,7 +25,7 @@ trait CCRuntime extends Runtime[Env] {
       else
         Platform.default
 
-    import zio.magic._
+    import zio.magic.*
 
     Runtime.unsafeFromLayer(
       ZLayer.fromMagic[PartialEnv](
@@ -42,11 +42,11 @@ trait CCRuntime extends Runtime[Env] {
   def shortcutsLayer: ULayer[Has[Shortcuts]]
   def terminalType: TerminalType
 
-  lazy val environment: Env   = runtime.environment
+  lazy val environment: Env = runtime.environment
   lazy val platform: Platform = runtime.platform
 }
 
 object CCRuntime {
   type PartialEnv = ZEnv with Logging with SttpClient with Has[Tools] with Has[Shortcuts]
-  type Env        = PartialEnv with Has[Conf]
+  type Env = PartialEnv with Has[Conf]
 }

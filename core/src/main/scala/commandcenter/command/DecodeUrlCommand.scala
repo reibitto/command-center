@@ -1,24 +1,24 @@
 package commandcenter.command
 
-import cats.syntax.apply._
+import cats.syntax.apply.*
 import com.monovore.decline
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.command.CommonOpts._
+import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
-import zio._
+import commandcenter.CCRuntime.Env
+import zio.*
 
 import java.net.URLDecoder
 
 final case class DecodeUrlCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.DecodeUrlCommand
-  val title: String            = "Decode (URL)"
+  val title: String = "Decode (URL)"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input                    <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      all                       = (stringArg, encodingOpt).tupled
-      parsedCommand             = decline.Command("", s"URL decodes the given string")(all).parse(input.args)
+      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      all = (stringArg, encodingOpt).tupled
+      parsedCommand = decline.Command("", s"URL decodes the given string")(all).parse(input.args)
       (valueToDecode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
       decoded                  <- Task(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
     } yield PreviewResults.one(
@@ -27,6 +27,7 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
 }
 
 object DecodeUrlCommand extends CommandPlugin[DecodeUrlCommand] {
+
   def make(config: Config): Managed[CommandPluginError, DecodeUrlCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")
