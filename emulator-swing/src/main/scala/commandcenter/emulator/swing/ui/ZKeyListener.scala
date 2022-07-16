@@ -1,9 +1,9 @@
 package commandcenter.emulator.swing.ui
 
-import java.awt.event.KeyEvent
-
 import commandcenter.CCRuntime.Env
-import zio.{ URIO, ZIO }
+import zio.{URIO, ZIO}
+
+import java.awt.event.KeyEvent
 
 class ZKeyAdapter {
   def keyTyped(e: KeyEvent): URIO[Env, Unit] = ZIO.unit

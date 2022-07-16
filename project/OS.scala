@@ -3,9 +3,9 @@ import java.util.Locale
 sealed trait OS
 
 object OS {
-  case object MacOS                    extends OS
-  case object Windows                  extends OS
-  case object Linux                    extends OS
+  case object MacOS extends OS
+  case object Windows extends OS
+  case object Linux extends OS
   final case class Other(name: String) extends OS
 
   lazy val os: OS = {

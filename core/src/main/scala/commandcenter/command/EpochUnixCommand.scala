@@ -1,21 +1,21 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
-import zio.{ clock, Managed, Task, ZIO }
+import commandcenter.CCRuntime.Env
+import zio.{clock, Managed, Task, ZIO}
 
-import java.time.format.{ DateTimeFormatter, FormatStyle }
-import java.time.{ Instant, ZoneId }
+import java.time.{Instant, ZoneId}
+import java.time.format.{DateTimeFormatter, FormatStyle}
 import java.util.concurrent.TimeUnit
 
 final case class EpochUnixCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.EpochUnixCommand
-  val title: String            = "Epoch (Unix time)"
+  val title: String = "Epoch (Unix time)"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
                            clock.currentTime(TimeUnit.SECONDS).map(time => (time.toString, Scores.high))
                          } else {
@@ -47,6 +47,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
 }
 
 object EpochUnixCommand extends CommandPlugin[EpochUnixCommand] {
+
   def make(config: Config): Managed[CommandPluginError, EpochUnixCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

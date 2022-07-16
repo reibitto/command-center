@@ -1,16 +1,17 @@
 package commandcenter.emulator.swing.shortcuts
 
-import com.tulskiy.keymaster.common.{ HotKey, HotKeyListener, Provider }
-import commandcenter.CCRuntime.Env
+import com.tulskiy.keymaster.common.{HotKey, HotKeyListener, Provider}
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
-import zio._
+import commandcenter.CCRuntime.Env
+import zio.*
 
 import java.awt.Toolkit
 import scala.util.Try
 
 final case class ShortcutsLive(provider: Provider, runtime: Runtime[Env]) extends Shortcuts {
+
   def addGlobalShortcut(shortcut: KeyboardShortcut)(handler: KeyboardShortcut => URIO[Env, Unit]): Task[Unit] =
     UIO {
       provider.register(
@@ -24,6 +25,7 @@ final case class ShortcutsLive(provider: Provider, runtime: Runtime[Env]) extend
 }
 
 object ShortcutsLive {
+
   def layer(runtime: Runtime[Env]): TaskLayer[Has[Shortcuts]] =
     ZLayer.fromManaged {
       ZManaged.make(Task {

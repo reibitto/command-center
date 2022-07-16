@@ -1,9 +1,10 @@
 package commandcenter.command.util
 
+import cats.syntax.either.*
+
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.security.MessageDigest
-import cats.syntax.either._
 
 object HashUtil {
 

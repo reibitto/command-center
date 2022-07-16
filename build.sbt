@@ -1,7 +1,7 @@
+import sbt.*
+import sbt.Keys.*
+import sbtwelcome.*
 import Build.Version
-import sbt.Keys._
-import sbt._
-import sbtwelcome._
 
 lazy val root = project
   .in(file("."))
@@ -13,10 +13,10 @@ lazy val root = project
     emulatorSwing
   )
   .settings(
-    name        := "command-center",
+    name := "command-center",
     addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll"),
     addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll"),
-    logo        :=
+    logo :=
       s"""
          |,---.                           .   ,---.         .
          ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
@@ -48,31 +48,31 @@ lazy val root = project
 lazy val core = module("core")
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio"                       %% "zio"                    % Version.zio,
-      "dev.zio"                       %% "zio-streams"            % Version.zio,
-      "dev.zio"                       %% "zio-prelude"            % "1.0.0-RC8",
-      "dev.zio"                       %% "zio-process"            % "0.6.1",
-      "dev.zio"                       %% "zio-logging"            % "0.5.14",
-      "dev.zio"                       %% "zio-cache"              % "0.1.2",
-      "io.github.kitlangton"          %% "zio-magic"              % "0.3.12",
-      "org.scala-lang"                 % "scala-reflect"          % "2.13.8",
-      "io.circe"                      %% "circe-core"             % Version.circe,
-      "io.circe"                      %% "circe-parser"           % Version.circe,
-      "io.circe"                      %% "circe-config"           % "0.8.0",
-      "com.monovore"                  %% "decline"                % "2.3.0",
-      "com.lihaoyi"                   %% "fansi"                  % "0.2.14",
-      "com.beachape"                  %% "enumeratum"             % Version.enumeratum,
-      "com.beachape"                  %% "enumeratum-circe"       % Version.enumeratum,
-      "com.softwaremill.sttp.client3" %% "core"                   % Version.sttp,
-      "com.softwaremill.sttp.client3" %% "circe"                  % Version.sttp,
+      "dev.zio" %% "zio" % Version.zio,
+      "dev.zio" %% "zio-streams" % Version.zio,
+      "dev.zio" %% "zio-prelude" % "1.0.0-RC8",
+      "dev.zio" %% "zio-process" % "0.6.1",
+      "dev.zio" %% "zio-logging" % "0.5.14",
+      "dev.zio" %% "zio-cache" % "0.1.2",
+      "io.github.kitlangton" %% "zio-magic" % "0.3.12",
+      "org.scala-lang" % "scala-reflect" % "2.13.8",
+      "io.circe" %% "circe-core" % Version.circe,
+      "io.circe" %% "circe-parser" % Version.circe,
+      "io.circe" %% "circe-config" % "0.8.0",
+      "com.monovore" %% "decline" % "2.3.0",
+      "com.lihaoyi" %% "fansi" % "0.2.14",
+      "com.beachape" %% "enumeratum" % Version.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % Version.enumeratum,
+      "com.softwaremill.sttp.client3" %% "core" % Version.sttp,
+      "com.softwaremill.sttp.client3" %% "circe" % Version.sttp,
       "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Version.sttp,
-      "com.lihaoyi"                   %% "fastparse"              % "2.3.3",
-      "org.typelevel"                 %% "spire"                  % "0.17.0",
-      "net.java.dev.jna"               % "jna"                    % Version.jna,
-      "net.java.dev.jna"               % "jna-platform"           % Version.jna,
-      "org.ocpsoft.prettytime"         % "prettytime-nlp"         % "5.0.3.Final"
+      "com.lihaoyi" %% "fastparse" % "2.3.3",
+      "org.typelevel" %% "spire" % "0.17.0",
+      "net.java.dev.jna" % "jna" % Version.jna,
+      "net.java.dev.jna" % "jna-platform" % Version.jna,
+      "org.ocpsoft.prettytime" % "prettytime-nlp" % "5.0.3.Final"
     ),
-    buildInfoKeys    := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
+    buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
   )
   .enablePlugins(BuildInfoPlugin)
@@ -88,20 +88,20 @@ lazy val coreUI = module("core-ui")
 lazy val cli = module("cli")
   .dependsOn(coreUI)
   .settings(
-    fork                             := true,
-    run / baseDirectory              := file("."),
+    fork := true,
+    run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
       "org.scalameta" %% "svm-subs" % Version.graal
     ),
     // Windows native terminal requires JNA.
     libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % Version.jna).filter(_ => OS.os == OS.Windows),
-    assembly / mainClass             := Some("commandcenter.cli.Main"),
-    assembly / assemblyJarName       := "cc.jar",
+    assembly / mainClass := Some("commandcenter.cli.Main"),
+    assembly / assemblyJarName := "cc.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
     },
-    graalVMNativeImageGraalVersion   := Version.imageGraal,
+    graalVMNativeImageGraalVersion := Version.imageGraal,
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
       "-H:+TraceClassInitialization",
@@ -133,29 +133,29 @@ def optionalPlugin(project: Project): Option[ClasspathDependency] = {
 lazy val emulatorCore = module("emulator-core")
   .dependsOn(coreUI)
   .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
   )
   .settings(
-    fork                := true,
+    fork := true,
     run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
       "com.github.tulskiy" % "jkeymaster" % "1.3",
-      "org.slf4j"          % "slf4j-nop"  % "1.7.30" // Seems to be required for jkeymaster on Linux
+      "org.slf4j" % "slf4j-nop" % "1.7.30" // Seems to be required for jkeymaster on Linux
     )
   )
 
 lazy val emulatorSwt = module("emulator-swt")
   .dependsOn(emulatorCore)
   .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
   )
   .settings(
-    fork                             := true,
-    publishMavenStyle                := false,
-    run / baseDirectory              := file("."),
-    assembly / mainClass             := Some("commandcenter.emulator.swt.Main"),
-    javaOptions                      := Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
-    assembly / assemblyJarName       := "cc-swt.jar",
+    fork := true,
+    publishMavenStyle := false,
+    run / baseDirectory := file("."),
+    assembly / mainClass := Some("commandcenter.emulator.swt.Main"),
+    javaOptions := Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
+    assembly / assemblyJarName := "cc-swt.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
@@ -167,13 +167,13 @@ lazy val emulatorSwt = module("emulator-swt")
 lazy val emulatorSwing = module("emulator-swing")
   .dependsOn(emulatorCore)
   .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
   )
   .settings(
-    fork                             := true,
-    run / baseDirectory              := file("."),
-    assembly / mainClass             := Some("commandcenter.emulator.swing.Main"),
-    assembly / assemblyJarName       := "cc-swing.jar",
+    fork := true,
+    run / baseDirectory := file("."),
+    assembly / mainClass := Some("commandcenter.emulator.swing.Main"),
+    assembly / assemblyJarName := "cc-swing.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
@@ -194,11 +194,11 @@ lazy val extras = project
 
 def swtDependencies: Seq[ModuleID] =
   OS.os match {
-    case OS.Windows     =>
+    case OS.Windows =>
       Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % Version.swt intransitive ())
-    case OS.MacOS       =>
+    case OS.MacOS =>
       Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % Version.swt intransitive ())
-    case OS.Linux       =>
+    case OS.Linux =>
       Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % Version.swt intransitive ())
     case OS.Other(name) =>
       println(s"SWT does not support OS '$name'")

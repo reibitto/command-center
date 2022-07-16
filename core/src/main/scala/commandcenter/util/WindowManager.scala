@@ -1,19 +1,20 @@
 package commandcenter.util
 
-import com.sun.jna.Pointer
-import com.sun.jna.platform.win32.WinDef.{ HDC, HWND, LPARAM, RECT }
-import com.sun.jna.platform.win32.WinUser.{ MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT }
-import com.sun.jna.platform.win32.{ User32, WinUser }
+import com.sun.jna.platform.win32.{User32, WinUser}
+import com.sun.jna.platform.win32.WinDef.{HDC, HWND, LPARAM, RECT}
+import com.sun.jna.platform.win32.WinUser.{MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT}
 import com.sun.jna.ptr.IntByReference
+import com.sun.jna.Pointer
+import zio.{RIO, Ref, Task}
 import zio.clock.Clock
-import zio.{ RIO, Ref, Task }
 
 import java.util
 import scala.collection.mutable
 
 object WindowManager {
+
   def centerScreen: Task[Unit] = Task {
-    val window  = User32.INSTANCE.GetForegroundWindow()
+    val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
     val monitorInfo = new MONITORINFO()
@@ -22,10 +23,10 @@ object WindowManager {
     val windowRect = new RECT()
     User32.INSTANCE.GetWindowRect(window, windowRect)
 
-    val windowWidth  = windowRect.right - windowRect.left
+    val windowWidth = windowRect.right - windowRect.left
     val windowHeight = windowRect.bottom - windowRect.top
 
-    val monitorWidth  = monitorInfo.rcWork.right - monitorInfo.rcWork.left
+    val monitorWidth = monitorInfo.rcWork.right - monitorInfo.rcWork.left
     val monitorHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top
 
     val x = monitorInfo.rcWork.left + (monitorWidth - windowWidth) / 2
@@ -35,7 +36,7 @@ object WindowManager {
   }
 
   def resizeToScreenSize: Task[Unit] = Task {
-    val window  = User32.INSTANCE.GetForegroundWindow()
+    val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
     val monitorInfo = new MONITORINFO()
@@ -44,7 +45,7 @@ object WindowManager {
     val windowRect = new RECT()
     User32.INSTANCE.GetWindowRect(window, windowRect)
 
-    val monitorWidth  = monitorInfo.rcWork.right - monitorInfo.rcWork.left
+    val monitorWidth = monitorInfo.rcWork.right - monitorInfo.rcWork.left
     val monitorHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top
 
     val x = monitorInfo.rcWork.left
@@ -54,7 +55,7 @@ object WindowManager {
   }
 
   def resizeFullHeightMaintainAspectRatio: Task[Unit] = Task {
-    val window  = User32.INSTANCE.GetForegroundWindow()
+    val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
     val monitorInfo = new MONITORINFO()
@@ -63,7 +64,7 @@ object WindowManager {
     val windowRect = new RECT()
     User32.INSTANCE.GetWindowRect(window, windowRect)
 
-    val monitorWidth  = monitorInfo.rcWork.right - monitorInfo.rcWork.left
+    val monitorWidth = monitorInfo.rcWork.right - monitorInfo.rcWork.left
     val monitorHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top
 
     val windowRatio = (windowRect.right - windowRect.left) / (windowRect.bottom - windowRect.top).toDouble
@@ -107,25 +108,25 @@ object WindowManager {
   }
 
   def cycleWindowSize(cycleWindowStateRef: Ref[Option[CycleWindowState]])(step: Int, name: String)(
-    boundsList: Vector[WindowBounds]
+      boundsList: Vector[WindowBounds]
   ): RIO[Clock, Unit] =
     for {
       cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))
-      newIndex          = if (cycleWindowState.lastAction.contains(name)) {
-                            if (step > 0) {
-                              (cycleWindowState.index + step) % boundsList.length
-                            } else {
-                              (boundsList.length - cycleWindowState.index - step) % boundsList.length
-                            }
-                          } else {
-                            0
-                          }
-      _                <- transform(boundsList(newIndex))
-      _                <- cycleWindowStateRef.set(Some(CycleWindowState(newIndex, Some(name))))
+      newIndex = if (cycleWindowState.lastAction.contains(name)) {
+                   if (step > 0) {
+                     (cycleWindowState.index + step) % boundsList.length
+                   } else {
+                     (boundsList.length - cycleWindowState.index - step) % boundsList.length
+                   }
+                 } else {
+                   0
+                 }
+      _ <- transform(boundsList(newIndex))
+      _ <- cycleWindowStateRef.set(Some(CycleWindowState(newIndex, Some(name))))
     } yield ()
 
   def transform(bounds: WindowBounds): Task[Unit] = Task {
-    val window  = User32.INSTANCE.GetForegroundWindow()
+    val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
     val windowPlacement = new WINDOWPLACEMENT()
@@ -140,10 +141,10 @@ object WindowManager {
     val monitorInfo = new MONITORINFO()
     User32.INSTANCE.GetMonitorInfo(monitor, monitorInfo)
 
-    val monitorWidth  = monitorInfo.rcWork.right - monitorInfo.rcWork.left
+    val monitorWidth = monitorInfo.rcWork.right - monitorInfo.rcWork.left
     val monitorHeight = monitorInfo.rcWork.bottom - monitorInfo.rcWork.top
 
-    val newWindowWidth  = monitorWidth * (bounds.right - bounds.left)
+    val newWindowWidth = monitorWidth * (bounds.right - bounds.left)
     val newWindowHeight = monitorHeight * (bounds.bottom - bounds.top)
 
     val x = monitorInfo.rcWork.left + bounds.left * monitorWidth
@@ -165,7 +166,7 @@ object WindowManager {
   def moveToPreviousDisplay: Task[Unit] = moveToDisplay(-1)
 
   def moveToDisplay(delta: Int): Task[Unit] = Task {
-    val window  = User32.INSTANCE.GetForegroundWindow()
+    val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
     val windowRect = new RECT()
@@ -196,20 +197,20 @@ object WindowManager {
 
     val nextMonitor = monitors(nextMonitorIndex)
 
-    val currentMonitorWidth  = currentMonitor.rcWork.right - currentMonitor.rcWork.left
+    val currentMonitorWidth = currentMonitor.rcWork.right - currentMonitor.rcWork.left
     val currentMonitorHeight = currentMonitor.rcWork.bottom - currentMonitor.rcWork.top
 
-    val boundsLeft   = (windowRect.left - currentMonitor.rcWork.left) / currentMonitorWidth.toDouble
-    val boundsRight  = (windowRect.right - currentMonitor.rcWork.left) / currentMonitorWidth.toDouble
+    val boundsLeft = (windowRect.left - currentMonitor.rcWork.left) / currentMonitorWidth.toDouble
+    val boundsRight = (windowRect.right - currentMonitor.rcWork.left) / currentMonitorWidth.toDouble
     val boundsBottom = (windowRect.bottom - currentMonitor.rcWork.top) / currentMonitorHeight.toDouble
-    val boundsTop    = (windowRect.top - currentMonitor.rcWork.top) / currentMonitorHeight.toDouble
+    val boundsTop = (windowRect.top - currentMonitor.rcWork.top) / currentMonitorHeight.toDouble
 
-    val nextMonitorWidth  = nextMonitor.rcWork.right - nextMonitor.rcWork.left
+    val nextMonitorWidth = nextMonitor.rcWork.right - nextMonitor.rcWork.left
     val nextMonitorHeight = nextMonitor.rcWork.bottom - nextMonitor.rcWork.top
 
-    val x               = nextMonitor.rcWork.left + boundsLeft * nextMonitorWidth
-    val y               = nextMonitor.rcWork.top + boundsTop * nextMonitorHeight
-    val newWindowWidth  = (boundsRight - boundsLeft) * nextMonitorWidth
+    val x = nextMonitor.rcWork.left + boundsLeft * nextMonitorWidth
+    val y = nextMonitor.rcWork.top + boundsTop * nextMonitorHeight
+    val newWindowWidth = (boundsRight - boundsLeft) * nextMonitorWidth
     val newWindowHeight = (boundsBottom - boundsTop) * nextMonitorHeight
 
     User32.INSTANCE.SetWindowPos(
@@ -240,7 +241,7 @@ object WindowManager {
   }
 
   def commandCenterWindow: Task[Option[HWND]] = Task {
-    val currentProcess         = ProcessHandle.current()
+    val currentProcess = ProcessHandle.current()
     var ccWindow: Option[HWND] = None
 
     User32.INSTANCE.EnumWindows(
@@ -320,7 +321,7 @@ object WindowManager {
 
   def fromCString(bufferSize: Int)(fn: Array[Char] => Int): String = {
     val buffer = Array.ofDim[Char](bufferSize)
-    val size   = fn(buffer)
+    val size = fn(buffer)
     new String(buffer, 0, size)
   }
 }

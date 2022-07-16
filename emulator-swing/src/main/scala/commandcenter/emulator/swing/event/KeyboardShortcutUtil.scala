@@ -1,11 +1,12 @@
 package commandcenter.emulator.swing.event
 
-import java.awt.event.{ InputEvent, KeyEvent }
+import commandcenter.event.{KeyCode, KeyModifier, KeyboardShortcut}
 
-import commandcenter.event.{ KeyCode, KeyModifier, KeyboardShortcut }
+import java.awt.event.{InputEvent, KeyEvent}
 import javax.swing.KeyStroke
 
 object KeyboardShortcutUtil {
+
   def fromKeyEvent(e: KeyEvent): KeyboardShortcut = {
     val modifiers: Set[KeyModifier] = (if (e.isShiftDown) Set(KeyModifier.Shift) else Set.empty) ++
       (if (e.isControlDown) Set(KeyModifier.Control) else Set.empty) ++

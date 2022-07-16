@@ -1,12 +1,13 @@
 package commandcenter.util
 
-import zio.RIO
-import zio.blocking._
+import zio.blocking.*
 import zio.cache.Cache
 import zio.clock.Clock
 import zio.process.Command
+import zio.RIO
 
 object AppleScript {
+
   def runScript(script: String): RIO[Blocking, String] =
     Command("osascript", "-e", script).string
 
@@ -25,7 +26,7 @@ object AppleScript {
       } yield result
 
   def loadFunction2[A, A2](
-    cache: Cache[String, Nothing, String]
+      cache: Cache[String, Nothing, String]
   )(resource: String): (A, A2) => RIO[Blocking with Clock, String] =
     (a, a2) =>
       for {

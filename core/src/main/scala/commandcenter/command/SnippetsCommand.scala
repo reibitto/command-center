@@ -1,17 +1,17 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.command.SnippetsCommand.Snippet
 import commandcenter.scorers.LengthScorer
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
+import commandcenter.CCRuntime.Env
 import io.circe.Decoder
-import zio.{ Managed, ZIO }
+import zio.{Managed, ZIO}
 
 final case class SnippetsCommand(commandNames: List[String], snippets: List[Snippet]) extends Command[String] {
   val commandType: CommandType = CommandType.SnippetsCommand
-  val title: String            = "Snippets"
+  val title: String = "Snippets"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {

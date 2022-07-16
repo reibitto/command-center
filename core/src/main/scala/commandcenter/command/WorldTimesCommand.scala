@@ -1,30 +1,30 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.{ Env, PartialEnv }
-import commandcenter.CommandContext
-import commandcenter.config.Decoders._
+import commandcenter.config.Decoders.*
 import commandcenter.tools.Tools
 import commandcenter.util.TimeZones
 import commandcenter.view.Rendered
+import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CommandContext
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
+import zio.{UIO, URIO, ZIO, ZManaged}
 import zio.clock.Clock
-import zio.{ UIO, URIO, ZIO, ZManaged }
 
-import java.time.format.{ DateTimeFormatter, FormatStyle }
-import java.time.{ ZoneId, ZonedDateTime }
-import scala.jdk.CollectionConverters._
+import java.time.{ZoneId, ZonedDateTime}
+import java.time.format.{DateTimeFormatter, FormatStyle}
+import scala.jdk.CollectionConverters.*
 
 final case class WorldTimesCommand(
-  commandNames: List[String],
-  dateTimeFormat: DateTimeFormatter,
-  dateTimeDetailedFormat: DateTimeFormatter,
-  dateTimeWithZoneFormat: DateTimeFormatter,
-  zones: List[TimeZone]
+    commandNames: List[String],
+    dateTimeFormat: DateTimeFormatter,
+    dateTimeDetailedFormat: DateTimeFormatter,
+    dateTimeWithZoneFormat: DateTimeFormatter,
+    zones: List[TimeZone]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.WorldTimesCommand
-  val title: String            = "World Times"
+  val title: String = "World Times"
 
   val isoFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSXXX")
 
@@ -32,7 +32,7 @@ final case class WorldTimesCommand(
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input    <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       previews <- if (input.rest.isEmpty) {
                     configuredZones(input.context)
                   } else {
@@ -72,7 +72,7 @@ final case class WorldTimesCommand(
                                 input.context
                               )
                             )
-                          case None       =>
+                          case None =>
                             configuredZones(input.context)
                         }
 
@@ -95,9 +95,9 @@ final case class WorldTimesCommand(
     })
 
   def timeToSpecificZone(
-    dateTimeFrom: ZonedDateTime,
-    zoneTo: ZoneId,
-    context: CommandContext
+      dateTimeFrom: ZonedDateTime,
+      zoneTo: ZoneId,
+      context: CommandContext
   ): PreviewResults[Unit] = {
     val time = dateTimeFrom.withZoneSameInstant(zoneTo)
 
@@ -115,9 +115,9 @@ final case class WorldTimesCommand(
 
   def configuredZones(context: CommandContext): URIO[Clock, PreviewResults[Unit]] =
     for {
-      now  <- zio.clock.currentDateTime.!.map(_.toZonedDateTime)
+      now <- zio.clock.currentDateTime.!.map(_.toZonedDateTime)
       times = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.withZoneSameInstant(tz.zoneId)))
-      _     = times.map(time => dateTimeFormat.format(time.dateTime))
+      _ = times.map(time => dateTimeFormat.format(time.dateTime))
     } yield PreviewResults.fromIterable(times.map { time =>
       Preview.unit
         .score(Scores.high(context))
@@ -131,6 +131,7 @@ final case class WorldTimesCommand(
 }
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
+
   def make(config: Config): ZManaged[PartialEnv, CommandPluginError, WorldTimesCommand] =
     for {
       commandNames           <- config.getManaged[Option[List[String]]]("commandNames")

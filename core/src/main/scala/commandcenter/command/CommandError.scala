@@ -8,6 +8,7 @@ sealed trait CommandError {
 }
 
 object CommandError {
+
   final case class ShowMessage(rendered: Rendered, score: Double) extends CommandError {
     def previewResult: PreviewResult[Nothing] = PreviewResult.nothing(rendered).score(score)
 

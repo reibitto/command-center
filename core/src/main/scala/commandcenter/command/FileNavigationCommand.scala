@@ -1,10 +1,10 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.{ Env, PartialEnv }
-import commandcenter.command.CommandError._
+import commandcenter.command.CommandError.*
 import commandcenter.util.ProcessUtil
-import zio._
+import commandcenter.CCRuntime.{Env, PartialEnv}
+import zio.*
 import zio.logging.log
 import zio.stream.ZStream
 
@@ -33,8 +33,8 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
         case _                                    => new File(input)
       }
 
-      val exists     = file.exists()
-      val score      = if (exists) 101 else 100
+      val exists = file.exists()
+      val score = if (exists) 101 else 100
       val titleColor = if (exists) fansi.Color.Blue else fansi.Color.Red
 
       val sameLevel = Option(file.getParentFile)
@@ -43,7 +43,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
         .map(_.toFile)
         .filter { f =>
           val listedPath = f.getAbsolutePath.toLowerCase
-          val inputFile  = file.getAbsolutePath.toLowerCase
+          val inputFile = file.getAbsolutePath.toLowerCase
           listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
         }
 
@@ -55,7 +55,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
         .map(_.toFile)
         .filter { f =>
           val listedPath = f.getAbsolutePath.toLowerCase
-          val inputFile  = file.getAbsolutePath.toLowerCase
+          val inputFile = file.getAbsolutePath.toLowerCase
           listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
         }
 
@@ -80,6 +80,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
 }
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
+
   def make(config: Config): ZManaged[PartialEnv, CommandPluginError, FileNavigationCommand] =
     (for {
       homeDirectory <- zio.system.property("user.home").catchAll { t =>

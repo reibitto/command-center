@@ -1,11 +1,11 @@
 package commandcenter.command.util
 
 import commandcenter.command.CalculatorCommand.Parameters
+import fastparse.*
 import fastparse.Parsed.Success
-import fastparse.ScalaWhitespace._
-import fastparse._
-import spire.random.{ Random, Uniform }
-import spire.std.any.{ BigDecimalAlgebra, BigDecimalIsTrig }
+import fastparse.ScalaWhitespace.*
+import spire.random.{Random, Uniform}
+import spire.std.any.{BigDecimalAlgebra, BigDecimalIsTrig}
 
 import scala.annotation.tailrec
 
@@ -21,7 +21,7 @@ import scala.annotation.tailrec
  * </ul>
  */
 final class CalculatorUtil(parameters: Parameters) {
-  import CalculatorUtil._
+  import CalculatorUtil.*
 
   private val randomGenerator = Random.initGenerator()
 
@@ -166,6 +166,7 @@ final class CalculatorUtil(parameters: Parameters) {
 }
 
 object CalculatorUtil {
+
   def helpMessageFunctionsList: String =
     List(
       "",

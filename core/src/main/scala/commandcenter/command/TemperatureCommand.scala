@@ -1,11 +1,11 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.command.CommandError._
+import commandcenter.command.CommandError.*
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
-import zio.{ UManaged, ZIO, ZManaged }
+import commandcenter.CCRuntime.Env
+import zio.{UManaged, ZIO, ZManaged}
 
 import scala.util.matching.Regex
 

@@ -1,20 +1,20 @@
 package commandcenter.emulator.swt.ui
 
-import commandcenter.CCRuntime.Env
-import commandcenter._
-import commandcenter.command._
+import commandcenter.*
+import commandcenter.command.*
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{ Debouncer, OS }
+import commandcenter.util.{Debouncer, OS}
 import commandcenter.view.Rendered
-import org.eclipse.swt.SWT
+import commandcenter.CCRuntime.Env
 import org.eclipse.swt.custom.StyleRange
-import org.eclipse.swt.events.{ KeyAdapter, KeyEvent, ModifyEvent, ModifyListener }
+import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
 import org.eclipse.swt.widgets.Display
-import zio._
+import org.eclipse.swt.SWT
+import zio.*
 import zio.blocking.Blocking
 import zio.stream.ZSink
 
@@ -22,10 +22,10 @@ import java.awt.Dimension
 import scala.collection.mutable
 
 final case class SwtTerminal(
-  commandCursorRef: Ref[Int],
-  searchResultsRef: Ref[SearchResults[Any]],
-  searchDebouncer: Debouncer[Env, Nothing, Unit],
-  terminal: RawSwtTerminal
+    commandCursorRef: Ref[Int],
+    searchResultsRef: Ref[SearchResults[Any]],
+    searchDebouncer: Debouncer[Env, Nothing, Unit],
+    terminal: RawSwtTerminal
 )(implicit runtime: Runtime[Env])
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swt
@@ -44,17 +44,17 @@ final case class SwtTerminal(
     terminal.inputBox.addModifyListener(new ModifyListener {
       override def modifyText(e: ModifyEvent): Unit = {
         val searchTerm = terminal.inputBox.getText
-        val context    = CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0)
+        val context = CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0)
 
         runtime.unsafeRunAsync_ {
           for {
             config <- Conf.config
-            _      <- searchDebouncer(
-                        Command
-                          .search(config.commands, config.aliases, searchTerm, context)
-                          .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-                          .unit
-                      ).flatMap(_.join)
+            _ <- searchDebouncer(
+                   Command
+                     .search(config.commands, config.aliases, searchTerm, context)
+                     .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                     .unit
+                 ).flatMap(_.join)
           } yield ()
         }
       }
@@ -70,9 +70,9 @@ final case class SwtTerminal(
                 previousResults <- searchResultsRef.get
                 cursorIndex     <- commandCursorRef.get
                 resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
-                _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                                     invoke(terminal.shell.dispose())
-                                   }
+                _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
+                       invoke(terminal.shell.dispose())
+                     }
               } yield ()
             }
 
@@ -91,9 +91,9 @@ final case class SwtTerminal(
             runtime.unsafeRunAsync_ {
               for {
                 previousResults <- searchResultsRef.get
-                previousCursor  <-
+                previousCursor <-
                   commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-                _               <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
+                _ <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
               } yield ()
             }
 
@@ -111,18 +111,18 @@ final case class SwtTerminal(
             runtime.unsafeRunAsync_ {
               for {
                 previousResults <- searchResultsRef.get
-                shortcutPressed  = KeyboardShortcutUtil.fromKeyEvent(e)
-                eligibleResults  = previousResults.previews.filter { p =>
-                                     p.shortcuts.contains(shortcutPressed)
-                                   }
-                bestMatch        = eligibleResults.maxByOption(_.score)
-                _               <- ZIO.foreach_(bestMatch) { preview =>
-                                     for {
-                                       _ <- hide
-                                       _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
-                                       _ <- reset
-                                     } yield ()
-                                   }
+                shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
+                eligibleResults = previousResults.previews.filter { p =>
+                                    p.shortcuts.contains(shortcutPressed)
+                                  }
+                bestMatch = eligibleResults.maxByOption(_.score)
+                _ <- ZIO.foreach_(bestMatch) { preview =>
+                       for {
+                         _ <- hide
+                         _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
+                         _ <- reset
+                       } yield ()
+                     }
               } yield ()
             }
         }
@@ -132,30 +132,30 @@ final case class SwtTerminal(
   private def renderSelectionCursor(cursorDelta: Int): UIO[Unit] =
     for {
       commandCursor <- commandCursorRef.get
-      textIndex      = smartBuffer.lineStartIndices(commandCursor)
+      textIndex = smartBuffer.lineStartIndices(commandCursor)
       priorTextIndex = smartBuffer.lineStartIndices(commandCursor + cursorDelta)
-      _             <- invoke {
-                         terminal.outputBox.replaceStyleRanges(
-                           0,
-                           0,
-                           Array(
-                             new StyleRange(
-                               priorTextIndex,
-                               1,
-                               null,
-                               terminal.darkGray
-                             ),
-                             new StyleRange(
-                               textIndex,
-                               1,
-                               null,
-                               terminal.green
-                             )
-                           ).sortBy(_.start)
-                         )
+      _ <- invoke {
+             terminal.outputBox.replaceStyleRanges(
+               0,
+               0,
+               Array(
+                 new StyleRange(
+                   priorTextIndex,
+                   1,
+                   null,
+                   terminal.darkGray
+                 ),
+                 new StyleRange(
+                   textIndex,
+                   1,
+                   null,
+                   terminal.green
+                 )
+               ).sortBy(_.start)
+             )
 
-                         terminal.outputBox.setSelection(textIndex)
-                       }
+             terminal.outputBox.setSelection(textIndex)
+           }
     } yield ()
 
   private def render(searchResults: SearchResults[Any]): URIO[Has[Conf], Unit] = {
@@ -163,9 +163,9 @@ final case class SwtTerminal(
 
     for {
       commandCursor <- commandCursorRef.get
-      _              = smartBuffer.clear()
-      styles         = new mutable.ArrayDeque[StyleRange]()
-      _              = {
+      _ = smartBuffer.clear()
+      styles = new mutable.ArrayDeque[StyleRange]()
+      _ = {
         def renderBar(rowIndex: Int): Unit = {
           val barColor = if (rowIndex == commandCursor) terminal.green else terminal.darkGray
 
@@ -226,24 +226,24 @@ final case class SwtTerminal(
       }
 
       config <- Conf.config
-      _      <- invoke {
-                  if (smartBuffer.buffer.isEmpty || !terminal.shell.isVisible) {
-                    terminal.outputBox.setVisible(false)
-                    terminal.outputBoxGridData.exclude = true
-                    terminal.outputBox.setText("")
-                  } else {
-                    terminal.outputBox.setVisible(true)
-                    terminal.outputBoxGridData.exclude = false
-                    terminal.outputBox.setText(smartBuffer.buffer.toString)
+      _ <- invoke {
+             if (smartBuffer.buffer.isEmpty || !terminal.shell.isVisible) {
+               terminal.outputBox.setVisible(false)
+               terminal.outputBoxGridData.exclude = true
+               terminal.outputBox.setText("")
+             } else {
+               terminal.outputBox.setVisible(true)
+               terminal.outputBoxGridData.exclude = false
+               terminal.outputBox.setText(smartBuffer.buffer.toString)
 
-                    terminal.outputBox.setStyleRanges(styles.toArray)
-                  }
+               terminal.outputBox.setStyleRanges(styles.toArray)
+             }
 
-                  val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
-                  terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
+             val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
+             terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
 
-                  terminal.outputBox.setSelection(scrollToPosition)
-                }
+             terminal.outputBox.setSelection(scrollToPosition)
+           }
     } yield ()
   }
 
@@ -264,18 +264,18 @@ final case class SwtTerminal(
                    for {
                      _                     <- preview.onRun.absorb.forkDaemon
                      (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
-                     _                     <- showMore(
-                                                results,
-                                                preview.moreResults(
-                                                  MoreResults.Remaining(
-                                                    p.copy(
-                                                      results = restStream,
-                                                      totalRemaining = p.totalRemaining.map(_ - pageSize)
-                                                    )
-                                                  )
-                                                ),
-                                                pageSize
-                                              )
+                     _ <- showMore(
+                            results,
+                            preview.moreResults(
+                              MoreResults.Remaining(
+                                p.copy(
+                                  results = restStream,
+                                  totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                )
+                              )
+                            ),
+                            pageSize
+                          )
                    } yield ()
 
                  case _ =>
@@ -286,12 +286,12 @@ final case class SwtTerminal(
     }
 
   def showMore[A](
-    moreResults: Chunk[PreviewResult[A]],
-    previewSource: PreviewResult[A],
-    pageSize: Int
+      moreResults: Chunk[PreviewResult[A]],
+      previewSource: PreviewResult[A],
+      pageSize: Int
   ): RIO[Env, Unit] =
     for {
-      cursorIndex   <- commandCursorRef.get
+      cursorIndex <- commandCursorRef.get
       searchResults <- searchResultsRef.updateAndGet { results =>
                          val (front, back) = results.previews.splitAt(cursorIndex)
 
@@ -303,7 +303,7 @@ final case class SwtTerminal(
 
                          results.copy(previews = previews)
                        }
-      _             <- render(searchResults)
+      _ <- render(searchResults)
     } yield ()
 
   def invoke(effect: => Unit): UIO[Unit] =
@@ -340,7 +340,7 @@ final case class SwtTerminal(
     for {
       _ <- invoke {
              val bounds = terminal.shell.getDisplay.getPrimaryMonitor.getClientArea
-             val x      = (bounds.width - terminal.shell.getSize.x) / 2
+             val x = (bounds.width - terminal.shell.getSize.x) / 2
              terminal.shell.setLocation(x, 0)
              terminal.shell.open()
            }
@@ -371,22 +371,23 @@ final case class SwtTerminal(
     for {
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
-      _      <- invoke {
-                  val preferredFont = terminal.getPreferredFont(config.display.fonts)
-                  terminal.inputBox.setFont(preferredFont)
-                  terminal.outputBox.setFont(preferredFont)
-                }
+      _ <- invoke {
+             val preferredFont = terminal.getPreferredFont(config.display.fonts)
+             terminal.inputBox.setFont(preferredFont)
+             terminal.outputBox.setFont(preferredFont)
+           }
     } yield ()
 }
 
 object SwtTerminal {
+
   def create(runtime: CCRuntime, terminal: RawSwtTerminal): RManaged[Env, SwtTerminal] =
     for {
       debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
       searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-      swtTerminal       = new SwtTerminal(commandCursorRef, searchResultsRef, searchDebouncer, terminal)(runtime)
-      _                <- swtTerminal.init.toManaged_
+      swtTerminal = new SwtTerminal(commandCursorRef, searchResultsRef, searchDebouncer, terminal)(runtime)
+      _ <- swtTerminal.init.toManaged_
     } yield swtTerminal
 }

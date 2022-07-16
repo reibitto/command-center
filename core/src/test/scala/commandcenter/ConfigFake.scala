@@ -1,11 +1,12 @@
 package commandcenter
 
-import commandcenter.CCRuntime.PartialEnv
 import commandcenter.event.KeyboardShortcut
-import zio.duration._
-import zio.{ Has, RIO, UIO, ULayer, ZLayer }
+import commandcenter.CCRuntime.PartialEnv
+import zio.{Has, RIO, UIO, ULayer, ZLayer}
+import zio.duration.*
 
 final case class ConfigFake() extends Conf {
+
   def config: UIO[CCConfig] = UIO(
     CCConfig(
       commands = Vector.empty,

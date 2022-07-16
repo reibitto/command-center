@@ -1,7 +1,7 @@
 package commandcenter.cli.message
 
 import commandcenter.codec.Codecs
-import io.circe._
+import io.circe.*
 
 sealed trait CCRequest {
   def correlationId: Option[String]

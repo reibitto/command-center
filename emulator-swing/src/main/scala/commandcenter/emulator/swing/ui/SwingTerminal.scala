@@ -1,38 +1,38 @@
 package commandcenter.emulator.swing.ui
 
-import commandcenter.CCRuntime.Env
-import commandcenter._
-import commandcenter.command._
+import commandcenter.*
+import commandcenter.command.*
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{ Debouncer, OS }
-import commandcenter.view.{ Rendered, Style }
-import zio._
+import commandcenter.util.{Debouncer, OS}
+import commandcenter.view.{Rendered, Style}
+import commandcenter.CCRuntime.Env
+import zio.*
 import zio.blocking.Blocking
 import zio.stream.ZSink
 
-import java.awt._
+import java.awt.*
 import java.awt.event.KeyEvent
-import javax.swing._
+import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
-import javax.swing.text.{ DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext }
+import javax.swing.text.{DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext}
 
 final case class SwingTerminal(
-  commandCursorRef: Ref[Int],
-  searchResultsRef: Ref[SearchResults[Any]],
-  searchDebouncer: Debouncer[Env, Nothing, Unit],
-  closePromise: Promise[Nothing, Unit]
+    commandCursorRef: Ref[Int],
+    searchResultsRef: Ref[SearchResults[Any]],
+    searchDebouncer: Debouncer[Env, Nothing, Unit],
+    closePromise: Promise[Nothing, Unit]
 )(implicit runtime: Runtime[Env])
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swing
 
-  val theme         = CCTheme.default
-  val document      = new DefaultStyledDocument
-  val context       = new StyleContext
-  val frame         = new JFrame("Command Center")
+  val theme = CCTheme.default
+  val document = new DefaultStyledDocument
+  val context = new StyleContext
+  val frame = new JFrame("Command Center")
   val preferredFont = runtime.unsafeRun(getPreferredFont)
 
   frame.setBackground(theme.background)
@@ -64,21 +64,23 @@ final case class SwingTerminal(
     ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
   ) {
+
     override def getPreferredSize: Dimension =
       runtime.unsafeRun {
         for {
           config              <- Conf.config
           preferredFrameWidth <- getPreferredFrameWidth
           searchResults       <- searchResultsRef.get
-          height               = if (searchResults.previews.isEmpty) 0
-                                 else
-                                   outputTextPane.getPreferredSize.height min config.display.maxHeight
+          height = if (searchResults.previews.isEmpty) 0
+                   else
+                     outputTextPane.getPreferredSize.height min config.display.maxHeight
         } yield new Dimension(preferredFrameWidth, height)
       }
   }
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
 
   outputScrollPane.getVerticalScrollBar.setUI(new BasicScrollBarUI() {
+
     val emptyButton: JButton = {
       val button = new JButton()
       button.setPreferredSize(new Dimension(0, 0))
@@ -104,16 +106,16 @@ final case class SwingTerminal(
 
   inputTextField.addOnChangeListener { e =>
     val searchTerm = inputTextField.getText
-    val context    = CommandContext(Language.detect(searchTerm), SwingTerminal.this, 1.0)
+    val context = CommandContext(Language.detect(searchTerm), SwingTerminal.this, 1.0)
 
     for {
       config <- Conf.config
-      _      <- searchDebouncer(
-                  Command
-                    .search(config.commands, config.aliases, searchTerm, context)
-                    .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-                    .unit
-                ).flatMap(_.join)
+      _ <- searchDebouncer(
+             Command
+               .search(config.commands, config.aliases, searchTerm, context)
+               .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+               .unit
+           ).flatMap(_.join)
     } yield ()
   }
 
@@ -252,18 +254,18 @@ final case class SwingTerminal(
                    for {
                      _                     <- preview.onRun.absorb.forkDaemon
                      (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
-                     _                     <- showMore(
-                                                results,
-                                                preview.moreResults(
-                                                  MoreResults.Remaining(
-                                                    p.copy(
-                                                      results = restStream,
-                                                      totalRemaining = p.totalRemaining.map(_ - pageSize)
-                                                    )
-                                                  )
-                                                ),
-                                                pageSize
-                                              )
+                     _ <- showMore(
+                            results,
+                            preview.moreResults(
+                              MoreResults.Remaining(
+                                p.copy(
+                                  results = restStream,
+                                  totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                )
+                              )
+                            ),
+                            pageSize
+                          )
                    } yield ()
 
                  case _ =>
@@ -274,12 +276,12 @@ final case class SwingTerminal(
     }
 
   def showMore[A](
-    moreResults: Chunk[PreviewResult[A]],
-    previewSource: PreviewResult[A],
-    pageSize: Int
+      moreResults: Chunk[PreviewResult[A]],
+      previewSource: PreviewResult[A],
+      pageSize: Int
   ): RIO[Env, Unit] =
     for {
-      cursorIndex   <- commandCursorRef.get
+      cursorIndex <- commandCursorRef.get
       searchResults <- searchResultsRef.updateAndGet { results =>
                          val (front, back) = results.previews.splitAt(cursorIndex)
 
@@ -291,10 +293,11 @@ final case class SwingTerminal(
 
                          results.copy(previews = previews)
                        }
-      _             <- render(searchResults)
+      _ <- render(searchResults)
     } yield ()
 
   inputTextField.addZKeyListener(new ZKeyAdapter {
+
     override def keyPressed(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
         case KeyEvent.VK_ENTER =>
@@ -303,9 +306,9 @@ final case class SwingTerminal(
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
             resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
-            _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                                 closePromise.succeed(())
-                               }
+            _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
+                   closePromise.succeed(())
+                 }
           } yield ()
 
         case KeyEvent.VK_ESCAPE =>
@@ -320,10 +323,10 @@ final case class SwingTerminal(
 
           for {
             previousResults <- searchResultsRef.get
-            previousCursor  <-
+            previousCursor <-
               commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
             // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
-            _               <- render(previousResults).when(previousCursor < previousResults.previews.length - 1)
+            _ <- render(previousResults).when(previousCursor < previousResults.previews.length - 1)
           } yield ()
 
         case KeyEvent.VK_UP =>
@@ -333,24 +336,24 @@ final case class SwingTerminal(
             previousResults <- searchResultsRef.get
             previousCursor  <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
             // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
-            _               <- render(previousResults).when(previousCursor > 0)
+            _ <- render(previousResults).when(previousCursor > 0)
           } yield ()
 
         case _ =>
           for {
             previousResults <- searchResultsRef.get
-            shortcutPressed  = KeyboardShortcutUtil.fromKeyEvent(e)
-            eligibleResults  = previousResults.previews.filter { p =>
-                                 p.shortcuts.contains(shortcutPressed)
-                               }
-            bestMatch        = eligibleResults.maxByOption(_.score)
-            _               <- ZIO.foreach_(bestMatch) { preview =>
-                                 for {
-                                   _ <- hide
-                                   _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
-                                   _ <- reset
-                                 } yield ()
-                               }
+            shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
+            eligibleResults = previousResults.previews.filter { p =>
+                                p.shortcuts.contains(shortcutPressed)
+                              }
+            bestMatch = eligibleResults.maxByOption(_.score)
+            _ <- ZIO.foreach_(bestMatch) { preview =>
+                   for {
+                     _ <- hide
+                     _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
+                     _ <- reset
+                   } yield ()
+                 }
           } yield ()
       }
   })
@@ -383,7 +386,7 @@ final case class SwingTerminal(
   def activate: RIO[Has[Tools] with Blocking, Unit] =
     OS.os match {
       case OS.MacOS => Tools.activate
-      case _        =>
+      case _ =>
         UIO {
           frame.toFront()
           frame.requestFocus()
@@ -415,10 +418,10 @@ final case class SwingTerminal(
     for {
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
-      _      <- Task {
-                  inputTextField.setFont(preferredFont)
-                  outputTextPane.setFont(preferredFont)
-                }
+      _ <- Task {
+             inputTextField.setFont(preferredFont)
+             outputTextPane.setFont(preferredFont)
+           }
     } yield ()
 
   def getPreferredFont: URIO[Has[Conf], Font] = {
@@ -432,7 +435,7 @@ final case class SwingTerminal(
 
   def getPreferredFrameWidth: URIO[Has[Conf], Int] =
     for {
-      width       <- Conf.get(_.display.width)
+      width <- Conf.get(_.display.width)
       screenWidth <-
         Task(
           GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
@@ -441,6 +444,7 @@ final case class SwingTerminal(
 }
 
 object SwingTerminal {
+
   def create(runtime: CCRuntime): RManaged[Env, SwingTerminal] =
     for {
       debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
@@ -448,10 +452,10 @@ object SwingTerminal {
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
       closePromise     <- Promise.makeManaged[Nothing, Unit]
-      swingTerminal    <-
+      swingTerminal <-
         ZManaged.make(
           UIO(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
         )(t => UIO(t.frame.dispose()))
-      _                <- swingTerminal.init.toManaged_
+      _ <- swingTerminal.init.toManaged_
     } yield swingTerminal
 }

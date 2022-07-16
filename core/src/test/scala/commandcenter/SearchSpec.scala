@@ -1,13 +1,14 @@
 package commandcenter
 
+import commandcenter.command.*
 import commandcenter.CCRuntime.Env
-import commandcenter.command._
-import zio.ZIO
-import zio.duration._
-import zio.test._
+import zio.duration.*
+import zio.test.*
 import zio.test.environment.TestClock
+import zio.ZIO
 
 object SearchSpec extends CommandBaseSpec {
+
   val defectCommand: Command[Unit] = new Command[Unit] {
     val commandType: CommandType = CommandType.ExitCommand
 
@@ -23,7 +24,7 @@ object SearchSpec extends CommandBaseSpec {
     suite("SearchSpec")(
       testM("defect in one command should not fail entire search") {
         val commands = Vector(defectCommand, EpochMillisCommand(List("epochmillis")))
-        val results  = Command.search(commands, Map.empty, "e", defaultCommandContext)
+        val results = Command.search(commands, Map.empty, "e", defaultCommandContext)
 
         for {
           _        <- TestClock.setTime(1.second)

@@ -1,7 +1,7 @@
 package commandcenter.event
 
-import cats.data.Validated.{ Invalid, Valid }
-import cats.data.{ NonEmptyList, ValidatedNel }
+import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.Validated.{Invalid, Valid}
 import io.circe.Decoder
 
 final case class KeyboardShortcut(key: KeyCode, modifiers: Set[KeyModifier]) {
@@ -23,7 +23,7 @@ object KeyboardShortcut {
 
   def fromString(shortcut: String): ValidatedNel[String, KeyboardShortcut] =
     shortcut.split("[ +]+") match {
-      case Array()        => Invalid(NonEmptyList.one("Keyboard shortcut cannot be empty"))
+      case Array() => Invalid(NonEmptyList.one("Keyboard shortcut cannot be empty"))
       case Array(keyName) =>
         KeyCode.withNameInsensitiveOption(keyName) match {
           case Some(keyCode) => Valid(KeyboardShortcut(keyCode, Set.empty))

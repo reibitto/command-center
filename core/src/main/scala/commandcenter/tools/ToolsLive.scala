@@ -1,12 +1,12 @@
 package commandcenter.tools
 
 import commandcenter.util.AppleScript
+import zio.{Has, Task, TaskLayer, UIO}
 import zio.blocking.Blocking
-import zio.process.{ Command => PCommand }
-import zio.{ Has, Task, TaskLayer, UIO }
+import zio.process.{Command as PCommand}
 
-import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
+import java.awt.Toolkit
 import java.io.File
 import scala.util.Try
 
@@ -17,7 +17,7 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File], blocking: Blockin
   def activate: Task[Unit] =
     (toolsPath match {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "activate", pid.toString).exitCode.unit
-      case None          =>
+      case None =>
         AppleScript
           .runScript(s"""
                         |tell application "System Events"
@@ -31,14 +31,14 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File], blocking: Blockin
     toolsPath match {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", pid.toString).exitCode.unit.provide(Has(blocking))
       // TODO: Fallback to AppleScript if macOS
-      case None          => UIO.unit
+      case None => UIO.unit
     }
 
   def setClipboard(text: String): Task[Unit] =
     toolsPath match {
       case Some(ccTools) =>
         PCommand(ccTools.getAbsolutePath, "set-clipboard", text).exitCode.unit.provide(Has(blocking))
-      case None          =>
+      case None =>
         blocking.effectBlocking {
           Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(text), null)
         }
@@ -48,9 +48,10 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File], blocking: Blockin
 }
 
 object ToolsLive {
+
   def make: TaskLayer[Has[Tools]] =
     (for {
-      pid      <- Task(ProcessHandle.current.pid).toManaged_
+      pid <- Task(ProcessHandle.current.pid).toManaged_
       toolsPath = sys.env.get("COMMAND_CENTER_TOOLS_PATH").map(new File(_)).orElse {
                     Try(System.getProperty("user.home")).toOption
                       .map(home => new File(home, ".command-center/cc-tools"))

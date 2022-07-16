@@ -1,20 +1,20 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
+import commandcenter.util.{OS, WindowManager}
 import commandcenter.CCRuntime.Env
-import commandcenter.util.{ OS, WindowManager }
-import zio.{ Managed, ZIO }
+import zio.{Managed, ZIO}
 
 final case class SwitchWindowCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SwitchWindowCommand
-  val title: String            = "Switch Window"
+  val title: String = "Switch Window"
 
   // TODO: Support macOS and Linux too
   override val supportedOS: Set[OS] = Set(OS.Windows)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input   <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       // TODO: Consider adding more info than just the title. Like "File Explorer" and so on.
       windows <- WindowManager.topLevelWindows.mapBoth(
                    CommandError.UnexpectedException,
@@ -29,6 +29,7 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
 }
 
 object SwitchWindowCommand extends CommandPlugin[SwitchWindowCommand] {
+
   def make(config: Config): Managed[CommandPluginError, SwitchWindowCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

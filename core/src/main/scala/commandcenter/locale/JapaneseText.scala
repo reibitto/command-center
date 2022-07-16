@@ -1,6 +1,7 @@
 package commandcenter.locale
 
 object JapaneseText {
+
   def isHiragana(c: Char): Boolean =
     c match {
       case code if code >= 0x3041 && code <= 0x3094   => true

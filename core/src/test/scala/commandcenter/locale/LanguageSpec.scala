@@ -1,11 +1,12 @@
 package commandcenter.locale
 
+import zio.test.*
+import zio.test.Assertion.*
+
 import java.util.Locale
 
-import zio.test.Assertion._
-import zio.test._
-
 object LanguageSpec extends DefaultRunnableSpec {
+
   def spec =
     suite("LanguageSpec")(
       test("detect plain English text") {

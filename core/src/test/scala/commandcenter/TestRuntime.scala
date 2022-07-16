@@ -3,12 +3,13 @@ package commandcenter
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
 import sttp.client3.httpclient.zio.SttpClient
+import zio.{Has, ZEnv}
 import zio.logging.Logging
-import zio.test.environment._
-import zio.test.{ Annotations, Sized }
-import zio.{ Has, ZEnv }
+import zio.test.{Annotations, Sized}
+import zio.test.environment.*
 
 object TestRuntime {
+
   type TestPartialEnv = ZEnv
     with Annotations
     with TestClock

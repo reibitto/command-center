@@ -1,13 +1,14 @@
 package commandcenter.emulator.swt.event
 
-import commandcenter.event.{ KeyCode, KeyModifier, KeyboardShortcut }
-import org.eclipse.swt.SWT
+import commandcenter.event.{KeyCode, KeyModifier, KeyboardShortcut}
 import org.eclipse.swt.events.KeyEvent
+import org.eclipse.swt.SWT
 
 import java.awt.event.InputEvent
 import javax.swing.KeyStroke
 
 object KeyboardShortcutUtil {
+
   def fromKeyEvent(e: KeyEvent): KeyboardShortcut = {
     val modifiers: Set[KeyModifier] =
       (if ((e.stateMask & SWT.SHIFT) == SWT.SHIFT) Set(KeyModifier.Shift) else Set.empty) ++

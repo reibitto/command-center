@@ -1,16 +1,16 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.tools.Tools
 import commandcenter.util.OS
+import commandcenter.CCRuntime.Env
+import zio.{Managed, ZIO}
 import zio.blocking.Blocking
-import zio.process.{ Command => PCommand }
-import zio.{ Managed, ZIO }
+import zio.process.{Command as PCommand}
 
 final case class ExternalIPCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.ExternalIPCommand
-  val title: String            = "External IP"
+  val title: String = "External IP"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
@@ -32,13 +32,14 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
           a.drop(prefix.length).trim
         }).mapError(CommandError.UnexpectedException)
           .someOrFail(CommandError.InternalError("Could not parse nslookup results"))
-      case _          =>
+      case _ =>
         PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
           .mapBoth(CommandError.UnexpectedException, _.trim)
     }
 }
 
 object ExternalIPCommand extends CommandPlugin[ExternalIPCommand] {
+
   def make(config: Config): Managed[CommandPluginError, ExternalIPCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

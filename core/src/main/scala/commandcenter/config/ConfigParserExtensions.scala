@@ -1,15 +1,17 @@
 package commandcenter.config
 
-import com.typesafe.config._
+import com.typesafe.config.*
 import commandcenter.command.CommandPluginError
+import io.circe.{Decoder, Json}
 import io.circe.config.parser
-import io.circe.{ Decoder, Json }
-import zio.{ IO, ZIO, ZManaged }
+import zio.{IO, ZIO, ZManaged}
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 trait ConfigParserExtensions {
+
   implicit class ConfigExtension(val config: Config) {
+
     def convertValueUnsafe(value: ConfigValue): Json =
       value match {
         case obj: ConfigObject =>
@@ -36,16 +38,19 @@ trait ConfigParserExtensions {
           }
       }
 
-    /** Read config settings into the specified type.
-      */
+    /**
+     * Read config settings into the specified type.
+     */
     def as[A: Decoder]: Either[io.circe.Error, A] = parser.decode[A](config)
 
-    /** Read config settings at given path into the specified type.
-      */
+    /**
+     * Read config settings at given path into the specified type.
+     */
     def as[A: Decoder](path: String): Either[io.circe.Error, A] = parser.decodePath[A](config, path)
 
-    /** Get the value at given path into the specified type.
-      */
+    /**
+     * Get the value at given path into the specified type.
+     */
     def get[A: Decoder](path: String): Either[io.circe.Error, A] = {
       val json =
         if (config.hasPath(path))

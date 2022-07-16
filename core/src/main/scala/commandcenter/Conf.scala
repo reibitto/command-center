@@ -1,7 +1,7 @@
 package commandcenter
 
-import commandcenter.CCRuntime.{ Env, PartialEnv }
-import zio._
+import commandcenter.CCRuntime.{Env, PartialEnv}
+import zio.*
 import zio.logging.log
 
 trait Conf {
@@ -31,20 +31,21 @@ final case class ConfigLive(configRef: Ref[CCConfig], reservationRef: Ref[Reserv
       previousReservation <- reservationRef.get
       _                   <- previousReservation.release(Exit.unit)
       reservation         <- CCConfig.load.reserve
-      config              <- reservation.acquire.tapError { t =>
-                               log.throwable(
-                                 "Command Center did not load properly with the new config and might now be in an invalid state.",
-                                 t
-                               )
-                             }
-      _                   <- configRef.set(config)
-      _                   <- reservationRef.set(reservation)
+      config <- reservation.acquire.tapError { t =>
+                  log.throwable(
+                    "Command Center did not load properly with the new config and might now be in an invalid state.",
+                    t
+                  )
+                }
+      _ <- configRef.set(config)
+      _ <- reservationRef.set(reservation)
     } yield config).tapError { t =>
       log.throwable("Could not reload config because the config file is not valid", t)
     }
 }
 
 object ConfigLive {
+
   def layer: RLayer[PartialEnv, Has[Conf]] =
     (for {
       reservation    <- CCConfig.load.reserve.toManaged_

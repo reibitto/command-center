@@ -4,11 +4,12 @@ import io.circe.Decoder
 
 import java.awt.Font
 import java.io.File
-import java.nio.file.{ Path, Paths }
-import java.time.format.{ DateTimeFormatter, FormatStyle }
+import java.nio.file.{Path, Paths}
+import java.time.format.{DateTimeFormatter, FormatStyle}
 import scala.util.Try
 
 object Decoders {
+
   implicit val fontDecoder: Decoder[Font] =
     Decoder.instance { c =>
       for {

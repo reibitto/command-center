@@ -1,32 +1,32 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.codec.Codecs.localeDecoder
-import commandcenter.command.CommandError._
+import commandcenter.command.CommandError.*
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
 import commandcenter.view.Renderer
-import zio._
+import commandcenter.CCRuntime.Env
+import zio.*
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 final case class SearchUrlCommand(
-  title: String,
-  urlTemplate: String,
-  override val commandNames: List[String] = List.empty,
-  override val locales: Set[Locale] = Set.empty,
-  override val shortcuts: Set[KeyboardShortcut] = Set.empty
+    title: String,
+    urlTemplate: String,
+    override val commandNames: List[String] = List.empty,
+    override val locales: Set[Locale] = Set.empty,
+    override val shortcuts: Set[KeyboardShortcut] = Set.empty
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchUrlCommand
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] = {
     def prefixPreview: ZIO[Env, CommandError, PreviewResults[Unit]] =
       for {
-        input      <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
-        url         = urlTemplate.replace("{query}", URLEncoder.encode(input.rest, StandardCharsets.UTF_8))
+        input <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
+        url = urlTemplate.replace("{query}", URLEncoder.encode(input.rest, StandardCharsets.UTF_8))
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
       } yield PreviewResults.one(
         Preview.unit
@@ -58,6 +58,7 @@ final case class SearchUrlCommand(
 }
 
 object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
+
   def make(config: Config): Managed[CommandPluginError, SearchUrlCommand] =
     for {
       title        <- config.getManaged[String]("title")

@@ -1,37 +1,37 @@
 package commandcenter.emulator.swt.ui
 
-import commandcenter.CCConfig
 import commandcenter.util.OS
-import org.eclipse.swt.SWT
+import commandcenter.CCConfig
 import org.eclipse.swt.custom.StyledText
-import org.eclipse.swt.graphics.{ Color, Font }
-import org.eclipse.swt.layout.{ GridData, GridLayout }
-import org.eclipse.swt.widgets.{ Display, Shell, Text }
+import org.eclipse.swt.graphics.{Color, Font}
+import org.eclipse.swt.layout.{GridData, GridLayout}
+import org.eclipse.swt.widgets.{Display, Shell, Text}
+import org.eclipse.swt.SWT
 
 class RawSwtTerminal(val initialConfig: CCConfig) {
   val display = new Display()
-  val shell   = new Shell(display, SWT.MODELESS | SWT.DOUBLE_BUFFERED)
+  val shell = new Shell(display, SWT.MODELESS | SWT.DOUBLE_BUFFERED)
 
   if (OS.os == OS.Windows) {
     display.setData("org.eclipse.swt.internal.win32.useDarkModeExplorerTheme", true)
   }
 
-  val black        = new Color(display, 0, 0, 0)
-  val red          = new Color(display, 236, 91, 57)
-  val green        = new Color(display, 122, 202, 107)
-  val yellow       = new Color(display, 245, 218, 55)
-  val blue         = new Color(display, 66, 142, 255)
-  val magenta      = new Color(display, 135, 129, 211)
-  val cyan         = new Color(display, 22, 180, 236)
-  val lightGray    = new Color(display, 100, 100, 100)
-  val darkGray     = new Color(display, 50, 50, 50)
-  val lightRed     = new Color(display, 255, 135, 119)
-  val lightGreen   = new Color(display, 165, 222, 153)
-  val lightYellow  = new Color(display, 255, 236, 131)
-  val lightBlue    = new Color(display, 75, 149, 255)
+  val black = new Color(display, 0, 0, 0)
+  val red = new Color(display, 236, 91, 57)
+  val green = new Color(display, 122, 202, 107)
+  val yellow = new Color(display, 245, 218, 55)
+  val blue = new Color(display, 66, 142, 255)
+  val magenta = new Color(display, 135, 129, 211)
+  val cyan = new Color(display, 22, 180, 236)
+  val lightGray = new Color(display, 100, 100, 100)
+  val darkGray = new Color(display, 50, 50, 50)
+  val lightRed = new Color(display, 255, 135, 119)
+  val lightGreen = new Color(display, 165, 222, 153)
+  val lightYellow = new Color(display, 255, 236, 131)
+  val lightBlue = new Color(display, 75, 149, 255)
   val lightMagenta = new Color(display, 135, 129, 211)
-  val lightCyan    = new Color(display, 111, 214, 255)
-  val white        = new Color(display, 209, 209, 209)
+  val lightCyan = new Color(display, 111, 214, 255)
+  val white = new Color(display, 209, 209, 209)
 
   def fromFansiColorCode(colorCode: Int): Option[Color] =
     colorCode match {

@@ -2,14 +2,14 @@ package commandcenter.command
 
 import com.monovore.decline.Help
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.{ Env, PartialEnv }
-import commandcenter.CommandContext
 import commandcenter.event.KeyboardShortcut
-import commandcenter.util.{ JavaVM, OS }
-import commandcenter.view.{ Rendered, Renderer }
-import zio._
-import zio.logging._
-import zio.stream.{ ZSink, ZStream }
+import commandcenter.util.{JavaVM, OS}
+import commandcenter.view.{Rendered, Renderer}
+import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CommandContext
+import zio.*
+import zio.logging.*
+import zio.stream.{ZSink, ZStream}
 
 import java.util.Locale
 
@@ -18,13 +18,14 @@ trait Command[+A] {
 
   def commandNames: List[String]
   def title: String
-  def locales: Set[Locale]             = Set.empty
-  def supportedOS: Set[OS]             = Set.empty
+  def locales: Set[Locale] = Set.empty
+  def supportedOS: Set[OS] = Set.empty
   def shortcuts: Set[KeyboardShortcut] = Set.empty
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[A]]
 
   object Preview {
+
     def apply[A1 >: A](a: A1): PreviewResult[A1] =
       PreviewResult.Some(
         Command.this,
@@ -62,11 +63,12 @@ trait Command[+A] {
 }
 
 object Command {
+
   def search[A](
-    commands: Vector[Command[A]],
-    aliases: Map[String, List[String]],
-    input: String,
-    context: CommandContext
+      commands: Vector[Command[A]],
+      aliases: Map[String, List[String]],
+      input: String,
+      context: CommandContext
   ): URIO[Env, SearchResults[A]] = {
     val (commandPart, rest) = input.split("[ ]+", 2) match {
       case Array(prefix, rest) => (prefix, s" $rest")
@@ -83,8 +85,8 @@ object Command {
                     command
                       .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
                       .flatMap {
-                        case PreviewResults.Single(r)                                   => UIO(Chunk.single(r))
-                        case PreviewResults.Multiple(rs)                                => UIO(rs)
+                        case PreviewResults.Single(r)    => UIO(Chunk.single(r))
+                        case PreviewResults.Multiple(rs) => UIO(rs)
                         case p @ PreviewResults.Paginated(rs, pageSize, totalRemaining) =>
                           for {
                             (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow
@@ -134,58 +136,58 @@ object Command {
     }
   }
 
-  def parse(config: Config): ZManaged[PartialEnv, CommandPluginError, Command[_]] =
+  def parse(config: Config): ZManaged[PartialEnv, CommandPluginError, Command[?]] =
     for {
       typeName <- Task(config.getString("type")).mapError(CommandPluginError.UnexpectedException).toManaged_
-      command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
-                    case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
-                    case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
-                    case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
-                    case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
-                    case CommandType.EncodeUrlCommand          => EncodeUrlCommand.make(config)
-                    case CommandType.EpochMillisCommand        => EpochMillisCommand.make(config)
-                    case CommandType.EpochUnixCommand          => EpochUnixCommand.make(config)
-                    case CommandType.ExitCommand               => ExitCommand.make(config)
-                    case CommandType.ExternalIPCommand         => ExternalIPCommand.make(config)
-                    case CommandType.Foobar2000Command         => Foobar2000Command.make(config)
-                    case CommandType.FileNavigationCommand     => FileNavigationCommand.make(config)
-                    case CommandType.FindFileCommand           => FindFileCommand.make(config)
-                    case CommandType.FindInFileCommand         => FindInFileCommand.make(config)
-                    case CommandType.HashCommand               => HashCommand.make(config)
-                    case CommandType.HoogleCommand             => HoogleCommand.make(config)
-                    case CommandType.ITunesCommand             => ITunesCommand.make(config)
-                    case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
-                    case CommandType.LockCommand               => LockCommand.make(config)
-                    case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
-                    case CommandType.OpacityCommand            => OpacityCommand.make(config)
-                    case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
-                    case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)
-                    case CommandType.RadixCommand              => RadixCommand.make(config)
-                    case CommandType.RebootCommand             => RebootCommand.make(config)
-                    case CommandType.ReloadCommand             => ReloadCommand.make(config)
-                    case CommandType.ResizeCommand             => ResizeCommand.make(config)
-                    case CommandType.SearchCratesCommand       => SearchCratesCommand.make(config)
-                    case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
-                    case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
-                    case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
-                    case CommandType.StocksCommand             => StocksCommand.make(config)
-                    case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
-                    case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
-                    case CommandType.SystemCommand             => SystemCommand.make(config)
-                    case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
-                    case CommandType.TerminalCommand           => TerminalCommand.make(config)
-                    case CommandType.TimerCommand              => TimerCommand.make(config)
-                    case CommandType.ToggleDesktopIconsCommand => ToggleDesktopIconsCommand.make(config)
-                    case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
-                    case CommandType.UUIDCommand               => UUIDCommand.make(config)
-                    case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
+      command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
+                   case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
+                   case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
+                   case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
+                   case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
+                   case CommandType.EncodeUrlCommand          => EncodeUrlCommand.make(config)
+                   case CommandType.EpochMillisCommand        => EpochMillisCommand.make(config)
+                   case CommandType.EpochUnixCommand          => EpochUnixCommand.make(config)
+                   case CommandType.ExitCommand               => ExitCommand.make(config)
+                   case CommandType.ExternalIPCommand         => ExternalIPCommand.make(config)
+                   case CommandType.Foobar2000Command         => Foobar2000Command.make(config)
+                   case CommandType.FileNavigationCommand     => FileNavigationCommand.make(config)
+                   case CommandType.FindFileCommand           => FindFileCommand.make(config)
+                   case CommandType.FindInFileCommand         => FindInFileCommand.make(config)
+                   case CommandType.HashCommand               => HashCommand.make(config)
+                   case CommandType.HoogleCommand             => HoogleCommand.make(config)
+                   case CommandType.ITunesCommand             => ITunesCommand.make(config)
+                   case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
+                   case CommandType.LockCommand               => LockCommand.make(config)
+                   case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
+                   case CommandType.OpacityCommand            => OpacityCommand.make(config)
+                   case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
+                   case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)
+                   case CommandType.RadixCommand              => RadixCommand.make(config)
+                   case CommandType.RebootCommand             => RebootCommand.make(config)
+                   case CommandType.ReloadCommand             => ReloadCommand.make(config)
+                   case CommandType.ResizeCommand             => ResizeCommand.make(config)
+                   case CommandType.SearchCratesCommand       => SearchCratesCommand.make(config)
+                   case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
+                   case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
+                   case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
+                   case CommandType.StocksCommand             => StocksCommand.make(config)
+                   case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
+                   case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
+                   case CommandType.SystemCommand             => SystemCommand.make(config)
+                   case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
+                   case CommandType.TerminalCommand           => TerminalCommand.make(config)
+                   case CommandType.TimerCommand              => TimerCommand.make(config)
+                   case CommandType.ToggleDesktopIconsCommand => ToggleDesktopIconsCommand.make(config)
+                   case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
+                   case CommandType.UUIDCommand               => UUIDCommand.make(config)
+                   case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
 
-                    case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
-                      ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))
+                   case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
+                     ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))
 
-                    case CommandType.External(typeName) =>
-                      CommandPlugin.loadDynamically(config, typeName)
-                  }
+                   case CommandType.External(typeName) =>
+                     CommandPlugin.loadDynamically(config, typeName)
+                 }
     } yield command
 
 }

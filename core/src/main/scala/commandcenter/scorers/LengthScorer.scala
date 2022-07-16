@@ -1,6 +1,7 @@
 package commandcenter.scorers
 
 object LengthScorer {
+
   def scoreDefault(target: String, input: String): Double =
     if (target.startsWith(input))
       1.0 - (target.length - input.length) / target.length.toDouble

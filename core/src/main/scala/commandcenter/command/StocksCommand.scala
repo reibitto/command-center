@@ -1,33 +1,33 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
+import commandcenter.command.StocksCommand.{StocksResult, Ticker}
 import commandcenter.CCRuntime.Env
-import commandcenter.command.StocksCommand.{ StocksResult, Ticker }
-import io.circe.{ Decoder, Json }
+import io.circe.{Decoder, Json}
+import sttp.client3.{basicRequest, UriContext}
 import sttp.client3.circe.asJson
-import sttp.client3.httpclient.zio._
-import sttp.client3.{ basicRequest, UriContext }
-import zio.{ IO, Managed, ZIO }
+import sttp.client3.httpclient.zio.*
+import zio.{IO, Managed, ZIO}
 
 final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]) extends Command[Unit] {
   val commandType: CommandType = CommandType.StocksCommand
-  val title: String            = "Stock"
-  val stocksUrl: String        = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
+  val title: String = "Stock"
+  val stocksUrl: String = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input    <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-      symbols   = if (input.rest.isBlank) tickers.map(_.id).mkString(",") else input.rest
-      request   = basicRequest
-                    .get(uri"$stocksUrl$symbols")
-                    .response(asJson[Json])
+      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      symbols = if (input.rest.isBlank) tickers.map(_.id).mkString(",") else input.rest
+      request = basicRequest
+                  .get(uri"$stocksUrl$symbols")
+                  .response(asJson[Json])
       response <- send(request)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
-      stocks   <- IO.fromEither(
-                    response.hcursor.downField("quoteResponse").downField("result").as[List[StocksResult]]
-                  ).mapError(CommandError.UnexpectedException)
+      stocks <- IO.fromEither(
+                  response.hcursor.downField("quoteResponse").downField("result").as[List[StocksResult]]
+                ).mapError(CommandError.UnexpectedException)
     } yield PreviewResults.fromIterable(stocks.map { stock =>
       Preview.unit
         .score(Scores.high(input.context))
@@ -43,7 +43,7 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
     })
 
   private def getChangePercentField(change: Double, changePercent: Double): fansi.Str = {
-    val changeTextField        = s"${String.format("%.2f", change)}"
+    val changeTextField = s"${String.format("%.2f", change)}"
     val changePercentTextField = s"(${String.format("%.2f", changePercent.abs)}%)"
     if (changePercent >= 0) fansi.Color.Green(s" +$changeTextField $changePercentTextField")
     else fansi.Color.Red(s" $changeTextField $changePercentTextField")
@@ -51,13 +51,14 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
 }
 
 object StocksCommand extends CommandPlugin[StocksCommand] {
+
   final case class StocksResult(
-    ticker: String,
-    name: String,
-    price: Double,
-    currency: String,
-    change: Double,
-    changePercent: Double
+      ticker: String,
+      name: String,
+      price: Double,
+      currency: String,
+      change: Double,
+      changePercent: Double
   )
 
   final case class Ticker(id: String)

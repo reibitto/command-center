@@ -1,8 +1,8 @@
 package commandcenter
 
-import commandcenter.CCRuntime.Env
 import commandcenter.command.PreviewResult
-import zio.{ Chunk, RIO, URIO }
+import commandcenter.CCRuntime.Env
+import zio.{Chunk, RIO, URIO}
 
 import java.awt.Dimension
 
@@ -19,9 +19,9 @@ trait CCTerminal {
   def reload: RIO[Env, Unit]
 
   def showMore[A](
-    moreResults: Chunk[PreviewResult[A]],
-    previewSource: PreviewResult[A],
-    pageSize: Int
+      moreResults: Chunk[PreviewResult[A]],
+      previewSource: PreviewResult[A],
+      pageSize: Int
   ): RIO[Env, Unit]
 }
 
