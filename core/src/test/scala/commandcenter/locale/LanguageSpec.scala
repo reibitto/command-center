@@ -4,8 +4,9 @@ import zio.test.*
 import zio.test.Assertion.*
 
 import java.util.Locale
+import zio.test.ZIOSpecDefault
 
-object LanguageSpec extends DefaultRunnableSpec {
+object LanguageSpec extends ZIOSpecDefault {
 
   def spec =
     suite("LanguageSpec")(

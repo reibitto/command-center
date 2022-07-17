@@ -4,11 +4,12 @@ import com.typesafe.config.Config
 import commandcenter.command.HoogleCommand.HoogleResult
 import commandcenter.util.ProcessUtil
 import commandcenter.CCRuntime.Env
+import commandcenter.HttpClient
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
-import sttp.client3.httpclient.zio.*
-import zio.{IO, Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 final case class HoogleCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.HoogleCommand
@@ -20,13 +21,15 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
       request = basicRequest
                   .get(uri"https://hoogle.haskell.org?mode=json&format=text&hoogle=${input.rest}&start=1&count=5")
                   .response(asJson[Json])
-      response <- send(request)
+      response <- request.send(HttpClient.backend)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
-      results <- IO.fromEither(
-                   response.as[List[HoogleResult]]
-                 ).mapError(CommandError.UnexpectedException)
+      results <- ZIO
+                   .fromEither(
+                     response.as[List[HoogleResult]]
+                   )
+                   .mapError(CommandError.UnexpectedException)
     } yield PreviewResults.fromIterable(results.map { result =>
       Preview.unit
         .onRun(ProcessUtil.openBrowser(result.url))

@@ -50,11 +50,10 @@ lazy val core = module("core")
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % Version.zio,
       "dev.zio" %% "zio-streams" % Version.zio,
-      "dev.zio" %% "zio-prelude" % "1.0.0-RC8",
-      "dev.zio" %% "zio-process" % "0.6.1",
-      "dev.zio" %% "zio-logging" % "0.5.14",
-      "dev.zio" %% "zio-cache" % "0.1.2",
-      "io.github.kitlangton" %% "zio-magic" % "0.3.12",
+      "dev.zio" %% "zio-managed" % Version.zio,
+      "dev.zio" %% "zio-prelude" % "1.0.0-RC15",
+      "dev.zio" %% "zio-process" % "0.7.1",
+      "dev.zio" %% "zio-cache" % "0.2.0",
       "org.scala-lang" % "scala-reflect" % "2.13.8",
       "io.circe" %% "circe-core" % Version.circe,
       "io.circe" %% "circe-parser" % Version.circe,
@@ -65,7 +64,7 @@ lazy val core = module("core")
       "com.beachape" %% "enumeratum-circe" % Version.enumeratum,
       "com.softwaremill.sttp.client3" %% "core" % Version.sttp,
       "com.softwaremill.sttp.client3" %% "circe" % Version.sttp,
-      "com.softwaremill.sttp.client3" %% "httpclient-backend-zio" % Version.sttp,
+      "com.softwaremill.sttp.client3" %% "zio" % Version.sttp,
       "com.lihaoyi" %% "fastparse" % "2.3.3",
       "org.typelevel" %% "spire" % "0.18.0",
       "net.java.dev.jna" % "jna" % Version.jna,
@@ -186,7 +185,7 @@ lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-o
 
 lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
   .dependsOn(core)
-  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject" % "0.2.0"))
+  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject-ja" % "0.2.0+8-d9d4ec6d+20220716-2333-SNAPSHOT"))
 
 lazy val extras = project
   .in(file("extras"))

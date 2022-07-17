@@ -4,19 +4,20 @@ import commandcenter.command.{Command, PreviewResult, SearchResults}
 import commandcenter.locale.Language
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.managed.*
 
 import java.awt.Dimension
 
 final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) extends CCTerminal {
   def terminalType: TerminalType = TerminalType.Test
 
-  def opacity: RIO[Env, Float] = UIO(1.0f)
+  def opacity: RIO[Env, Float] = ZIO.succeed(1.0f)
 
   def setOpacity(opacity: Float): RIO[Env, Unit] = ZIO.unit
 
-  def isOpacitySupported: URIO[Env, Boolean] = UIO(false)
+  def isOpacitySupported: URIO[Env, Boolean] = ZIO.succeed(false)
 
-  def size: RIO[Env, Dimension] = UIO(new Dimension(80, 40))
+  def size: RIO[Env, Dimension] = ZIO.succeed(new Dimension(80, 40))
 
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit
 
@@ -38,7 +39,7 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
     for {
       results <- searchResultsRef.get
       previewResult = results.previews.lift(cursorIndex)
-      _ <- ZIO.foreach_(previewResult) { preview =>
+      _ <- ZIO.foreachDiscard(previewResult) { preview =>
              // TODO: Log defects
              preview.onRun.absorb.forkDaemon
            }

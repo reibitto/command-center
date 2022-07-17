@@ -1,8 +1,6 @@
 package commandcenter.util
 
-import zio.{Fiber, IO, Promise, RefM, UIO, URIO, ZIO}
-import zio.clock.Clock
-import zio.duration.Duration
+import zio.{Duration, Fiber, IO, Promise, Ref, UIO, URIO, ZIO}
 
 final case class DebounceState[E, A](
   running: Fiber[E, A],
@@ -12,25 +10,25 @@ final case class DebounceState[E, A](
 )
 
 final case class Debouncer[R, E, A](
-  debounceFn: ZIO[R, E, A] => URIO[R with Clock, Fiber[E, A]],
-  stateRef: RefM[Option[DebounceState[E, A]]]
+  debounceFn: ZIO[R, E, A] => URIO[R, Fiber[E, A]],
+  stateRef: Ref.Synchronized[Option[DebounceState[E, A]]]
 ) {
-  def apply(zio: ZIO[R, E, A]): URIO[R with Clock, Fiber[E, A]] = debounceFn(zio)
+  def apply(zio: ZIO[R, E, A]): URIO[R, Fiber[E, A]] = debounceFn(zio)
 
   def triggerNow: IO[E, Option[Promise[Nothing, Unit]]] =
-    stateRef.modify {
+    stateRef.modifyZIO {
       case Some(state) =>
         state.delay.succeed(()).as {
           (Some(state.completion), Some(state.copy(triggered = true)))
         }
 
-      case None => UIO((None, None))
+      case None => ZIO.succeed((None, None))
     }
 
   def triggerNowAwait: IO[E, Unit] =
     for {
       promiseOpt <- triggerNow
-      _ <- ZIO.foreach_(promiseOpt) { promise =>
+      _ <- ZIO.foreachDiscard(promiseOpt) { promise =>
              promise.await
            }
     } yield ()
@@ -41,13 +39,13 @@ object Debouncer {
 
   def make[R, E, A](waitTime: Duration): UIO[Debouncer[R, E, A]] =
     for {
-      ref <- RefM.make(Option.empty[DebounceState[E, A]])
+      ref <- Ref.Synchronized.make(Option.empty[DebounceState[E, A]])
       fn = (f: ZIO[R, E, A]) =>
-             ref.modify { state =>
+             ref.modifyZIO { state =>
                for {
                  delayPromise      <- Promise.make[Nothing, Unit]
                  completionPromise <- Promise.make[Nothing, Unit]
-                 _ <- ZIO.foreach_(state) { s =>
+                 _ <- ZIO.foreachDiscard(state) { s =>
                         s.running.interrupt.unless(s.triggered)
                       }
                  result <-

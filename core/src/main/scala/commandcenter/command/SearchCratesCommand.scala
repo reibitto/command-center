@@ -1,15 +1,16 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
+import commandcenter.CCRuntime.Env
+import commandcenter.HttpClient
 import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
-import commandcenter.CCRuntime.Env
 import io.circe.Decoder
 import sttp.client3.*
 import sttp.client3.circe.*
-import sttp.client3.httpclient.zio.*
-import zio.{Chunk, Managed, ZIO}
+import zio.managed.*
 import zio.stream.ZStream
+import zio.{Chunk, ZIO}
 
 import java.time.OffsetDateTime
 
@@ -21,12 +22,12 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
-      cratesStream = ZStream.paginateChunkM(1) { page =>
+      cratesStream = ZStream.paginateChunkZIO(1) { page =>
                        val request = basicRequest
                          .get(uri"https://crates.io/api/v1/crates?page=$page&per_page=$pageSize&q=${input.rest}")
                          .response(asJson[CrateResults])
 
-                       send(request)
+        request.send(HttpClient.backend)
                          .map(_.body)
                          .absolve
                          .mapBoth(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))

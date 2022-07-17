@@ -1,16 +1,16 @@
 package commandcenter.util
 
 import zio.{RIO, UIO, ZIO}
-import zio.blocking.{Blocking, *}
 import zio.process.Command as PCommand
 
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
+import zio.ZIO.attemptBlocking
 
 object ProcessUtil {
 
-  def openBrowser(url: String): RIO[Blocking, Unit] =
+  def openBrowser(url: String): RIO[Any, Unit] =
     OS.os match {
       case OS.MacOS =>
         PCommand("open", url).exitCode.unit
@@ -19,19 +19,19 @@ object ProcessUtil {
         PCommand("xdg-open", url).exitCode.unit
 
       case OS.Windows | OS.Other(_) =>
-        effectBlocking(
+        attemptBlocking(
           Desktop.getDesktop.browse(new URI(url))
         )
     }
 
-  def frontProcessId: RIO[Blocking, Long] =
+  def frontProcessId: RIO[Any, Long] =
     OS.os match {
       case OS.MacOS =>
         for {
           asn       <- PCommand("lsappinfo", "front").string
           pidString <- PCommand("lsappinfo", "info", "-only", "pid", asn.trim).string
           pid <- pidString.split('=') match {
-                   case Array(_, pid) => UIO(pid.trim.toLong)
+                   case Array(_, pid) => ZIO.succeed(pid.trim.toLong)
                    case _             => ZIO.fail(new Exception(s"pid could not be extracted from: $pidString"))
                  }
         } yield pid
@@ -42,7 +42,7 @@ object ProcessUtil {
         )
     }
 
-  def browseFile(file: File): RIO[Blocking, Unit] =
+  def browseFile(file: File): RIO[Any, Unit] =
     OS.os match {
       case OS.MacOS =>
         val command =
@@ -59,7 +59,7 @@ object ProcessUtil {
         PCommand("explorer.exe", arg).successfulExitCode.unit
 
       // TODO: To properly support Linux, we probably need to detect the Linux flavor
-      case OS.Linux | OS.Other(_) => effectBlocking(Desktop.getDesktop.browseFileDirectory(file))
+      case OS.Linux | OS.Other(_) => attemptBlocking(Desktop.getDesktop.browseFileDirectory(file))
     }
 
 }

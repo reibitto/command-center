@@ -4,9 +4,9 @@ import com.typesafe.config.Config
 import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
-import zio.blocking.Blocking
+import zio.managed.Managed
 import zio.process.{Command as PCommand, CommandError as PCommandError}
+import zio.ZIO
 
 final case class RebootCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.RebootCommand
@@ -39,26 +39,30 @@ object RebootCommand extends CommandPlugin[RebootCommand] {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")
     } yield RebootCommand(commandNames.getOrElse(List("reboot", "restart")))
 
-  def reboot: ZIO[Blocking, Throwable, Unit] =
-    ZIO.whenCase(OS.os) {
-      case OS.Windows =>
-        PCommand("shutdown", "/r", "/t", "0").successfulExitCode.unit
+  def reboot: ZIO[Any, Throwable, Unit] =
+    ZIO
+      .whenCase(OS.os) {
+        case OS.Windows =>
+          PCommand("shutdown", "/r", "/t", "0").successfulExitCode.unit
 
-      case OS.Linux =>
-        // TODO: Probably need to check for different flavors of Linux. Not sure if this works everywhere.
-        PCommand("systemctl", "reboot").successfulExitCode.unit
+        case OS.Linux =>
+          // TODO: Probably need to check for different flavors of Linux. Not sure if this works everywhere.
+          PCommand("systemctl", "reboot").successfulExitCode.unit
 
-      case OS.MacOS =>
-        AppleScript.runScript("tell application \"System Events\" to restart").unit
-    }
+        case OS.MacOS =>
+          AppleScript.runScript("tell application \"System Events\" to restart").unit
+      }
+      .unit
 
-  def rebootIntoBios: ZIO[Blocking, PCommandError, Unit] =
-    ZIO.whenCase(OS.os) {
-      case OS.Windows =>
-        PCommand("shutdown", "/r", "/fw", "/t", "0").successfulExitCode.unit
+  def rebootIntoBios: ZIO[Any, PCommandError, Unit] =
+    ZIO
+      .whenCase(OS.os) {
+        case OS.Windows =>
+          PCommand("shutdown", "/r", "/fw", "/t", "0").successfulExitCode.unit
 
-      case OS.Linux =>
-        // TODO: Probably need to check for different flavors of Linux. Not sure if this works everywhere.
-        PCommand("systemctl", "reboot", "--firmware-setup").successfulExitCode.unit
-    }
+        case OS.Linux =>
+          // TODO: Probably need to check for different flavors of Linux. Not sure if this works everywhere.
+          PCommand("systemctl", "reboot", "--firmware-setup").successfulExitCode.unit
+      }
+      .unit
 }

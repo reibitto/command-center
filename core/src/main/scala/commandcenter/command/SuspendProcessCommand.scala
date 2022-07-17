@@ -8,9 +8,8 @@ import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{OS, ProcessUtil}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.{Env, PartialEnv}
-import zio.{RIO, ZIO, ZManaged}
-import zio.blocking.Blocking
-import zio.logging.log
+import zio.{Task, ZIO}
+import zio.managed.*
 import zio.process.Command as PCommand
 
 final case class SuspendProcessCommand(commandNames: List[String]) extends Command[Unit] {
@@ -54,28 +53,28 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
              .foreach(suspendShortcut) { suspendShortcut =>
                Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
                  (for {
-                   _   <- log.debug("Toggling suspend for frontmost process...")
+                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
                    pid <- SuspendProcessCommand.toggleSuspendFrontProcess
-                   _   <- log.debug(s"Toggled suspend for process $pid")
+                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
                  } yield ()).ignore
                )
              }
              .mapError(CommandPluginError.UnexpectedException)
-             .toManaged_
+             .toManaged
     } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")))
 
-  def isProcessSuspended(processId: Long): RIO[Blocking, Boolean] = {
+  def isProcessSuspended(processId: Long): Task[Boolean] = {
     val stateParam = if (OS.os == OS.MacOS) "state=" else "s="
 
     PCommand("ps", "-o", stateParam, "-p", processId.toString).string.map(_.trim == "T")
   }
 
-  def setProcessState(suspend: Boolean, pid: Long): RIO[Blocking, Unit] = {
+  def setProcessState(suspend: Boolean, pid: Long): Task[Unit] = {
     val targetState = if (suspend) "-STOP" else "-CONT"
     PCommand("kill", targetState, pid.toString).exitCode.unit
   }
 
-  def toggleSuspendFrontProcess: RIO[Blocking, Long] =
+  def toggleSuspendFrontProcess: Task[Long] =
     for {
       pid         <- ProcessUtil.frontProcessId
       isSuspended <- isProcessSuspended(pid)

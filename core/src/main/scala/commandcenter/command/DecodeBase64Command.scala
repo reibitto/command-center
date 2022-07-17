@@ -6,7 +6,8 @@ import com.typesafe.config.Config
 import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 import java.util.Base64
 

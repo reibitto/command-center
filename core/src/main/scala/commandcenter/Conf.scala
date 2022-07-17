@@ -2,7 +2,7 @@ package commandcenter
 
 import commandcenter.CCRuntime.{Env, PartialEnv}
 import zio.*
-import zio.logging.log
+import zio.managed.Reservation
 
 trait Conf {
   def config: UIO[CCConfig]
@@ -10,9 +10,9 @@ trait Conf {
 }
 
 object Conf {
-  def get[A](f: CCConfig => A): URIO[Has[Conf], A] = config.map(f)
+  def get[A](f: CCConfig => A): URIO[Conf, A] = config.map(f)
 
-  def config: URIO[Has[Conf], CCConfig] = ZIO.serviceWith[Conf](_.config)
+  def config: URIO[Conf, CCConfig] = ZIO.serviceWithZIO[Conf](_.config)
 
   def reload: RIO[Env, CCConfig] =
     for {
@@ -21,37 +21,45 @@ object Conf {
     } yield config
 }
 
-final case class ConfigLive(configRef: Ref[CCConfig], reservationRef: Ref[Reservation[PartialEnv, Throwable, CCConfig]])
-    extends Conf {
+final case class ConfigLive(configRef: Ref[CCConfig]) extends Conf {
   def config: UIO[CCConfig] = configRef.get
 
   def reload: RIO[PartialEnv, CCConfig] =
-    (for {
-      _                   <- CCConfig.validateConfig
-      previousReservation <- reservationRef.get
-      _                   <- previousReservation.release(Exit.unit)
-      reservation         <- CCConfig.load.reserve
-      config <- reservation.acquire.tapError { t =>
-                  log.throwable(
-                    "Command Center did not load properly with the new config and might now be in an invalid state.",
-                    t
-                  )
-                }
-      _ <- configRef.set(config)
-      _ <- reservationRef.set(reservation)
-    } yield config).tapError { t =>
-      log.throwable("Could not reload config because the config file is not valid", t)
-    }
+    ???
+//    (for {
+//      _                   <- CCConfig.validateConfig
+//      previousReservation <- reservationRef.get
+//      _                   <- previousReservation.release(Exit.unit)
+//      reservation         <- CCConfig.load.fromReservation
+//      config <- reservation.acquire.tapError { t =>
+//                  ZIO.logWarningCause(
+//                    "Command Center did not load properly with the new config and might now be in an invalid state.",
+//                    Cause.fail(t)
+//                  )
+//                }
+//      _ <- configRef.set(config)
+//      _ <- reservationRef.set(reservation)
+//    } yield config).tapError { t =>
+//      ZIO.logWarningCause("Could not reload config because the config file is not valid", Cause.fail(t))
+//    }
 }
 
 object ConfigLive {
 
-  def layer: RLayer[PartialEnv, Has[Conf]] =
-    (for {
-      reservation    <- CCConfig.load.reserve.toManaged_
-      config         <- reservation.acquire.toManaged_
-      ref            <- Ref.makeManaged(config)
-      reservationRef <- Ref.makeManaged(reservation)
-      _              <- ZIO.unit.toManaged(_ => reservation.release(Exit.unit))
-    } yield ConfigLive(ref, reservationRef)).toLayer
+  def layer = {
+    ZLayer.fromZIO(
+      for {
+        config    <- CCConfig.load
+        configRef <- Ref.make(config)
+      } yield ConfigLive(configRef)
+    )
+
+  }
+  //    (for {
+//      reservation    <- CCConfig.load.fromReservation.toManaged
+//      config         <- reservation.acquire.toManaged
+//      ref            <- Ref.makeManaged(config)
+//      reservationRef <- Ref.makeManaged(reservation)
+//      _              <- ZIO.unit.toManagedWith(_ => reservation.release(Exit.unit))
+//    } yield ConfigLive(ref, reservationRef)).toLayer
 }

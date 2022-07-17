@@ -3,11 +3,12 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.command.StocksCommand.{StocksResult, Ticker}
 import commandcenter.CCRuntime.Env
+import commandcenter.HttpClient
 import io.circe.{Decoder, Json}
-import sttp.client3.{basicRequest, UriContext}
+import sttp.client3.{UriContext, basicRequest}
 import sttp.client3.circe.asJson
-import sttp.client3.httpclient.zio.*
-import zio.{IO, Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]) extends Command[Unit] {
   val commandType: CommandType = CommandType.StocksCommand
@@ -21,13 +22,15 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       request = basicRequest
                   .get(uri"$stocksUrl$symbols")
                   .response(asJson[Json])
-      response <- send(request)
+      response <- request.send(HttpClient.backend)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
-      stocks <- IO.fromEither(
-                  response.hcursor.downField("quoteResponse").downField("result").as[List[StocksResult]]
-                ).mapError(CommandError.UnexpectedException)
+      stocks <- ZIO
+                  .fromEither(
+                    response.hcursor.downField("quoteResponse").downField("result").as[List[StocksResult]]
+                  )
+                  .mapError(CommandError.UnexpectedException)
     } yield PreviewResults.fromIterable(stocks.map { stock =>
       Preview.unit
         .score(Scores.high(input.context))

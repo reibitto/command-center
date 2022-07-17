@@ -11,15 +11,15 @@ class ZTextField(implicit runtime: Runtime[Env]) extends JTextField {
 
   def addZKeyListener(keyListener: ZKeyAdapter): Unit =
     addKeyListener(new KeyListener {
-      def keyTyped(e: KeyEvent): Unit = runtime.unsafeRunAsync_(keyListener.keyTyped(e))
-      def keyPressed(e: KeyEvent): Unit = runtime.unsafeRunAsync_(keyListener.keyPressed(e))
-      def keyReleased(e: KeyEvent): Unit = runtime.unsafeRunAsync_(keyListener.keyReleased(e))
+      def keyTyped(e: KeyEvent): Unit = runtime.unsafeRunAsync(keyListener.keyTyped(e))
+      def keyPressed(e: KeyEvent): Unit = runtime.unsafeRunAsync(keyListener.keyPressed(e))
+      def keyReleased(e: KeyEvent): Unit = runtime.unsafeRunAsync(keyListener.keyReleased(e))
     })
 
   def addOnChangeListener(handler: DocumentEvent => URIO[Env, Unit]): Unit =
     getDocument.addDocumentListener(
       new DocumentListener {
-        def onChange(e: DocumentEvent): Unit = runtime.unsafeRunAsync_(handler(e))
+        def onChange(e: DocumentEvent): Unit = runtime.unsafeRunAsync(handler(e))
 
         override def insertUpdate(e: DocumentEvent): Unit = onChange(e)
         override def removeUpdate(e: DocumentEvent): Unit = onChange(e)

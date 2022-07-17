@@ -9,36 +9,58 @@ import zio.*
 
 import java.awt.Toolkit
 import scala.util.Try
+import zio.managed._
 
-final case class ShortcutsLive(provider: Provider, runtime: Runtime[Env]) extends Shortcuts {
+final case class ShortcutsLive(provider: Provider) extends Shortcuts {
 
   def addGlobalShortcut(shortcut: KeyboardShortcut)(handler: KeyboardShortcut => URIO[Env, Unit]): Task[Unit] =
-    UIO {
-      provider.register(
-        KeyboardShortcutUtil.toKeyStroke(shortcut),
-        new HotKeyListener {
-          def onHotKey(hotKey: HotKey): Unit =
-            runtime.unsafeRunAsync_(handler(shortcut))
-        }
-      )
-    }
+    ???
+//    ZIO.succeed {
+//      provider.register(
+//        KeyboardShortcutUtil.toKeyStroke(shortcut),
+//        new HotKeyListener {
+//          def onHotKey(hotKey: HotKey): Unit = {
+//            Unsafe.unsafe { implicit u =>
+//              runtime.unsafe.fork(handler(shortcut))
+//            }
+//          }
+//        }
+//      )
+//    }
 }
 
 object ShortcutsLive {
 
-  def layer(runtime: Runtime[Env]): TaskLayer[Has[Shortcuts]] =
+  def layer: TaskLayer[Shortcuts] =
     ZLayer.fromManaged {
-      ZManaged.make(Task {
+      ZManaged.acquireReleaseWith(ZIO.attempt {
         // This is a hack for macOS to get the separate `java` Application started (it shows up as an icon in the Dock).
         // Otherwise the hot key provider won't be fully started up yet.
         Try(Toolkit.getDefaultToolkit)
 
-        new ShortcutsLive(Provider.getCurrentProvider(true), runtime)
+        new ShortcutsLive(Provider.getCurrentProvider(true))
       }) { shortcuts =>
-        UIO {
+        ZIO.succeed {
           shortcuts.provider.reset()
           shortcuts.provider.stop()
         }
       }
     }
+
+//  ???
+//  def layer(runtime: Runtime[Env]): TaskLayer[Shortcuts] =
+//    ZLayer.fromManaged {
+//      ZManaged.acquireReleaseWith(ZIO.attempt {
+//        // This is a hack for macOS to get the separate `java` Application started (it shows up as an icon in the Dock).
+//        // Otherwise the hot key provider won't be fully started up yet.
+//        Try(Toolkit.getDefaultToolkit)
+//
+//        new ShortcutsLive(Provider.getCurrentProvider(true), runtime)
+//      }) { shortcuts =>
+//        ZIO.succeed {
+//          shortcuts.provider.reset()
+//          shortcuts.provider.stop()
+//        }
+//      }
+//    }
 }

@@ -15,8 +15,8 @@ import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener
 import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
 import zio.*
-import zio.blocking.Blocking
 import zio.stream.ZSink
+import zio.managed.*
 
 import java.awt.Dimension
 import scala.collection.mutable
@@ -46,16 +46,18 @@ final case class SwtTerminal(
         val searchTerm = terminal.inputBox.getText
         val context = CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0)
 
-        runtime.unsafeRunAsync_ {
-          for {
-            config <- Conf.config
-            _ <- searchDebouncer(
-                   Command
-                     .search(config.commands, config.aliases, searchTerm, context)
-                     .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-                     .unit
-                 ).flatMap(_.join)
-          } yield ()
+        Unsafe.unsafe { implicit u =>
+          runtime.unsafe.fork {
+            for {
+              config <- Conf.config
+              _ <- searchDebouncer(
+                Command
+                  .search(config.commands, config.aliases, searchTerm, context)
+                  .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                  .unit
+              ).flatMap(_.join)
+            } yield ()
+          }
         }
       }
     })
@@ -64,66 +66,76 @@ final case class SwtTerminal(
       override def keyPressed(e: KeyEvent): Unit =
         e.keyCode match {
           case SWT.CR =>
-            runtime.unsafeRunAsync_ {
-              for {
-                _               <- searchDebouncer.triggerNowAwait
-                previousResults <- searchResultsRef.get
-                cursorIndex     <- commandCursorRef.get
-                resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
-                _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                       invoke(terminal.shell.dispose())
-                     }
-              } yield ()
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                for {
+                  _ <- searchDebouncer.triggerNowAwait
+                  previousResults <- searchResultsRef.get
+                  cursorIndex <- commandCursorRef.get
+                  resultOpt <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
+                  _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
+                    invoke(terminal.shell.dispose())
+                  }
+                } yield ()
+              }
             }
 
           case SWT.ESC =>
-            runtime.unsafeRunAsync_ {
-              for {
-                _ <- hide
-                _ <- deactivate.ignore
-                _ <- reset
-              } yield ()
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                for {
+                  _ <- hide
+                  _ <- deactivate.ignore
+                  _ <- reset
+                } yield ()
+              }
             }
 
           case SWT.ARROW_DOWN =>
             e.doit = false // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
 
-            runtime.unsafeRunAsync_ {
-              for {
-                previousResults <- searchResultsRef.get
-                previousCursor <-
-                  commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-                _ <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
-              } yield ()
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                for {
+                  previousResults <- searchResultsRef.get
+                  previousCursor <-
+                    commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
+                  _ <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
+                } yield ()
+              }
             }
 
           case SWT.ARROW_UP =>
             e.doit = false // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
 
-            runtime.unsafeRunAsync_ {
-              for {
-                previousCursor <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
-                _              <- renderSelectionCursor(1).when(previousCursor > 0)
-              } yield ()
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                for {
+                  previousCursor <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
+                  _ <- renderSelectionCursor(1).when(previousCursor > 0)
+                } yield ()
+              }
             }
 
           case _ =>
-            runtime.unsafeRunAsync_ {
-              for {
-                previousResults <- searchResultsRef.get
-                shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
-                eligibleResults = previousResults.previews.filter { p =>
-                                    p.shortcuts.contains(shortcutPressed)
-                                  }
-                bestMatch = eligibleResults.maxByOption(_.score)
-                _ <- ZIO.foreach_(bestMatch) { preview =>
-                       for {
-                         _ <- hide
-                         _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
-                         _ <- reset
-                       } yield ()
-                     }
-              } yield ()
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                for {
+                  previousResults <- searchResultsRef.get
+                  shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
+                  eligibleResults = previousResults.previews.filter { p =>
+                    p.shortcuts.contains(shortcutPressed)
+                  }
+                  bestMatch = eligibleResults.maxByOption(_.score)
+                  _ <- ZIO.foreachDiscard(bestMatch) { preview =>
+                    for {
+                      _ <- hide
+                      _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
+                      _ <- reset
+                    } yield ()
+                  }
+                } yield ()
+              }
             }
         }
     })
@@ -158,7 +170,7 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  private def render(searchResults: SearchResults[Any]): URIO[Has[Conf], Unit] = {
+  private def render(searchResults: SearchResults[Any]): URIO[Conf, Unit] = {
     var scrollToPosition: Int = 0
 
     for {
@@ -263,7 +275,9 @@ final case class SwtTerminal(
                      if totalRemaining.forall(_ > 0) =>
                    for {
                      _                     <- preview.onRun.absorb.forkDaemon
-                     (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
+                     (results, restStream) <- ZIO.scoped {
+                       rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
+                     }
                      _ <- showMore(
                             results,
                             preview.moreResults(
@@ -307,13 +321,13 @@ final case class SwtTerminal(
     } yield ()
 
   def invoke(effect: => Unit): UIO[Unit] =
-    UIO(Display.getDefault.asyncExec(() => effect))
+    ZIO.succeed(Display.getDefault.asyncExec(() => effect))
 
   def invokeReturn[A](effect: => A): Task[A] =
-    Task.effectAsyncM { cb =>
+    ZIO.asyncZIO { cb =>
       invoke {
         val evaluatedEffect = effect
-        cb(UIO(evaluatedEffect))
+        cb(ZIO.succeed(evaluatedEffect))
       }
     }
 
@@ -326,13 +340,13 @@ final case class SwtTerminal(
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
-  def deactivate: RIO[Has[Tools] with Blocking, Unit] =
+  def deactivate: RIO[Tools, Unit] =
     ZIO.whenCase(OS.os) { case OS.MacOS =>
       Tools.hide
-    }
+    }.unit
 
   def clearScreen: UIO[Unit] =
-    UIO {
+    ZIO.succeed {
       terminal.outputBox.setText("")
     }
 
@@ -355,9 +369,9 @@ final case class SwtTerminal(
 
   def setOpacity(opacity: Float): RIO[Env, Unit] = invoke {
     terminal.shell.setAlpha((255 * opacity).toInt)
-  }.whenM(isOpacitySupported)
+  }.whenZIO(isOpacitySupported).unit
 
-  def isOpacitySupported: URIO[Env, Boolean] = UIO(true)
+  def isOpacitySupported: URIO[Env, Boolean] = ZIO.succeed(true)
 
   def size: RIO[Env, Dimension] =
     invokeReturn {
@@ -383,11 +397,11 @@ object SwtTerminal {
 
   def create(runtime: CCRuntime, terminal: RawSwtTerminal): RManaged[Env, SwtTerminal] =
     for {
-      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
+      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
       swtTerminal = new SwtTerminal(commandCursorRef, searchResultsRef, searchDebouncer, terminal)(runtime)
-      _ <- swtTerminal.init.toManaged_
+      _ <- swtTerminal.init.toManaged
     } yield swtTerminal
 }

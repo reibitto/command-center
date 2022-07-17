@@ -7,7 +7,8 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 import scala.util.Try
 

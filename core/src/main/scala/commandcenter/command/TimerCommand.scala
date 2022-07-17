@@ -8,9 +8,9 @@ import commandcenter.command.CommonArgs.*
 import commandcenter.util.{AppleScript, OS, PowerShellScript}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, UIO, ZIO}
+import zio.*
 import zio.cache.{Cache, Lookup}
-import zio.duration.*
+import zio.managed.*
 
 import scala.io.Source
 
@@ -67,9 +67,9 @@ object TimerCommand extends CommandPlugin[TimerCommand] {
                  .make(
                    1024,
                    Duration.Infinity,
-                   Lookup((resource: String) => UIO(Source.fromResource(resource)).map(_.mkString))
+                   Lookup((resource: String) => ZIO.succeed(Source.fromResource(resource)).map(_.mkString))
                  )
-                 .toManaged_
+                 .toManaged
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")
     } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), cache)
 

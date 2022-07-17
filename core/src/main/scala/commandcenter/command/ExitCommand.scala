@@ -3,7 +3,8 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 final case class ExitCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ExitCommand

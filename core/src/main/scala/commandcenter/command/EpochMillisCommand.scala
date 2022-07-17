@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.managed.*
 
 import java.time.{Instant, ZoneId}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -17,11 +18,11 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
-                           clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high))
+                           Clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high))
                          } else {
                            input.rest.toLongOption match {
                              case Some(millis) =>
-                               Task {
+                               ZIO.attempt {
                                  val formatted = Instant
                                    .ofEpochMilli(millis)
                                    .atZone(ZoneId.systemDefault())

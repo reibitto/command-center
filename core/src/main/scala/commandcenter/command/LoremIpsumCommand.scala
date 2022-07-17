@@ -10,6 +10,7 @@ import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.managed.*
 
 import scala.io.Source
 
@@ -76,8 +77,8 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")
       lipsum <- ZManaged
-                  .fromAutoCloseable(Task(Source.fromResource("lipsum")))
-                  .mapEffect(_.getLines().mkString("\n"))
+                  .fromAutoCloseable(ZIO.attempt(Source.fromResource("lipsum")))
+                  .mapAttempt(_.getLines().mkString("\n"))
                   .mapError(CommandPluginError.UnexpectedException)
     } yield LoremIpsumCommand(commandNames.getOrElse(List("lipsum", "lorem", "ipsum")), lipsum)
 

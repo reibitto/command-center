@@ -2,18 +2,18 @@ package commandcenter.command
 
 import com.monovore.decline
 import com.monovore.decline.Opts
+import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef.HWND
-import com.sun.jna.Pointer
 import com.typesafe.config.Config
+import commandcenter.CCRuntime.{Env, PartialEnv}
 import commandcenter.command.Foobar2000Command.Opt
 import commandcenter.util.OS
 import commandcenter.util.WindowManager.fromCString
 import commandcenter.view.{Rendered, Renderer}
-import commandcenter.CCRuntime.{Env, PartialEnv}
-import zio.{system, Task, UIO, ZIO, ZManaged}
+import zio.managed.*
 import zio.process.Command as PCommand
-import zio.system.System
+import zio.{System, Task, ZIO}
 
 import java.io.File
 import java.nio.file.Paths
@@ -75,17 +75,17 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
               case Opt.Help => ZIO.unit
             }
       message <- opt match {
-                   case Opt.Play          => UIO(fansi.Str(playCommand.header))
-                   case Opt.Pause         => UIO(fansi.Str(pauseCommand.header))
-                   case Opt.Stop          => UIO(fansi.Str(stopCommand.header))
-                   case Opt.NextTrack     => UIO(fansi.Str(nextTrackCommand.header))
-                   case Opt.PreviousTrack => UIO(fansi.Str(previousTrackCommand.header))
-                   case Opt.Rewind        => UIO(fansi.Str("Rewind current track to the beginning"))
-                   case Opt.DeleteTrack   => UIO(fansi.Str(deleteTrackCommand.header))
-                   case Opt.Help          => UIO(fansi.Str(foobarCommand.showHelp))
+                   case Opt.Play          => ZIO.succeed(fansi.Str(playCommand.header))
+                   case Opt.Pause         => ZIO.succeed(fansi.Str(pauseCommand.header))
+                   case Opt.Stop          => ZIO.succeed(fansi.Str(stopCommand.header))
+                   case Opt.NextTrack     => ZIO.succeed(fansi.Str(nextTrackCommand.header))
+                   case Opt.PreviousTrack => ZIO.succeed(fansi.Str(previousTrackCommand.header))
+                   case Opt.Rewind        => ZIO.succeed(fansi.Str("Rewind current track to the beginning"))
+                   case Opt.DeleteTrack   => ZIO.succeed(fansi.Str(deleteTrackCommand.header))
+                   case Opt.Help          => ZIO.succeed(fansi.Str(foobarCommand.showHelp))
                    case Opt.Show =>
                      for {
-                       trackInfo <- trackInfoFromWindow.catchAll(_ => UIO.none)
+                       trackInfo <- trackInfoFromWindow.catchAll(_ => ZIO.none)
                      } yield trackInfo
                        .map(t => fansi.Color.Magenta(t))
                        .getOrElse(fansi.Str("Show window"))
@@ -99,13 +99,13 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
     )
 
   private def trackInfoFromWindow: Task[Option[String]] =
-    Task.effectAsync { cb =>
+    ZIO.async { cb =>
       User32.INSTANCE.EnumWindows(
         (window: HWND, _: Pointer) => {
           val windowTitle = fromCString(256)(a => User32.INSTANCE.GetWindowText(window, a, a.length))
 
           if (windowTitle.contains("[foobar2000]")) {
-            cb(UIO.some(windowTitle.replace("[foobar2000]", "").trim))
+            cb(ZIO.some(windowTitle.replace("[foobar2000]", "").trim))
             false
           } else {
             true
@@ -114,7 +114,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
         Pointer.NULL
       )
 
-      cb(UIO.none)
+      cb(ZIO.none)
 
     }
 }
@@ -127,22 +127,22 @@ object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
     for {
       commandNames  <- config.getManaged[Option[List[String]]]("commandNames")
       foobarPathOpt <- config.getManaged[Option[File]]("foobarPath")
-      foobarPath    <- UIO(foobarPathOpt).someOrElseM(findFoobarPath).toManaged_
+      foobarPath    <- ZIO.succeed(foobarPathOpt).someOrElseZIO(findFoobarPath).toManaged
     } yield Foobar2000Command(commandNames.getOrElse(List("foobar", "fb")), foobarPath)
   }
 
-  private def findFoobarPath: ZIO[System, CommandPluginError, File] =
-    system
+  private def findFoobarPath: ZIO[Any, CommandPluginError, File] =
+    System
       .env("ProgramFiles(x86)")
       .map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe").toFile).filter(_.exists))
       .some
       .orElse {
-        system
+        System
           .env("ProgramFiles")
           .map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe").toFile).filter(_.exists))
           .some
       }
-      .optional
+      .unsome
       .mapError(CommandPluginError.UnexpectedException)
       .someOrFail(
         CommandPluginError.PluginNotApplicable(CommandType.Foobar2000Command, "Path to foobar2000 executable not found")

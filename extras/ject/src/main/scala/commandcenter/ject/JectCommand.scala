@@ -1,36 +1,34 @@
 package commandcenter.ject
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.command._
-import commandcenter.config.Decoders.pathDecoder
+import commandcenter.command.*
 import commandcenter.locale.JapaneseText
 import commandcenter.tools.Tools
+import commandcenter.CCRuntime.Env
+import ject.ja.docs.WordDoc
+import ject.ja.lucene.WordReader
 import ject.SearchPattern
-import ject.docs.WordDoc
-import ject.lucene.WordReader
-import zio.{ Managed, UIO, ZIO }
-
-import java.nio.file.Path
+import zio.managed.*
+import zio.ZIO
 
 final case class JectCommand(commandNames: List[String], luceneIndex: WordReader, showScore: Boolean)
     extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
-  val title: String            = "Ject"
+  val title: String = "Ject"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input        <- ZIO
-                        .fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty).map(_.rest))
-                        .orElseFail(CommandError.NotApplicable)
-                        .orElse {
-                          if (searchInput.input.exists(JapaneseText.isJapanese))
-                            UIO(searchInput.input)
-                          else
-                            ZIO.fail(CommandError.NotApplicable)
-                        }
+      input <- ZIO
+                 .fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty).map(_.rest))
+                 .orElseFail(CommandError.NotApplicable)
+                 .orElse {
+                   if (searchInput.input.exists(JapaneseText.isJapanese))
+                     ZIO.succeed(searchInput.input)
+                   else
+                     ZIO.fail(CommandError.NotApplicable)
+                 }
       searchPattern = SearchPattern(input)
-      wordStream    = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedException)
+      wordStream = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedException)
     } yield PreviewResults.paginated(
       wordStream.map { word =>
         Preview.unit
@@ -72,12 +70,14 @@ final case class JectCommand(commandNames: List[String], luceneIndex: WordReader
 }
 
 object JectCommand extends CommandPlugin[JectCommand] {
+
   def make(config: Config): Managed[CommandPluginError, JectCommand] =
-    // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
-    for {
-      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
-      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
-      luceneIndex    <- WordReader.make(dictionaryPath.resolve("word")).mapError(CommandPluginError.UnexpectedException)
-      showScore      <- config.getManaged[Option[Boolean]]("showScore")
-    } yield JectCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
+    ???
+//    // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
+//    for {
+//      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
+//      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
+//      luceneIndex    <- WordReader.make(dictionaryPath.resolve("word")).mapError(CommandPluginError.UnexpectedException)
+//      showScore      <- config.getManaged[Option[Boolean]]("showScore")
+//    } yield JectCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
 }

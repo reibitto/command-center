@@ -11,7 +11,7 @@ import commandcenter.util.{Debouncer, OS}
 import commandcenter.view.{Rendered, Style}
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.blocking.Blocking
+import zio.managed.*
 import zio.stream.ZSink
 
 import java.awt.*
@@ -230,7 +230,7 @@ final case class SwingTerminal(
   def reset: UIO[Unit] =
     for {
       _ <- commandCursorRef.set(0)
-      _ <- UIO {
+      _ <- ZIO.succeed {
              inputTextField.setText("")
              document.remove(0, document.getLength)
            }
@@ -253,7 +253,9 @@ final case class SwingTerminal(
                      if totalRemaining.forall(_ > 0) =>
                    for {
                      _                     <- preview.onRun.absorb.forkDaemon
-                     (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
+                     (results, restStream) <- ZIO.scoped {
+                       rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
+                     }
                      _ <- showMore(
                             results,
                             preview.moreResults(
@@ -305,7 +307,7 @@ final case class SwingTerminal(
             _               <- searchDebouncer.triggerNowAwait
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
-            resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
+            resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
             _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
                    closePromise.succeed(())
                  }
@@ -347,7 +349,7 @@ final case class SwingTerminal(
                                 p.shortcuts.contains(shortcutPressed)
                               }
             bestMatch = eligibleResults.maxByOption(_.score)
-            _ <- ZIO.foreach_(bestMatch) { preview =>
+            _ <- ZIO.foreachDiscard(bestMatch) { preview =>
                    for {
                      _ <- hide
                      _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
@@ -363,12 +365,12 @@ final case class SwingTerminal(
   frame.pack()
 
   def clearScreen: UIO[Unit] =
-    UIO {
+    ZIO.succeed {
       document.remove(0, document.getLength)
     }
 
   def open: Task[Unit] =
-    Task {
+    ZIO.attempt {
       val bounds =
         GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
 
@@ -379,38 +381,40 @@ final case class SwingTerminal(
 
     }
 
-  def hide: UIO[Unit] = UIO {
+  def hide: UIO[Unit] = ZIO.succeed {
     frame.setVisible(false)
   }
 
-  def activate: RIO[Has[Tools] with Blocking, Unit] =
+  def activate: RIO[Tools, Unit] =
     OS.os match {
       case OS.MacOS => Tools.activate
       case _ =>
-        UIO {
+        ZIO.succeed {
           frame.toFront()
           frame.requestFocus()
           inputTextField.requestFocusInWindow()
         }
     }
 
-  def deactivate: RIO[Has[Tools] with Blocking, Unit] =
+  def deactivate: RIO[Tools, Unit] =
     OS.os match {
       case OS.MacOS => Tools.hide
-      case _        => UIO.unit
+      case _        => ZIO.unit
     }
 
-  def opacity: RIO[Env, Float] = UIO(frame.getOpacity)
+  def opacity: RIO[Env, Float] = ZIO.succeed(frame.getOpacity)
 
-  def setOpacity(opacity: Float): RIO[Env, Unit] = Task(frame.setOpacity(opacity)).whenM(isOpacitySupported)
+  def setOpacity(opacity: Float): RIO[Env, Unit] = ZIO.attempt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported)
 
   def isOpacitySupported: URIO[Env, Boolean] =
-    Task(
-      GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
-        .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.TRANSLUCENT)
-    ).orElseSucceed(false)
+    ZIO
+      .attempt(
+        GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
+          .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.TRANSLUCENT)
+      )
+      .orElseSucceed(false)
 
-  def size: RIO[Env, Dimension] = UIO(frame.getSize)
+  def size: RIO[Env, Dimension] = ZIO.succeed(frame.getSize)
 
   def setSize(width: Int, maxHeight: Int): RIO[Env, Unit] = ZIO.unit
 
@@ -418,28 +422,32 @@ final case class SwingTerminal(
     for {
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
-      _ <- Task {
+      _ <- ZIO.attempt {
              inputTextField.setFont(preferredFont)
              outputTextPane.setFont(preferredFont)
            }
     } yield ()
 
-  def getPreferredFont: URIO[Has[Conf], Font] = {
+  def getPreferredFont: URIO[Conf, Font] = {
     def fallbackFont = new Font("Monospaced", Font.PLAIN, 18)
 
     (for {
-      fonts              <- Conf.get(_.display.fonts)
-      installedFontNames <- Task(GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet)
-    } yield fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(fallbackFont)).orElse(UIO(fallbackFont))
+      fonts <- Conf.get(_.display.fonts)
+      installedFontNames <-
+        ZIO.attempt(GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet)
+    } yield fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(fallbackFont))
+      .orElse(ZIO.succeed(fallbackFont))
   }
 
-  def getPreferredFrameWidth: URIO[Has[Conf], Int] =
+  def getPreferredFrameWidth: URIO[Conf, Int] =
     for {
       width <- Conf.get(_.display.width)
       screenWidth <-
-        Task(
-          GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
-        ).orElse(UIO(width))
+        ZIO
+          .attempt(
+            GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
+          )
+          .orElse(ZIO.succeed(width))
     } yield width min screenWidth
 }
 
@@ -447,15 +455,15 @@ object SwingTerminal {
 
   def create(runtime: CCRuntime): RManaged[Env, SwingTerminal] =
     for {
-      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
+      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged
       commandCursorRef <- Ref.makeManaged(0)
       searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
       closePromise     <- Promise.makeManaged[Nothing, Unit]
       swingTerminal <-
-        ZManaged.make(
-          UIO(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
-        )(t => UIO(t.frame.dispose()))
-      _ <- swingTerminal.init.toManaged_
+        ZManaged.acquireReleaseWith(
+          ZIO.succeed(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
+        )(t => ZIO.succeed(t.frame.dispose()))
+      _ <- swingTerminal.init.toManaged
     } yield swingTerminal
 }

@@ -3,9 +3,9 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
-import zio.blocking.Blocking
+import zio.managed.*
 import zio.process.{Command as PCommand, CommandError as PCommandError}
+import zio.ZIO
 
 final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleHiddenFilesCommand
@@ -25,7 +25,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
       PreviewResults.one(Preview.unit.onRun(run).score(Scores.high(input.context)))
     }
 
-  private def runMacOS: ZIO[Blocking, PCommandError, Unit] =
+  private def runMacOS: ZIO[Any, PCommandError, Unit] =
     for {
       showingAll <- PCommand("defaults", "read", "com.apple.finder", "AppleShowAllFiles").string.map(_.trim == "1")
       _ <- PCommand(
@@ -39,7 +39,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
       _ <- PCommand("killall", "Finder").exitCode
     } yield ()
 
-  private def runWindows: ZIO[Blocking, PCommandError, Unit] =
+  private def runWindows: ZIO[Any, PCommandError, Unit] =
     for {
       showingAllFlag <-
         PCommand(

@@ -1,17 +1,17 @@
 package commandcenter.tools
 
 import commandcenter.util.AppleScript
-import zio.{Has, Task, TaskLayer, UIO}
-import zio.blocking.Blocking
+import zio.{Task, TaskLayer, UIO, ZIO}
 import zio.process.Command as PCommand
 
 import java.awt.datatransfer.StringSelection
 import java.awt.Toolkit
 import java.io.File
 import scala.util.Try
+import zio.managed.*
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
-final case class ToolsLive(pid: Long, toolsPath: Option[File], blocking: Blocking.Service) extends Tools {
+final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
   def processId: Long = pid
 
   def activate: Task[Unit] =
@@ -25,37 +25,37 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File], blocking: Blockin
                         |end tell
                         |""".stripMargin)
           .unit
-    }).provide(Has(blocking))
+    })
 
   def hide: Task[Unit] =
     toolsPath match {
-      case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", pid.toString).exitCode.unit.provide(Has(blocking))
+      case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", pid.toString).exitCode.unit
       // TODO: Fallback to AppleScript if macOS
-      case None => UIO.unit
+      case None => ZIO.unit
     }
 
   def setClipboard(text: String): Task[Unit] =
     toolsPath match {
       case Some(ccTools) =>
-        PCommand(ccTools.getAbsolutePath, "set-clipboard", text).exitCode.unit.provide(Has(blocking))
+        PCommand(ccTools.getAbsolutePath, "set-clipboard", text).exitCode.unit
       case None =>
-        blocking.effectBlocking {
+        ZIO.attemptBlocking {
           Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(text), null)
         }
     }
 
-  def beep: Task[Unit] = Task(Toolkit.getDefaultToolkit.beep())
+  def beep: Task[Unit] = ZIO.attempt(Toolkit.getDefaultToolkit.beep())
 }
 
 object ToolsLive {
 
-  def make: TaskLayer[Has[Tools]] =
+  def make: TaskLayer[Tools] =
     (for {
-      pid <- Task(ProcessHandle.current.pid).toManaged_
+      pid <- ZIO.attempt(ProcessHandle.current.pid).toManaged
       toolsPath = sys.env.get("COMMAND_CENTER_TOOLS_PATH").map(new File(_)).orElse {
                     Try(System.getProperty("user.home")).toOption
                       .map(home => new File(home, ".command-center/cc-tools"))
                       .filter(_.exists())
                   }
-    } yield new ToolsLive(pid, toolsPath, Blocking.Service.live)).toLayer
+    } yield new ToolsLive(pid, toolsPath)).toLayer
 }

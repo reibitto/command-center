@@ -10,7 +10,8 @@ import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.util.OS
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, Task, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 final case class SystemCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SystemCommand
@@ -49,7 +50,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                          case SystemSubcommand.Sleep =>
                            Tuple2(
                              Renderer.renderDefault("Sleep", "Put computer to sleep"),
-                             Task {
+                             ZIO.attempt {
                                PowrProf
                                  .SetSuspendState(bHibernate = false, bForce = false, bWakeupEventsDisabled = false)
                                ()
@@ -59,7 +60,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                          case SystemSubcommand.MonitorOff =>
                            Tuple2(
                              Renderer.renderDefault("Turn off monitor", ""),
-                             Task {
+                             ZIO.attempt {
                                User32.INSTANCE.SendMessage(
                                  WinUser.HWND_BROADCAST,
                                  WinUser.WM_SYSCOMMAND,
@@ -73,7 +74,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                          case SystemSubcommand.Screensaver =>
                            Tuple2(
                              Renderer.renderDefault("Activate screensaver", ""),
-                             Task {
+                             ZIO.attempt {
                                User32.INSTANCE.SendMessage(
                                  WinUser.HWND_BROADCAST,
                                  WinUser.WM_SYSCOMMAND,

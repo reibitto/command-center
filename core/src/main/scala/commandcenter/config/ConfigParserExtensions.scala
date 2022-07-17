@@ -4,7 +4,8 @@ import com.typesafe.config.*
 import commandcenter.command.CommandPluginError
 import io.circe.{Decoder, Json}
 import io.circe.config.parser
-import zio.{IO, ZIO, ZManaged}
+import zio.{IO, ZIO}
+import zio.managed.*
 
 import scala.jdk.CollectionConverters.*
 

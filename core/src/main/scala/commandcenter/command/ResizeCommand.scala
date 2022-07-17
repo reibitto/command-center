@@ -4,9 +4,10 @@ import cats.implicits.*
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
-import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import commandcenter.view.Renderer
+import zio.ZIO
+import zio.managed.*
 
 final case class ResizeCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand

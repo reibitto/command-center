@@ -3,8 +3,9 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.managed.*
 import zio.process.Command as PCommand
+import zio.ZIO
 
 // TODO: Sleep vs lock distinction?
 // /System/Library/CoreServices/Menu\ Extras/User.menu/Contents/Resources/CGSession -suspend

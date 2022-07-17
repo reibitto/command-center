@@ -5,7 +5,8 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 final case class OpacityCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.OpacityCommand
@@ -17,7 +18,7 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      _     <- ZIO.fail(CommandError.NotApplicable).unlessM(searchInput.context.terminal.isOpacitySupported)
+      _     <- ZIO.fail(CommandError.NotApplicable).unlessZIO(searchInput.context.terminal.isOpacitySupported)
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed = opacityCommand.parse(input.args)
       message <- ZIO

@@ -7,7 +7,8 @@ import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import io.circe.Decoder
-import zio.{Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 final case class SnippetsCommand(commandNames: List[String], snippets: List[Snippet]) extends Command[String] {
   val commandType: CommandType = CommandType.SnippetsCommand

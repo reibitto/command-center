@@ -3,7 +3,8 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.{OS, WindowManager}
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 final case class SwitchWindowCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SwitchWindowCommand

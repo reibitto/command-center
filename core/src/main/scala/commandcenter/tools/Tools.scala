@@ -1,8 +1,6 @@
 package commandcenter.tools
 
-import zio.{Has, RIO, Task, ZIO}
-import zio.prelude.fx.ZPure
-import zio.prelude.Reader
+import zio.{RIO, Task, URIO, ZIO}
 
 trait Tools {
   def processId: Long
@@ -14,18 +12,18 @@ trait Tools {
 
 object Tools {
 
-  def processId: Reader[Has[Tools], Long] =
-    ZPure.access[Has[Tools]](_.get.processId)
+  def processId: URIO[Tools, Long] =
+    ZIO.serviceWith[Tools](_.processId)
 
-  def activate: RIO[Has[Tools], Unit] =
-    ZIO.serviceWith[Tools](_.activate)
+  def activate: RIO[Tools, Unit] =
+    ZIO.serviceWithZIO[Tools](_.activate)
 
-  def hide: RIO[Has[Tools], Unit] =
-    ZIO.serviceWith[Tools](_.hide)
+  def hide: RIO[Tools, Unit] =
+    ZIO.serviceWithZIO[Tools](_.hide)
 
-  def setClipboard(text: String): RIO[Has[Tools], Unit] =
-    ZIO.serviceWith[Tools](_.setClipboard(text))
+  def setClipboard(text: String): RIO[Tools, Unit] =
+    ZIO.serviceWithZIO[Tools](_.setClipboard(text))
 
-  def beep: RIO[Has[Tools], Unit] =
-    ZIO.serviceWith[Tools](_.beep)
+  def beep: RIO[Tools, Unit] =
+    ZIO.serviceWithZIO[Tools](_.beep)
 }

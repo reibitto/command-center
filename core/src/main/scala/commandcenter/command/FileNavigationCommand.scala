@@ -5,7 +5,7 @@ import commandcenter.command.CommandError.*
 import commandcenter.util.ProcessUtil
 import commandcenter.CCRuntime.{Env, PartialEnv}
 import zio.*
-import zio.logging.log
+import zio.managed.*
 import zio.stream.ZStream
 
 import java.io.File
@@ -59,7 +59,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
           listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
         }
 
-      UIO {
+      ZIO.succeed {
         PreviewResults.paginated(
           ZStream.succeed(
             Preview(file)
@@ -83,8 +83,8 @@ object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
 
   def make(config: Config): ZManaged[PartialEnv, CommandPluginError, FileNavigationCommand] =
     (for {
-      homeDirectory <- zio.system.property("user.home").catchAll { t =>
-                         log.throwable("Could not obtain location of home directory", t) *> ZIO.none
+      homeDirectory <- zio.System.property("user.home").catchAll { t =>
+                         ZIO.logWarningCause("Could not obtain location of home directory", Cause.fail(t)) *> ZIO.none
                        }
-    } yield FileNavigationCommand(homeDirectory)).toManaged_
+    } yield FileNavigationCommand(homeDirectory)).toManaged
 }

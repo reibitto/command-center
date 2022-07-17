@@ -1,15 +1,16 @@
 package commandcenter.strokeorder
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.command._
+import commandcenter.command.*
 import commandcenter.tools.Tools
-import commandcenter.view.{ Rendered, Style, StyledText }
-import zio.{ Managed, ZIO }
+import commandcenter.view.{Rendered, Style, StyledText}
+import commandcenter.CCRuntime.Env
+import zio.managed.*
+import zio.ZIO
 
 final case class StrokeOrderCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
-  val title: String            = "Stroke Order"
+  val title: String = "Stroke Order"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
@@ -29,6 +30,7 @@ final case class StrokeOrderCommand(commandNames: List[String]) extends Command[
 }
 
 object StrokeOrderCommand extends CommandPlugin[StrokeOrderCommand] {
+
   def make(config: Config): Managed[CommandPluginError, StrokeOrderCommand] =
     for {
       commandNames <- config.getManaged[Option[List[String]]]("commandNames")

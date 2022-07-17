@@ -5,14 +5,14 @@ import commandcenter.command.SearchMavenCommand.{BucketedMavenArtifact, MavenArt
 import commandcenter.tools.Tools
 import commandcenter.util.Orderings
 import commandcenter.CCRuntime.Env
+import commandcenter.HttpClient
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
-import sttp.client3.httpclient.zio.*
-import zio.{IO, Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 import java.time.{Instant, LocalDate, ZoneId}
-import scala.math.Ordering
 import scala.util.matching.Regex
 
 final case class SearchMavenCommand(commandNames: List[String]) extends Command[String] {
@@ -27,13 +27,15 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
       request = basicRequest
                   .get(uri"https://search.maven.org/solrsearch/select?q=${input.rest}&rows=100&wt=json")
                   .response(asJson[Json])
-      response <- send(request)
+      response <- request.send(HttpClient.backend)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
-      artifacts <- IO.fromEither(
-                     response.hcursor.downField("response").downField("docs").as[List[MavenArtifact]]
-                   ).mapError(CommandError.UnexpectedException)
+      artifacts <- ZIO
+                     .fromEither(
+                       response.hcursor.downField("response").downField("docs").as[List[MavenArtifact]]
+                     )
+                     .mapError(CommandError.UnexpectedException)
       scoredArtifacts = bucket(artifacts, Some(input.rest)).take(20)
     } yield PreviewResults.fromIterable(scoredArtifacts.map { artifact =>
       val renderedCoordinates = artifact.render

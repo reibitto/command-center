@@ -6,19 +6,20 @@ import commandcenter.shortcuts.Shortcuts
 import commandcenter.ui.{CliTerminal, EventResult}
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.console.*
+
 import zio.stream.ZStream
+import zio.Console.{ printLine, _ }
 
 object Main extends CCApp {
   val terminalType: TerminalType = TerminalType.Cli
-  val shortcutsLayer: ULayer[Has[Shortcuts]] = Shortcuts.unsupported
+  val shortcutsLayer: ULayer[Shortcuts] = Shortcuts.unsupported
 
   def uiLoop: RManaged[Env, ExitCode] =
     for {
       terminal <- CliTerminal.createNative
       exitCode <- (for {
                     _ <- terminal.keyHandlersRef.set(terminal.defaultKeyHandlers)
-                    _ <- Task(terminal.screen.startScreen())
+                    _ <- ZIO.attempt(terminal.screen.startScreen())
                     _ <- terminal.render(SearchResults.empty)
                     _ <- ZStream
                            .fromQueue(terminal.renderQueue)
@@ -34,24 +35,24 @@ object Main extends CCApp {
                                true
                              case EventResult.Success | EventResult.RemainOpen => true
                            }
-                  } yield ()).exitCode.toManaged_
+                  } yield ()).exitCode.toManaged
     } yield exitCode
 
   def run(args: List[String]): URIO[Env, ExitCode] =
     CliArgs.rootCommand
       .parse(args)
       .fold(
-        help => putStrLn(help.toString),
+        help => printLine(help.toString),
         {
           case CliCommand.Standalone =>
             uiLoop.useNow.tapError { t =>
-              UIO(t.printStackTrace())
+              ZIO.succeed(t.printStackTrace())
             }
 
           case CliCommand.Help =>
-            putStrLn(CliArgs.rootCommand.showHelp)
+            printLine(CliArgs.rootCommand.showHelp)
 
-          case CliCommand.Version => putStrLn(s"Command Center CLI v${commandcenter.BuildInfo.version}")
+          case CliCommand.Version => printLine(s"Command Center CLI v${commandcenter.BuildInfo.version}")
         }
       )
       .exitCode

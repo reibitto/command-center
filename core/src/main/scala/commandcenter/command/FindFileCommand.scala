@@ -6,8 +6,9 @@ import commandcenter.command.CommandError.*
 import commandcenter.util.OS
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.managed.*
 import zio.process.Command as PCommand
+import zio.ZIO
 
 import java.io.File
 

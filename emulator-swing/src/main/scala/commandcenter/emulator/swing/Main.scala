@@ -6,11 +6,10 @@ import commandcenter.emulator.swing.ui.SwingTerminal
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.logging.log
 
 object Main extends CCApp {
   val terminalType: TerminalType = TerminalType.Swing
-  val shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).!
+  val shortcutsLayer: ULayer[Shortcuts] = ShortcutsLive.layer(this).!
 
   def run(args: List[String]): URIO[Env, ExitCode] =
     (for {
@@ -19,16 +18,16 @@ object Main extends CCApp {
       _ <- (for {
              _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
                     (for {
-                      _ <- log.debug("Opening emulated terminal...")
+                      _ <- ZIO.logDebug("Opening emulated terminal...")
                       _ <- terminal.open
                       _ <- terminal.activate
                     } yield ()).ignore
                   )
-             _ <- log.info(
+             _ <- ZIO.logInfo(
                     s"Ready to accept input. Press `${config.keyboard.openShortcut}` to open the terminal."
                   )
              _ <- GlobalActions.setupCommon(config.globalActions)
-           } yield ()).toManaged_
+           } yield ()).toManaged
     } yield terminal).use { terminal =>
       terminal.closePromise.await
     }.exitCode

@@ -6,7 +6,8 @@ import com.typesafe.config.Config
 import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.{IO, Managed, ZIO}
+import zio.managed.*
+import zio.ZIO
 
 import java.util.Base64
 
@@ -19,7 +20,7 @@ final case class EncodeBase64Command(commandNames: List[String]) extends Command
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command("", s"Base64 encodes the given string")(all).parse(input.args)
-      (valueToEncode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      (valueToEncode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
       encoded = Base64.getEncoder.encodeToString(valueToEncode.getBytes(charset))
     } yield PreviewResults.one(
       Preview(encoded).onRun(Tools.setClipboard(encoded)).score(Scores.high(input.context))

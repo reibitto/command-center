@@ -8,6 +8,7 @@ import commandcenter.util.ProcessUtil
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.managed.*
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -41,7 +42,7 @@ final case class SearchUrlCommand(
       else {
         val url = urlTemplate.replace("{query}", URLEncoder.encode(searchInput.input, StandardCharsets.UTF_8))
 
-        UIO(
+        ZIO.succeed(
           PreviewResults.one(
             Preview.unit
               .score(Scores.high * 0.35)

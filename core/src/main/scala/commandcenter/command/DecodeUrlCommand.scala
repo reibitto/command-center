@@ -7,6 +7,7 @@ import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.managed.*
 
 import java.net.URLDecoder
 
@@ -19,8 +20,8 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command("", s"URL decodes the given string")(all).parse(input.args)
-      (valueToDecode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
-      decoded                  <- Task(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
+      (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      decoded                  <- ZIO.attempt(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
     } yield PreviewResults.one(
       Preview(decoded).onRun(Tools.setClipboard(decoded)).score(Scores.high(input.context))
     )

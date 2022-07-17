@@ -4,9 +4,9 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
-import zio.blocking.Blocking
+import zio.managed.*
 import zio.process.Command as PCommand
+import zio.ZIO
 
 final case class ExternalIPCommand(commandNames: List[String]) extends Command[String] {
   val commandType: CommandType = CommandType.ExternalIPCommand
@@ -22,7 +22,7 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
         .onRun(Tools.setClipboard(externalIP))
     )
 
-  private def getExternalIP: ZIO[Blocking, CommandError, String] =
+  private def getExternalIP: ZIO[Any, CommandError, String] =
     OS.os match {
       case OS.Windows =>
         val prefix = "Address:"

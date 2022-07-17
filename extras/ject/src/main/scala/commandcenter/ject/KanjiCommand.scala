@@ -2,12 +2,13 @@ package commandcenter.ject
 
 import com.typesafe.config.Config
 import commandcenter.CCRuntime.Env
-import commandcenter.command._
+import commandcenter.command.*
 import commandcenter.config.Decoders.pathDecoder
 import commandcenter.tools.Tools
-import ject.docs.KanjiDoc
-import ject.lucene.KanjiReader
-import zio.{ Managed, ZIO }
+import ject.ja.docs.KanjiDoc
+import ject.ja.lucene.KanjiReader
+import zio.ZIO
+import zio.managed.*
 
 import java.nio.file.Path
 
@@ -58,17 +59,18 @@ final case class KanjiCommand(
 
 object KanjiCommand extends CommandPlugin[KanjiCommand] {
   def make(config: Config): Managed[CommandPluginError, KanjiCommand] =
+    ???
     // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
-    for {
-      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
-      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
-      luceneIndex    <- KanjiReader.make(dictionaryPath.resolve("kanji")).mapError(CommandPluginError.UnexpectedException)
-      showScore      <- config.getManaged[Option[Boolean]]("showScore")
-      quickPrefixes  <- config.getManaged[Option[List[String]]]("quickPrefixes")
-    } yield KanjiCommand(
-      commandNames.getOrElse(List("kanji", "k")),
-      luceneIndex,
-      quickPrefixes.getOrElse(Nil),
-      showScore.getOrElse(false)
-    )
+//    for {
+//      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
+//      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
+//      luceneIndex    <- KanjiReader.make(dictionaryPath.resolve("kanji")).mapError(CommandPluginError.UnexpectedException)
+//      showScore      <- config.getManaged[Option[Boolean]]("showScore")
+//      quickPrefixes  <- config.getManaged[Option[List[String]]]("quickPrefixes")
+//    } yield KanjiCommand(
+//      commandNames.getOrElse(List("kanji", "k")),
+//      luceneIndex,
+//      quickPrefixes.getOrElse(Nil),
+//      showScore.getOrElse(false)
+//    )
 }

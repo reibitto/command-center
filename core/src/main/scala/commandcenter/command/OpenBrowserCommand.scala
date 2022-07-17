@@ -5,6 +5,7 @@ import commandcenter.command.CommandError.*
 import commandcenter.util.ProcessUtil
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.managed.*
 
 final case class OpenBrowserCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.OpenBrowserCommand
@@ -20,7 +21,7 @@ final case class OpenBrowserCommand() extends Command[Unit] {
     // TODO: also check endsWith TLD + URL.isValid
 
     if (startsWith)
-      UIO(PreviewResults.one(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
+      ZIO.succeed(PreviewResults.one(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
     else
       ZIO.fail(NotApplicable)
   }

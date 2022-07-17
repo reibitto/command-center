@@ -8,7 +8,7 @@ import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.{Env, PartialEnv}
 import commandcenter.CommandContext
 import zio.*
-import zio.logging.*
+import zio.managed.*
 import zio.stream.{ZSink, ZStream}
 
 import java.util.Locale
@@ -30,7 +30,7 @@ trait Command[+A] {
       PreviewResult.Some(
         Command.this,
         a,
-        UIO.unit,
+        ZIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
@@ -41,7 +41,7 @@ trait Command[+A] {
       PreviewResult.Some(
         ev(Command.this),
         (),
-        UIO.unit,
+        ZIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
@@ -52,7 +52,7 @@ trait Command[+A] {
       PreviewResult.Some(
         ev(Command.this),
         (),
-        UIO.unit,
+        ZIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
@@ -81,32 +81,34 @@ object Command {
     (for {
       chunks <- ZStream
                   .fromIterable(commands)
-                  .mapMPar(8) { command =>
+                  .mapZIOPar(8) { command =>
                     command
                       .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
                       .flatMap {
-                        case PreviewResults.Single(r)    => UIO(Chunk.single(r))
-                        case PreviewResults.Multiple(rs) => UIO(rs)
+                        case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
+                        case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
                         case p @ PreviewResults.Paginated(rs, pageSize, totalRemaining) =>
-                          for {
-                            (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow
-                          } yield results match {
-                            case beforeLast :+ last if results.length >= pageSize =>
-                              beforeLast :+ last :+
-                                PreviewResult
-                                  .nothing(Rendered.Ansi(fansi.Color.Yellow("More...")))
-                                  .runOption(RunOption.RemainOpen)
-                                  .score(last.score)
-                                  .moreResults(
-                                    MoreResults.Remaining(
-                                      p.copy(
-                                        results = restStream,
-                                        totalRemaining = totalRemaining.map(_ - pageSize)
+                            for {
+                              (results, restStream) <- ZIO.scoped {
+                                rs.peel(ZSink.take[PreviewResult[A]](pageSize))
+                              }
+                            } yield results match {
+                              case beforeLast :+ last if results.length >= pageSize =>
+                                beforeLast :+ last :+
+                                  PreviewResult
+                                    .nothing(Rendered.Ansi(fansi.Color.Yellow("More...")))
+                                    .runOption(RunOption.RemainOpen)
+                                    .score(last.score)
+                                    .moreResults(
+                                      MoreResults.Remaining(
+                                        p.copy(
+                                          results = restStream,
+                                          totalRemaining = totalRemaining.map(_ - pageSize)
+                                        )
                                       )
                                     )
-                                  )
 
-                            case chunk => chunk
+                              case chunk => chunk
                           }
                       }
                       .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedException(t)))
@@ -127,66 +129,70 @@ object Command {
 
         SearchResults(input, results, errors)
     }).tap { r =>
-      ZIO.foreach_(r.errors) {
+      ZIO.foreachDiscard(r.errors) {
         case CommandError.UnexpectedException(t) =>
-          log.throwable(s"Command encountered an unexpected exception with input: $input", t)
+          ZIO.logWarningCause(s"Command encountered an unexpected exception with input: $input", Cause.fail(t))
 
         case _ => ZIO.unit
       }
     }
+
+
   }
 
-  def parse(config: Config): ZManaged[PartialEnv, CommandPluginError, Command[?]] =
+  def parse(config: Config): ZIO[Scope & PartialEnv, CommandPluginError, Command[?]] =
     for {
-      typeName <- Task(config.getString("type")).mapError(CommandPluginError.UnexpectedException).toManaged_
+      typeName <- ZIO.attempt(config.getString("type")).mapError(CommandPluginError.UnexpectedException)
       command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
-                   case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
-                   case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
-                   case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
-                   case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
-                   case CommandType.EncodeUrlCommand          => EncodeUrlCommand.make(config)
-                   case CommandType.EpochMillisCommand        => EpochMillisCommand.make(config)
-                   case CommandType.EpochUnixCommand          => EpochUnixCommand.make(config)
-                   case CommandType.ExitCommand               => ExitCommand.make(config)
-                   case CommandType.ExternalIPCommand         => ExternalIPCommand.make(config)
-                   case CommandType.Foobar2000Command         => Foobar2000Command.make(config)
-                   case CommandType.FileNavigationCommand     => FileNavigationCommand.make(config)
-                   case CommandType.FindFileCommand           => FindFileCommand.make(config)
-                   case CommandType.FindInFileCommand         => FindInFileCommand.make(config)
-                   case CommandType.HashCommand               => HashCommand.make(config)
-                   case CommandType.HoogleCommand             => HoogleCommand.make(config)
-                   case CommandType.ITunesCommand             => ITunesCommand.make(config)
-                   case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
-                   case CommandType.LockCommand               => LockCommand.make(config)
-                   case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
-                   case CommandType.OpacityCommand            => OpacityCommand.make(config)
-                   case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
-                   case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)
-                   case CommandType.RadixCommand              => RadixCommand.make(config)
-                   case CommandType.RebootCommand             => RebootCommand.make(config)
-                   case CommandType.ReloadCommand             => ReloadCommand.make(config)
-                   case CommandType.ResizeCommand             => ResizeCommand.make(config)
-                   case CommandType.SearchCratesCommand       => SearchCratesCommand.make(config)
-                   case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
-                   case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
-                   case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
-                   case CommandType.StocksCommand             => StocksCommand.make(config)
-                   case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
-                   case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
-                   case CommandType.SystemCommand             => SystemCommand.make(config)
-                   case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
-                   case CommandType.TerminalCommand           => TerminalCommand.make(config)
-                   case CommandType.TimerCommand              => TimerCommand.make(config)
-                   case CommandType.ToggleDesktopIconsCommand => ToggleDesktopIconsCommand.make(config)
-                   case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
-                   case CommandType.UUIDCommand               => UUIDCommand.make(config)
-                   case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
+//                   case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
+//                   case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
+//                   case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
+//                   case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
+//                   case CommandType.EncodeUrlCommand          => EncodeUrlCommand.make(config)
+//                   case CommandType.EpochMillisCommand        => EpochMillisCommand.make(config)
+//                   case CommandType.EpochUnixCommand          => EpochUnixCommand.make(config)
+//                   case CommandType.ExitCommand               => ExitCommand.make(config)
+//                   case CommandType.ExternalIPCommand         => ExternalIPCommand.make(config)
+//                   case CommandType.Foobar2000Command         => Foobar2000Command.make(config)
+//                   case CommandType.FileNavigationCommand     => FileNavigationCommand.make(config)
+//                   case CommandType.FindFileCommand           => FindFileCommand.make(config)
+//                   case CommandType.FindInFileCommand         => FindInFileCommand.make(config)
+//                   case CommandType.HashCommand               => HashCommand.make(config)
+//                   case CommandType.HoogleCommand             => HoogleCommand.make(config)
+//                   case CommandType.ITunesCommand             => ITunesCommand.make(config)
+//                   case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
+//                   case CommandType.LockCommand               => LockCommand.make(config)
+//                   case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
+//                   case CommandType.OpacityCommand            => OpacityCommand.make(config)
+//                   case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
+//                   case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)
+//                   case CommandType.RadixCommand              => RadixCommand.make(config)
+//                   case CommandType.RebootCommand             => RebootCommand.make(config)
+//                   case CommandType.ReloadCommand             => ReloadCommand.make(config)
+//                   case CommandType.ResizeCommand             => ResizeCommand.make(config)
+//                   case CommandType.SearchCratesCommand       => SearchCratesCommand.make(config)
+//                   case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
+//                   case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
+//                   case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
+//                   case CommandType.StocksCommand             => StocksCommand.make(config)
+//                   case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
+//                   case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
+//                   case CommandType.SystemCommand             => SystemCommand.make(config)
+//                   case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
+//                   case CommandType.TerminalCommand           => TerminalCommand.make(config)
+//                   case CommandType.TimerCommand              => TimerCommand.make(config)
+//                   case CommandType.ToggleDesktopIconsCommand => ToggleDesktopIconsCommand.make(config)
+//                   case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
+//                   case CommandType.UUIDCommand               => UUIDCommand.make(config)
+                   case CommandType.WorldTimesCommand         => WorldTimesCommand.make2(config)
 
-                   case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
-                     ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))
+//                   case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
+//                     ZIO.fail(CommandPluginError.PluginsNotSupported(typeName))
+//
+//                   case CommandType.External(typeName) =>
+//                     CommandPlugin.loadDynamically(config, typeName)
 
-                   case CommandType.External(typeName) =>
-                     CommandPlugin.loadDynamically(config, typeName)
+                   case other => ZIO.fail(CommandPluginError.PluginsNotSupported(typeName)) // ???
                  }
     } yield command
 
