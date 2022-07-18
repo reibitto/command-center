@@ -1,16 +1,15 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.HttpClient
 import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
+import commandcenter.CCRuntime.Env
+import commandcenter.HttpClient
 import io.circe.Decoder
 import sttp.client3.*
 import sttp.client3.circe.*
-import zio.managed.*
+import zio.{Chunk, IO, ZIO}
 import zio.stream.ZStream
-import zio.{Chunk, ZIO}
 
 import java.time.OffsetDateTime
 
@@ -27,7 +26,8 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
                          .get(uri"https://crates.io/api/v1/crates?page=$page&per_page=$pageSize&q=${input.rest}")
                          .response(asJson[CrateResults])
 
-        request.send(HttpClient.backend)
+                       request
+                         .send(HttpClient.backend)
                          .map(_.body)
                          .absolve
                          .mapBoth(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))
@@ -99,8 +99,8 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
       )(CrateResult.apply)
   }
 
-  def make(config: Config): Managed[CommandPluginError, SearchCratesCommand] =
+  def make(config: Config): IO[CommandPluginError, SearchCratesCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield SearchCratesCommand(commandNames.getOrElse(List("crate", "crates")))
 }

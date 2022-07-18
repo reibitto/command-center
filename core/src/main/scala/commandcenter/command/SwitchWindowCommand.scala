@@ -3,8 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.{OS, WindowManager}
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 final case class SwitchWindowCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SwitchWindowCommand
@@ -31,8 +30,8 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
 
 object SwitchWindowCommand extends CommandPlugin[SwitchWindowCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, SwitchWindowCommand] =
+  def make(config: Config): IO[CommandPluginError, SwitchWindowCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield SwitchWindowCommand(commandNames.getOrElse(List("window", "w")))
 }

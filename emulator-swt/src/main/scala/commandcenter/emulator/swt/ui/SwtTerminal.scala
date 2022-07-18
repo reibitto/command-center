@@ -16,7 +16,6 @@ import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
 import zio.*
 import zio.stream.ZSink
-import zio.managed.*
 
 import java.awt.Dimension
 import scala.collection.mutable
@@ -51,11 +50,11 @@ final case class SwtTerminal(
             for {
               config <- Conf.config
               _ <- searchDebouncer(
-                Command
-                  .search(config.commands, config.aliases, searchTerm, context)
-                  .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-                  .unit
-              ).flatMap(_.join)
+                     Command
+                       .search(config.commands, config.aliases, searchTerm, context)
+                       .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                       .unit
+                   ).flatMap(_.join)
             } yield ()
           }
         }
@@ -69,13 +68,13 @@ final case class SwtTerminal(
             Unsafe.unsafe { implicit u =>
               runtime.unsafe.fork {
                 for {
-                  _ <- searchDebouncer.triggerNowAwait
+                  _               <- searchDebouncer.triggerNowAwait
                   previousResults <- searchResultsRef.get
-                  cursorIndex <- commandCursorRef.get
-                  resultOpt <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
+                  cursorIndex     <- commandCursorRef.get
+                  resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
                   _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                    invoke(terminal.shell.dispose())
-                  }
+                         invoke(terminal.shell.dispose())
+                       }
                 } yield ()
               }
             }
@@ -112,7 +111,7 @@ final case class SwtTerminal(
               runtime.unsafe.fork {
                 for {
                   previousCursor <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
-                  _ <- renderSelectionCursor(1).when(previousCursor > 0)
+                  _              <- renderSelectionCursor(1).when(previousCursor > 0)
                 } yield ()
               }
             }
@@ -124,16 +123,16 @@ final case class SwtTerminal(
                   previousResults <- searchResultsRef.get
                   shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
                   eligibleResults = previousResults.previews.filter { p =>
-                    p.shortcuts.contains(shortcutPressed)
-                  }
+                                      p.shortcuts.contains(shortcutPressed)
+                                    }
                   bestMatch = eligibleResults.maxByOption(_.score)
                   _ <- ZIO.foreachDiscard(bestMatch) { preview =>
-                    for {
-                      _ <- hide
-                      _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
-                      _ <- reset
-                    } yield ()
-                  }
+                         for {
+                           _ <- hide
+                           _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
+                           _ <- reset
+                         } yield ()
+                       }
                 } yield ()
               }
             }
@@ -274,10 +273,11 @@ final case class SwtTerminal(
                  case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
-                     _                     <- preview.onRun.absorb.forkDaemon
+                     _ <- preview.onRun.absorb.forkDaemon
                      (results, restStream) <- ZIO.scoped {
-                       rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
-                     }
+                                                rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
+                                                  .mapError(_.toThrowable)
+                                              }
                      _ <- showMore(
                             results,
                             preview.moreResults(
@@ -341,9 +341,11 @@ final case class SwtTerminal(
     } yield ()
 
   def deactivate: RIO[Tools, Unit] =
-    ZIO.whenCase(OS.os) { case OS.MacOS =>
-      Tools.hide
-    }.unit
+    ZIO
+      .whenCase(OS.os) { case OS.MacOS =>
+        Tools.hide
+      }
+      .unit
 
   def clearScreen: UIO[Unit] =
     ZIO.succeed {
@@ -395,13 +397,13 @@ final case class SwtTerminal(
 
 object SwtTerminal {
 
-  def create(runtime: CCRuntime, terminal: RawSwtTerminal): RManaged[Env, SwtTerminal] =
+  def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
-      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged
-      commandCursorRef <- Ref.makeManaged(0)
-      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
+      debounceDelay    <- Conf.get(_.general.debounceDelay)
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      commandCursorRef <- Ref.make(0)
+      searchResultsRef <- Ref.make(SearchResults.empty[Any])
       swtTerminal = new SwtTerminal(commandCursorRef, searchResultsRef, searchDebouncer, terminal)(runtime)
-      _ <- swtTerminal.init.toManaged
+      _ <- swtTerminal.init
     } yield swtTerminal
 }

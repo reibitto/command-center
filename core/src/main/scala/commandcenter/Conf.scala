@@ -2,7 +2,6 @@ package commandcenter
 
 import commandcenter.CCRuntime.{Env, PartialEnv}
 import zio.*
-import zio.managed.Reservation
 
 trait Conf {
   def config: UIO[CCConfig]
@@ -46,7 +45,7 @@ final case class ConfigLive(configRef: Ref[CCConfig]) extends Conf {
 
 object ConfigLive {
 
-  def layer = {
+  def layer: ZLayer[Scope with PartialEnv, Throwable, ConfigLive] = {
     ZLayer.fromZIO(
       for {
         config    <- CCConfig.load

@@ -1,11 +1,12 @@
 package commandcenter
 
+import commandcenter.CCRuntime.Env
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.util.{ CycleWindowState, WindowBounds, WindowManager }
-import zio.{ RIO, Ref, ZIO }
+import commandcenter.util.{CycleWindowState, WindowBounds, WindowManager}
+import zio.{RIO, Ref, ZIO}
 
 object GlobalActions {
-  def setupCommon(actions: Vector[GlobalAction]): RIO[Shortcuts, Unit] =
+  def setupCommon(actions: Vector[GlobalAction]): RIO[Env, Unit] =
     for {
       cycleWindowStateRef <- Ref.make(Option.empty[CycleWindowState])
       _                   <- ZIO.foreachDiscard(actions) { action =>

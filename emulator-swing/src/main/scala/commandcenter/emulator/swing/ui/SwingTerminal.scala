@@ -11,7 +11,6 @@ import commandcenter.util.{Debouncer, OS}
 import commandcenter.view.{Rendered, Style}
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 import zio.stream.ZSink
 
 import java.awt.*
@@ -33,7 +32,10 @@ final case class SwingTerminal(
   val document = new DefaultStyledDocument
   val context = new StyleContext
   val frame = new JFrame("Command Center")
-  val preferredFont = runtime.unsafeRun(getPreferredFont)
+
+  val preferredFont = Unsafe.unsafe { implicit u =>
+    runtime.unsafe.run(getPreferredFont).getOrThrow()
+  }
 
   frame.setBackground(theme.background)
   frame.setFocusable(false)
@@ -65,17 +67,20 @@ final case class SwingTerminal(
     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
   ) {
 
-    override def getPreferredSize: Dimension =
-      runtime.unsafeRun {
-        for {
-          config              <- Conf.config
-          preferredFrameWidth <- getPreferredFrameWidth
-          searchResults       <- searchResultsRef.get
-          height = if (searchResults.previews.isEmpty) 0
-                   else
-                     outputTextPane.getPreferredSize.height min config.display.maxHeight
-        } yield new Dimension(preferredFrameWidth, height)
+    override def getPreferredSize: Dimension = {
+      Unsafe.unsafe { implicit u =>
+        runtime.unsafe.run {
+          for {
+            config              <- Conf.config
+            preferredFrameWidth <- getPreferredFrameWidth
+            searchResults       <- searchResultsRef.get
+            height = if (searchResults.previews.isEmpty) 0
+                     else
+                       outputTextPane.getPreferredSize.height min config.display.maxHeight
+          } yield new Dimension(preferredFrameWidth, height)
+        }.getOrThrow()
       }
+    }
   }
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
 
@@ -252,10 +257,11 @@ final case class SwingTerminal(
                  case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
-                     _                     <- preview.onRun.absorb.forkDaemon
+                     _ <- preview.onRun.absorb.forkDaemon
                      (results, restStream) <- ZIO.scoped {
-                       rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
-                     }
+                                                rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
+                                                  .mapError(_.toThrowable)
+                                              }
                      _ <- showMore(
                             results,
                             preview.moreResults(
@@ -361,7 +367,15 @@ final case class SwingTerminal(
   })
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  frame.setMinimumSize(new Dimension(runtime.unsafeRun(getPreferredFrameWidth), 20))
+
+  frame.setMinimumSize(
+    new Dimension(
+      Unsafe.unsafe { implicit u =>
+        runtime.unsafe.run(getPreferredFrameWidth).getOrThrow()
+      },
+      20
+    )
+  )
   frame.pack()
 
   def clearScreen: UIO[Unit] =
@@ -404,7 +418,8 @@ final case class SwingTerminal(
 
   def opacity: RIO[Env, Float] = ZIO.succeed(frame.getOpacity)
 
-  def setOpacity(opacity: Float): RIO[Env, Unit] = ZIO.attempt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported)
+  def setOpacity(opacity: Float): RIO[Env, Unit] =
+    ZIO.attempt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported).unit
 
   def isOpacitySupported: URIO[Env, Boolean] =
     ZIO
@@ -453,17 +468,17 @@ final case class SwingTerminal(
 
 object SwingTerminal {
 
-  def create(runtime: CCRuntime): RManaged[Env, SwingTerminal] =
+  def create(runtime: Runtime[Env]): RIO[Scope & Env, SwingTerminal] =
     for {
-      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged
-      commandCursorRef <- Ref.makeManaged(0)
-      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-      closePromise     <- Promise.makeManaged[Nothing, Unit]
+      debounceDelay    <- Conf.get(_.general.debounceDelay)
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      commandCursorRef <- Ref.make(0)
+      searchResultsRef <- Ref.make(SearchResults.empty[Any])
+      closePromise     <- Promise.make[Nothing, Unit]
       swingTerminal <-
-        ZManaged.acquireReleaseWith(
+        ZIO.acquireRelease(
           ZIO.succeed(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
         )(t => ZIO.succeed(t.frame.dispose()))
-      _ <- swingTerminal.init.toManaged
+      _ <- swingTerminal.init
     } yield swingTerminal
 }

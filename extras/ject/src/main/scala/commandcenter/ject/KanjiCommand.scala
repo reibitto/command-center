@@ -1,16 +1,12 @@
 package commandcenter.ject
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.command.*
-import commandcenter.config.Decoders.pathDecoder
 import commandcenter.tools.Tools
+import commandcenter.CCRuntime.Env
 import ject.ja.docs.KanjiDoc
 import ject.ja.lucene.KanjiReader
-import zio.ZIO
-import zio.managed.*
-
-import java.nio.file.Path
+import zio.{IO, ZIO}
 
 final case class KanjiCommand(
   commandNames: List[String],
@@ -19,15 +15,15 @@ final case class KanjiCommand(
   showScore: Boolean
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
-  val title: String            = "Kanji"
+  val title: String = "Kanji"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input      <-
+      input <-
         ZIO
           .fromOption(
             searchInput
-              .asPrefixedQuick(quickPrefixes: _*)
+              .asPrefixedQuick(quickPrefixes*)
               .orElse(searchInput.asPrefixed)
               .filter(_.rest.nonEmpty)
               .map(_.rest)
@@ -58,15 +54,16 @@ final case class KanjiCommand(
 }
 
 object KanjiCommand extends CommandPlugin[KanjiCommand] {
-  def make(config: Config): Managed[CommandPluginError, KanjiCommand] =
-    ???
-    // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
+
+  def make(config: Config): IO[CommandPluginError, KanjiCommand] =
+    ZIO.fail(CommandPluginError.PluginsNotSupported("..."))
+  // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
 //    for {
-//      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
-//      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
+//      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
+//      dictionaryPath <- config.getZIO[Path]("dictionaryPath")
 //      luceneIndex    <- KanjiReader.make(dictionaryPath.resolve("kanji")).mapError(CommandPluginError.UnexpectedException)
-//      showScore      <- config.getManaged[Option[Boolean]]("showScore")
-//      quickPrefixes  <- config.getManaged[Option[List[String]]]("quickPrefixes")
+//      showScore      <- config.getZIO[Option[Boolean]]("showScore")
+//      quickPrefixes  <- config.getZIO[Option[List[String]]]("quickPrefixes")
 //    } yield KanjiCommand(
 //      commandNames.getOrElse(List("kanji", "k")),
 //      luceneIndex,

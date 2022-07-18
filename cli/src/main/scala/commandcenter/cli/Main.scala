@@ -3,18 +3,27 @@ package commandcenter.cli
 import commandcenter.*
 import commandcenter.command.*
 import commandcenter.shortcuts.Shortcuts
+import commandcenter.tools.ToolsLive
 import commandcenter.ui.{CliTerminal, EventResult}
 import commandcenter.CCRuntime.Env
 import zio.*
-
 import zio.stream.ZStream
-import zio.Console.{ printLine, _ }
+import zio.Console.printLine
 
-object Main extends CCApp {
-  val terminalType: TerminalType = TerminalType.Cli
-  val shortcutsLayer: ULayer[Shortcuts] = Shortcuts.unsupported
+object Main extends ZIOApp {
 
-  def uiLoop: RManaged[Env, ExitCode] =
+  override type Environment = Env
+
+  val environmentTag: EnvironmentTag[Environment] = EnvironmentTag[Environment]
+
+  override def bootstrap: ZLayer[Scope, Any, Environment] = ZLayer.make[Environment](
+    ConfigLive.layer,
+    Shortcuts.unsupported,
+    ToolsLive.make,
+    Scope.default
+  )
+
+  def uiLoop: RIO[Scope & Env, ExitCode] =
     for {
       terminal <- CliTerminal.createNative
       exitCode <- (for {
@@ -35,25 +44,30 @@ object Main extends CCApp {
                                true
                              case EventResult.Success | EventResult.RemainOpen => true
                            }
-                  } yield ()).exitCode.toManaged
+                  } yield ()).exitCode
     } yield exitCode
 
-  def run(args: List[String]): URIO[Env, ExitCode] =
-    CliArgs.rootCommand
-      .parse(args)
-      .fold(
-        help => printLine(help.toString),
-        {
-          case CliCommand.Standalone =>
-            uiLoop.useNow.tapError { t =>
-              ZIO.succeed(t.printStackTrace())
-            }
+  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] = {
+    for {
+      args <- ZIOAppArgs.getArgs
+      exitCode <- CliArgs.rootCommand
+                    .parse(args)
+                    .fold(
+                      help => printLine(help.toString),
+                      {
+                        case CliCommand.Standalone =>
+                          uiLoop.tapError { t =>
+                            ZIO.succeed(t.printStackTrace())
+                          }
 
-          case CliCommand.Help =>
-            printLine(CliArgs.rootCommand.showHelp)
+                        case CliCommand.Help =>
+                          printLine(CliArgs.rootCommand.showHelp)
 
-          case CliCommand.Version => printLine(s"Command Center CLI v${commandcenter.BuildInfo.version}")
-        }
-      )
-      .exitCode
+                        case CliCommand.Version => printLine(s"Command Center CLI v${commandcenter.BuildInfo.version}")
+                      }
+                    )
+                    .exitCode
+    } yield exitCode
+  }
+
 }

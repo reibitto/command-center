@@ -3,9 +3,8 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.command.CommandError.*
 import commandcenter.util.ProcessUtil
-import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 import zio.stream.ZStream
 
 import java.io.File
@@ -81,10 +80,10 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
 
-  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, FileNavigationCommand] =
-    (for {
+  def make(config: Config): ZIO[Scope, CommandPluginError, FileNavigationCommand] =
+    for {
       homeDirectory <- zio.System.property("user.home").catchAll { t =>
-                         ZIO.logWarningCause("Could not obtain location of home directory", Cause.fail(t)) *> ZIO.none
+                         ZIO.logWarningCause("Could not obtain location of home directory", Cause.fail(t)).as(None)
                        }
-    } yield FileNavigationCommand(homeDirectory)).toManaged
+    } yield FileNavigationCommand(homeDirectory)
 }

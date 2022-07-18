@@ -7,7 +7,6 @@ import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 
 import java.net.URLDecoder
 
@@ -29,8 +28,8 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
 
 object DecodeUrlCommand extends CommandPlugin[DecodeUrlCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, DecodeUrlCommand] =
+  def make(config: Config): IO[CommandPluginError, DecodeUrlCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield DecodeUrlCommand(commandNames.getOrElse(List("decodeurl")))
 }

@@ -4,8 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 import zio.ZIO.attemptBlocking
 
 import java.net.{Inet4Address, NetworkInterface}
@@ -40,8 +39,8 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
 
 object LocalIPCommand extends CommandPlugin[LocalIPCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, LocalIPCommand] =
+  def make(config: Config): IO[CommandPluginError, LocalIPCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield LocalIPCommand(commandNames.getOrElse(List("localip")))
 }

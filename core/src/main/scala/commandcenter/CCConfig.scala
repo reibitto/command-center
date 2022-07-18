@@ -6,13 +6,10 @@ import commandcenter.config.ConfigParserExtensions.*
 import commandcenter.config.Decoders.*
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.OS
-import commandcenter.CCRuntime.PartialEnv
 import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
 import io.circe.Decoder
-import zio.{System, *}
-import zio.{UIO, ZIO}
-import zio.managed.*
+import zio.*
 import zio.ZIO.attemptBlocking
 
 import java.awt.Font
@@ -29,7 +26,7 @@ final case class CCConfig(
 
 object CCConfig {
 
-  def load: ZIO[Scope & PartialEnv, Throwable, CCConfig] =
+  def load: ZIO[Scope, Throwable, CCConfig] =
     for {
       file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
       _      <- ZIO.logDebug(s"Loading config file at ${file.getAbsolutePath}")

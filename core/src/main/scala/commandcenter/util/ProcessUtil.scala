@@ -2,11 +2,11 @@ package commandcenter.util
 
 import zio.{RIO, UIO, ZIO}
 import zio.process.Command as PCommand
+import zio.ZIO.attemptBlocking
 
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
-import zio.ZIO.attemptBlocking
 
 object ProcessUtil {
 

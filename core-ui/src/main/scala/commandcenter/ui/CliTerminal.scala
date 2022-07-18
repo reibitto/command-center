@@ -13,12 +13,10 @@ import commandcenter.util.{Debouncer, TextUtils}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import zio.*
-
 import zio.stream.ZSink
+import zio.ZIO.attemptBlocking
 
 import java.awt.Dimension
-import zio.ZIO.attemptBlocking
-import zio.managed._
 
 final case class CliTerminal[T <: Terminal](
   terminal: T,
@@ -42,7 +40,8 @@ final case class CliTerminal[T <: Terminal](
 
   def isOpacitySupported: URIO[Env, Boolean] = ZIO.succeed(false)
 
-  def size: RIO[Env, Dimension] = ZIO.succeed(new Dimension(screen.getTerminalSize.getColumns, screen.getTerminalSize.getRows))
+  def size: RIO[Env, Dimension] =
+    ZIO.succeed(new Dimension(screen.getTerminalSize.getColumns, screen.getTerminalSize.getRows))
 
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit
 
@@ -181,24 +180,24 @@ final case class CliTerminal[T <: Terminal](
         _ <- preview.moreResults match {
                case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                    if totalRemaining.forall(_ > 0) =>
-                   for {
-                     _ <- preview.onRun.absorb.forkDaemon
-                     (results, restStream) <- ZIO.scoped {
-                       rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
-                     }
-                     _ <- showMore(
-                       results,
-                       preview.moreResults(
-                         MoreResults.Remaining(
-                           p.copy(
-                             results = restStream,
-                             totalRemaining = p.totalRemaining.map(_ - pageSize)
-                           )
-                         )
-                       ),
-                       pageSize
-                     )
-                   } yield ()
+                 for {
+                   _ <- preview.onRun.absorb.forkDaemon
+                   (results, restStream) <- ZIO.scoped {
+                                              rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
+                                            }
+                   _ <- showMore(
+                          results,
+                          preview.moreResults(
+                            MoreResults.Remaining(
+                              p.copy(
+                                results = restStream,
+                                totalRemaining = p.totalRemaining.map(_ - pageSize)
+                              )
+                            )
+                          ),
+                          pageSize
+                        )
+                 } yield ()
 
                case _ =>
                  // TODO: Log defects
@@ -303,27 +302,27 @@ final case class CliTerminal[T <: Terminal](
 
 object CliTerminal {
 
-  def createNative: RManaged[Conf, CliTerminal[Terminal]] =
+  def createNative: RIO[Scope & Conf, CliTerminal[Terminal]] =
     create {
       val terminalFactory = new DefaultTerminalFactory()
 
-      ZManaged.fromAutoCloseable(ZIO.attempt {
+      ZIO.fromAutoCloseable(ZIO.attempt {
         terminalFactory.createHeadlessTerminal()
       })
     }
 
-  private def create[T <: Terminal](managedTerminal: Managed[Throwable, T]): RManaged[Conf, CliTerminal[T]] =
+  private def create[T <: Terminal](managedTerminal: RIO[Scope, T]): RIO[Scope & Conf, CliTerminal[T]] =
     for {
       terminal         <- managedTerminal
-      screen           <- ZManaged.fromAutoCloseable(ZIO.attempt(new TerminalScreen(terminal)))
-      graphics         <- ZIO.attempt(screen.newTextGraphics()).toManaged
-      commandCursorRef <- Ref.makeManaged(0)
-      textCursorRef    <- Ref.makeManaged(TextCursor.unit)
-      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-      keyHandlersRef   <- Ref.makeManaged(Map.empty[KeyStroke, URIO[Env, EventResult]])
-      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged
-      renderQueue      <- Queue.sliding[SearchResults[Any]](1).toManaged
+      screen           <- ZIO.fromAutoCloseable(ZIO.attempt(new TerminalScreen(terminal)))
+      graphics         <- ZIO.attempt(screen.newTextGraphics())
+      commandCursorRef <- Ref.make(0)
+      textCursorRef    <- Ref.make(TextCursor.unit)
+      searchResultsRef <- Ref.make(SearchResults.empty[Any])
+      keyHandlersRef   <- Ref.make(Map.empty[KeyStroke, URIO[Env, EventResult]])
+      debounceDelay    <- Conf.get(_.general.debounceDelay)
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      renderQueue      <- Queue.sliding[SearchResults[Any]](1)
     } yield CliTerminal(
       terminal,
       screen,

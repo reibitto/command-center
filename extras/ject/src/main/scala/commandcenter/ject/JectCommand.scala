@@ -8,8 +8,7 @@ import commandcenter.CCRuntime.Env
 import ject.ja.docs.WordDoc
 import ject.ja.lucene.WordReader
 import ject.SearchPattern
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 final case class JectCommand(commandNames: List[String], luceneIndex: WordReader, showScore: Boolean)
     extends Command[Unit] {
@@ -71,13 +70,13 @@ final case class JectCommand(commandNames: List[String], luceneIndex: WordReader
 
 object JectCommand extends CommandPlugin[JectCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, JectCommand] =
-    ???
+  def make(config: Config): IO[CommandPluginError, JectCommand] =
+    ZIO.fail(CommandPluginError.PluginsNotSupported("..."))
 //    // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
 //    for {
-//      commandNames   <- config.getManaged[Option[List[String]]]("commandNames")
-//      dictionaryPath <- config.getManaged[Path]("dictionaryPath")
+//      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
+//      dictionaryPath <- config.getZIO[Path]("dictionaryPath")
 //      luceneIndex    <- WordReader.make(dictionaryPath.resolve("word")).mapError(CommandPluginError.UnexpectedException)
-//      showScore      <- config.getManaged[Option[Boolean]]("showScore")
+//      showScore      <- config.getZIO[Option[Boolean]]("showScore")
 //    } yield JectCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
 }

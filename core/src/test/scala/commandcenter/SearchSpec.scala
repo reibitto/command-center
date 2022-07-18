@@ -2,10 +2,10 @@ package commandcenter
 
 import commandcenter.command.*
 import commandcenter.CCRuntime.Env
-
 import zio.test.*
 import zio.ZIO
-import zio._
+
+import java.time.Instant
 
 object SearchSpec extends CommandBaseSpec {
 
@@ -25,11 +25,12 @@ object SearchSpec extends CommandBaseSpec {
       test("defect in one command should not fail entire search") {
         val commands = Vector(defectCommand, EpochMillisCommand(List("epochmillis")))
         val results = Command.search(commands, Map.empty, "e", defaultCommandContext)
+        val time = Instant.now()
 
         for {
-          _        <- TestClock.setTime(1.second)
+          _        <- TestClock.setTime(time)
           previews <- results.map(_.previews)
-        } yield assertTrue(previews.head.asInstanceOf[PreviewResult.Some[Any]].result == "1000")
+        } yield assertTrue(previews.head.asInstanceOf[PreviewResult.Some[Any]].result == time.toEpochMilli.toString)
       }
     )
 }

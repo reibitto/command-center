@@ -3,9 +3,8 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.managed.*
+import zio.{IO, ZIO}
 import zio.process.Command as PCommand
-import zio.ZIO
 
 final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleDesktopIconsCommand
@@ -30,8 +29,8 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
 
 object ToggleDesktopIconsCommand extends CommandPlugin[ToggleDesktopIconsCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ToggleDesktopIconsCommand] =
+  def make(config: Config): IO[CommandPluginError, ToggleDesktopIconsCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ToggleDesktopIconsCommand(commandNames.getOrElse(List("icons")))
 }

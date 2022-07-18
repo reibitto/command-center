@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 
 import java.time.{Instant, ZoneId}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -49,8 +48,8 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
 
 object EpochMillisCommand extends CommandPlugin[EpochMillisCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, EpochMillisCommand] =
+  def make(config: Config): IO[CommandPluginError, EpochMillisCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield EpochMillisCommand(commandNames.getOrElse(List("epochmillis")))
 }

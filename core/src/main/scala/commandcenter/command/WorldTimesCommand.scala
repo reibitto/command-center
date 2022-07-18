@@ -5,12 +5,11 @@ import commandcenter.config.Decoders.*
 import commandcenter.tools.Tools
 import commandcenter.util.TimeZones
 import commandcenter.view.Rendered
-import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
-import zio.{Clock, Scope, URIO, ZIO}
-import zio.managed.*
+import zio.{Scope, URIO, ZIO}
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -132,7 +131,7 @@ final case class WorldTimesCommand(
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
 
-  def make2(config: Config): ZIO[Scope & PartialEnv, CommandPluginError, WorldTimesCommand] =
+  def make(config: Config): ZIO[Scope, CommandPluginError, WorldTimesCommand] =
     for {
       commandNames           <- config.getZIO[Option[List[String]]]("commandNames")
       dateTimeFormat         <- config.getZIO[Option[DateTimeFormatter]]("dateTimeFormat")
@@ -146,8 +145,6 @@ object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
       dateTimeWithZoneFormat.getOrElse(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG)),
       zones
     )
-
-  override def make(config: Config): RManaged[PartialEnv, WorldTimesCommand] = ???
 }
 
 final case class WorldTimesResult(zone: ZoneId, displayName: String, dateTime: ZonedDateTime)

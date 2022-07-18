@@ -5,7 +5,6 @@ import commandcenter.command.CommandError.*
 import commandcenter.util.ProcessUtil
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 
 final case class OpenBrowserCommand() extends Command[Unit] {
   val commandType: CommandType = CommandType.OpenBrowserCommand
@@ -28,5 +27,5 @@ final case class OpenBrowserCommand() extends Command[Unit] {
 }
 
 object OpenBrowserCommand extends CommandPlugin[OpenBrowserCommand] {
-  def make(config: Config): UManaged[OpenBrowserCommand] = ZManaged.succeed(OpenBrowserCommand())
+  def make(config: Config): UIO[OpenBrowserCommand] = ZIO.succeed(OpenBrowserCommand())
 }

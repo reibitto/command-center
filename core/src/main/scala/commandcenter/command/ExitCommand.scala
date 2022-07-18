@@ -3,8 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 final case class ExitCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ExitCommand
@@ -23,8 +22,8 @@ final case class ExitCommand(commandNames: List[String]) extends Command[Unit] {
 
 object ExitCommand extends CommandPlugin[ExitCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ExitCommand] =
+  def make(config: Config): IO[CommandPluginError, ExitCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ExitCommand(commandNames.getOrElse(List("exit", "quit")))
 }

@@ -4,9 +4,8 @@ import com.typesafe.config.Config
 import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.managed.Managed
+import zio.{IO, ZIO}
 import zio.process.{Command as PCommand, CommandError as PCommandError}
-import zio.ZIO
 
 final case class RebootCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.RebootCommand
@@ -34,9 +33,9 @@ final case class RebootCommand(commandNames: List[String]) extends Command[Unit]
 
 object RebootCommand extends CommandPlugin[RebootCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, RebootCommand] =
+  def make(config: Config): IO[CommandPluginError, RebootCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield RebootCommand(commandNames.getOrElse(List("reboot", "restart")))
 
   def reboot: ZIO[Any, Throwable, Unit] =

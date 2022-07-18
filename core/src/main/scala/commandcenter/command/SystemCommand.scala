@@ -10,8 +10,7 @@ import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.util.OS
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 final case class SystemCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SystemCommand
@@ -101,9 +100,9 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
 object SystemCommand extends CommandPlugin[SystemCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, SystemCommand] =
+  def make(config: Config): IO[CommandPluginError, SystemCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield SystemCommand(commandNames.getOrElse(List("system")))
 
   sealed trait SystemSubcommand

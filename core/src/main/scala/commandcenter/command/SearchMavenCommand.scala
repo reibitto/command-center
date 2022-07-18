@@ -9,8 +9,7 @@ import commandcenter.HttpClient
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 import java.time.{Instant, LocalDate, ZoneId}
 import scala.util.matching.Regex
@@ -27,7 +26,8 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
       request = basicRequest
                   .get(uri"https://search.maven.org/solrsearch/select?q=${input.rest}&rows=100&wt=json")
                   .response(asJson[Json])
-      response <- request.send(HttpClient.backend)
+      response <- request
+                    .send(HttpClient.backend)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
@@ -114,8 +114,8 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
     }
   }
 
-  def make(config: Config): Managed[CommandPluginError, SearchMavenCommand] =
+  def make(config: Config): IO[CommandPluginError, SearchMavenCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield SearchMavenCommand(commandNames.getOrElse(List("maven", "mvn")))
 }

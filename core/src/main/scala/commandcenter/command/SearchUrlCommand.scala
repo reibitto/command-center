@@ -8,7 +8,6 @@ import commandcenter.util.ProcessUtil
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -60,13 +59,13 @@ final case class SearchUrlCommand(
 
 object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, SearchUrlCommand] =
+  def make(config: Config): IO[CommandPluginError, SearchUrlCommand] =
     for {
-      title        <- config.getManaged[String]("title")
-      urlTemplate  <- config.getManaged[String]("urlTemplate")
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
-      locales      <- config.getManaged[Option[Set[Locale]]]("locales")
-      shortcuts    <- config.getManaged[Option[Set[KeyboardShortcut]]]("shortcuts")
+      title        <- config.getZIO[String]("title")
+      urlTemplate  <- config.getZIO[String]("urlTemplate")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      locales      <- config.getZIO[Option[Set[Locale]]]("locales")
+      shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
     } yield SearchUrlCommand(
       title,
       urlTemplate,

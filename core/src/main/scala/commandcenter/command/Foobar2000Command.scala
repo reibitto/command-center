@@ -2,18 +2,17 @@ package commandcenter.command
 
 import com.monovore.decline
 import com.monovore.decline.Opts
-import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef.HWND
+import com.sun.jna.Pointer
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.{Env, PartialEnv}
 import commandcenter.command.Foobar2000Command.Opt
 import commandcenter.util.OS
 import commandcenter.util.WindowManager.fromCString
 import commandcenter.view.{Rendered, Renderer}
-import zio.managed.*
+import commandcenter.CCRuntime.Env
+import zio.{Scope, System, Task, ZIO}
 import zio.process.Command as PCommand
-import zio.{System, Task, ZIO}
 
 import java.io.File
 import java.nio.file.Paths
@@ -121,13 +120,13 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
 
 object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
 
-  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, Foobar2000Command] = {
+  def make(config: Config): ZIO[Scope, CommandPluginError, Foobar2000Command] = {
     import commandcenter.config.Decoders.*
 
     for {
-      commandNames  <- config.getManaged[Option[List[String]]]("commandNames")
-      foobarPathOpt <- config.getManaged[Option[File]]("foobarPath")
-      foobarPath    <- ZIO.succeed(foobarPathOpt).someOrElseZIO(findFoobarPath).toManaged
+      commandNames  <- config.getZIO[Option[List[String]]]("commandNames")
+      foobarPathOpt <- config.getZIO[Option[File]]("foobarPath")
+      foobarPath    <- ZIO.succeed(foobarPathOpt).someOrElseZIO(findFoobarPath)
     } yield Foobar2000Command(commandNames.getOrElse(List("foobar", "fb")), foobarPath)
   }
 

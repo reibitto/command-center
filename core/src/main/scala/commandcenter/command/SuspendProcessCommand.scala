@@ -7,18 +7,35 @@ import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{OS, ProcessUtil}
 import commandcenter.view.Renderer
-import commandcenter.CCRuntime.{Env, PartialEnv}
-import zio.{Task, ZIO}
-import zio.managed.*
+import commandcenter.CCRuntime.Env
+import zio.{Scope, Task, ZIO}
 import zio.process.Command as PCommand
 
-final case class SuspendProcessCommand(commandNames: List[String]) extends Command[Unit] {
+final case class SuspendProcessCommand(commandNames: List[String], suspendShortcut: Option[KeyboardShortcut])
+    extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
   val title: String = "Suspend/Resume Process"
 
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
 
   val command = decline.Command("suspend", title)(Opts.argument[Long]("pid"))
+
+  // TODO:: ??? call this and if it fails unload the plugin
+  def initialize: ZIO[Env, CommandPluginError, Unit] = {
+    for {
+      _ <- ZIO
+             .foreach(suspendShortcut) { suspendShortcut =>
+               Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
+                 (for {
+                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
+                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
+                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
+                 } yield ()).ignore
+               )
+             }
+             .mapError(CommandPluginError.UnexpectedException)
+    } yield ()
+  }
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
@@ -45,23 +62,22 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
-  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, SuspendProcessCommand] =
+  def make(config: Config): ZIO[Scope, CommandPluginError, SuspendProcessCommand] =
     for {
-      commandNames    <- config.getManaged[Option[List[String]]]("commandNames")
-      suspendShortcut <- config.getManaged[Option[KeyboardShortcut]]("suspendShortcut")
-      _ <- ZIO
-             .foreach(suspendShortcut) { suspendShortcut =>
-               Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
-                 (for {
-                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
-                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
-                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
-                 } yield ()).ignore
-               )
-             }
-             .mapError(CommandPluginError.UnexpectedException)
-             .toManaged
-    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")))
+      commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
+      suspendShortcut <- config.getZIO[Option[KeyboardShortcut]]("suspendShortcut")
+//      _ <- ZIO
+//             .foreach(suspendShortcut) { suspendShortcut =>
+//               Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
+//                 (for {
+//                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
+//                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
+//                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
+//                 } yield ()).ignore
+//               )
+//             }
+//             .mapError(CommandPluginError.UnexpectedException)
+    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")), suspendShortcut)
 
   def isProcessSuspended(processId: Long): Task[Boolean] = {
     val stateParam = if (OS.os == OS.MacOS) "state=" else "s="

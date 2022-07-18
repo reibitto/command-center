@@ -4,10 +4,9 @@ import cats.implicits.*
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.view.Renderer
-import zio.ZIO
-import zio.managed.*
+import commandcenter.CCRuntime.Env
+import zio.{IO, ZIO}
 
 final case class ResizeCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ResizeCommand
@@ -47,8 +46,8 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
 
 object ResizeCommand extends CommandPlugin[ResizeCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ResizeCommand] =
+  def make(config: Config): IO[CommandPluginError, ResizeCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ResizeCommand(commandNames.getOrElse(List("resize", "size")))
 }

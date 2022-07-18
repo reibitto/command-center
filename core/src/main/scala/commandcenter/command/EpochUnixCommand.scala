@@ -3,8 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.{Clock, ZIO}
-import zio.managed.*
+import zio.{Clock, IO, ZIO}
 
 import java.time.{Instant, ZoneId}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -49,8 +48,8 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
 
 object EpochUnixCommand extends CommandPlugin[EpochUnixCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, EpochUnixCommand] =
+  def make(config: Config): IO[CommandPluginError, EpochUnixCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield EpochUnixCommand(commandNames.getOrElse(List("epochunix")))
 }

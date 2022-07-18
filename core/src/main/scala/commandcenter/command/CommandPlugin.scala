@@ -3,12 +3,10 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.config.ConfigParserExtensions
 import commandcenter.util.OS
-import commandcenter.CCRuntime.PartialEnv
-import zio.managed.*
-import zio.{Scope, ZIO}
+import zio.{RIO, Scope, ZIO}
 
 trait CommandPlugin[A <: Command[?]] extends ConfigParserExtensions {
-  def make(config: Config): RManaged[PartialEnv, A]
+  def make(config: Config): RIO[Scope, A]
 }
 
 object CommandPlugin {
@@ -30,19 +28,18 @@ object CommandPlugin {
                             ZIO
                               .logDebug(
                                 s"Skipping loading `$commandType` plugin because it's not applicable: $reason"
-                              ) *>
-                              ZIO.succeed(None)
+                              )
+                              .as(None)
 
                           case CommandPluginError.PluginNotFound(typeName, _) =>
-                            ZIO.logWarning(s"Plugin '$typeName' not found") *>
-                              ZIO.succeed(None)
+                            ZIO.logWarning(s"Plugin '$typeName' not found").as(None)
 
                           case CommandPluginError.PluginsNotSupported(typeName) =>
                             ZIO
                               .logWarning(
                                 s"Cannot load `$typeName` because external plugins not yet supported for Substrate VM."
-                              ) *>
-                              ZIO.succeed(None)
+                              )
+                              .as(None)
 
                           case error: CommandPluginError.UnexpectedException =>
                             ZIO.fail(error)
@@ -54,8 +51,8 @@ object CommandPlugin {
     } yield commands.flatten.filter(c => c.supportedOS.isEmpty || c.supportedOS.contains(OS.os))
   }
 
-  def loadDynamically(c: Config, typeName: String): ZIO[Scope & PartialEnv, CommandPluginError, Command[Any]] = {
-    ???
+  def loadDynamically(c: Config, typeName: String): ZIO[Scope, CommandPluginError, Command[Any]] = {
+    ZIO.fail(CommandPluginError.PluginsNotSupported(typeName))
 //    val mirror = scala.reflect.runtime.universe.runtimeMirror(CommandPlugin.getClass.getClassLoader)
 //
 //    for {

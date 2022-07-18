@@ -6,8 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 import java.net.URLEncoder
 
@@ -30,8 +29,8 @@ final case class EncodeUrlCommand(commandNames: List[String]) extends Command[St
 
 object EncodeUrlCommand extends CommandPlugin[EncodeUrlCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, EncodeUrlCommand] =
+  def make(config: Config): IO[CommandPluginError, EncodeUrlCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield EncodeUrlCommand(commandNames.getOrElse(List("encodeurl")))
 }

@@ -6,8 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 import java.util.Base64
 
@@ -29,8 +28,8 @@ final case class DecodeBase64Command(commandNames: List[String]) extends Command
 
 object DecodeBase64Command extends CommandPlugin[DecodeBase64Command] {
 
-  def make(config: Config): Managed[CommandPluginError, DecodeBase64Command] =
+  def make(config: Config): IO[CommandPluginError, DecodeBase64Command] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield DecodeBase64Command(commandNames.getOrElse(List("decodebase64")))
 }

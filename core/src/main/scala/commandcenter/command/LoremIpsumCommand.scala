@@ -10,7 +10,6 @@ import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 
 import scala.io.Source
 
@@ -73,10 +72,10 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
     case object Paragraph extends ChunkType
   }
 
-  def make(config: Config): Managed[CommandPluginError, LoremIpsumCommand] =
+  def make(config: Config): ZIO[Scope, CommandPluginError, LoremIpsumCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
-      lipsum <- ZManaged
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      lipsum <- ZIO
                   .fromAutoCloseable(ZIO.attempt(Source.fromResource("lipsum")))
                   .mapAttempt(_.getLines().mkString("\n"))
                   .mapError(CommandPluginError.UnexpectedException)

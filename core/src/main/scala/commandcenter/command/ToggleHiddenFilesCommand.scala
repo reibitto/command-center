@@ -3,9 +3,8 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.managed.*
+import zio.{IO, ZIO}
 import zio.process.{Command as PCommand, CommandError as PCommandError}
-import zio.ZIO
 
 final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ToggleHiddenFilesCommand
@@ -63,8 +62,8 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
 
 object ToggleHiddenFilesCommand extends CommandPlugin[ToggleHiddenFilesCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ToggleHiddenFilesCommand] =
+  def make(config: Config): IO[CommandPluginError, ToggleHiddenFilesCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ToggleHiddenFilesCommand(commandNames.getOrElse(List("hidden")))
 }

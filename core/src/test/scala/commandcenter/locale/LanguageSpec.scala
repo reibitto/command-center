@@ -2,9 +2,9 @@ package commandcenter.locale
 
 import zio.test.*
 import zio.test.Assertion.*
+import zio.test.ZIOSpecDefault
 
 import java.util.Locale
-import zio.test.ZIOSpecDefault
 
 object LanguageSpec extends ZIOSpecDefault {
 

@@ -1,6 +1,5 @@
 package commandcenter.util
 
-
 import zio.process.Command
 import zio.RIO
 

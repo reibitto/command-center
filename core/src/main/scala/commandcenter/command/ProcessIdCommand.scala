@@ -5,9 +5,8 @@ import commandcenter.tools.Tools
 import commandcenter.util.OS
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.managed.*
+import zio.{IO, ZIO}
 import zio.process.Command as PCommand
-import zio.ZIO
 
 import scala.util.matching.Regex
 
@@ -52,9 +51,9 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
 
 object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ProcessIdCommand] =
+  def make(config: Config): IO[CommandPluginError, ProcessIdCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ProcessIdCommand(commandNames.getOrElse(List("pid", "process")))
 
   final case class ProcessInfo(pid: Long, name: String)

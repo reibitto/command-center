@@ -9,7 +9,6 @@ import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
 import zio.cache.{Cache, Lookup}
-import zio.managed.*
 
 import scala.io.Source
 
@@ -125,7 +124,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
 
 object ITunesCommand extends CommandPlugin[ITunesCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ITunesCommand] =
+  def make(config: Config): IO[CommandPluginError, ITunesCommand] =
     for {
       cache <- Cache
                  .make(
@@ -133,8 +132,7 @@ object ITunesCommand extends CommandPlugin[ITunesCommand] {
                    Duration.Infinity,
                    Lookup((resource: String) => ZIO.succeed(Source.fromResource(resource)).map(_.mkString))
                  )
-                 .toManaged
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ITunesCommand(commandNames.getOrElse(List("itunes")), cache)
 
   sealed trait Opt

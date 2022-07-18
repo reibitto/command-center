@@ -4,7 +4,6 @@ import commandcenter.command.{Command, PreviewResult, SearchResults}
 import commandcenter.locale.Language
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.managed.*
 
 import java.awt.Dimension
 
@@ -55,8 +54,8 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
 
 object HeadlessTerminal {
 
-  def create: UManaged[HeadlessTerminal] =
+  def create: UIO[HeadlessTerminal] =
     for {
-      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
+      searchResultsRef <- Ref.make(SearchResults.empty[Any])
     } yield HeadlessTerminal(searchResultsRef)
 }

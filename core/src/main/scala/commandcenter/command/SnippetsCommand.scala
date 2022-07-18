@@ -7,8 +7,7 @@ import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import io.circe.Decoder
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 final case class SnippetsCommand(commandNames: List[String], snippets: List[Snippet]) extends Command[String] {
   val commandType: CommandType = CommandType.SnippetsCommand
@@ -46,10 +45,10 @@ object SnippetsCommand extends CommandPlugin[SnippetsCommand] {
     implicit val decoder: Decoder[Snippet] = Decoder.forProduct2("keyword", "value")(Snippet.apply)
   }
 
-  def make(config: Config): Managed[CommandPluginError, SnippetsCommand] =
+  def make(config: Config): IO[CommandPluginError, SnippetsCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
-      snippets     <- config.getManaged[Option[List[Snippet]]]("snippets")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      snippets     <- config.getZIO[Option[List[Snippet]]]("snippets")
     } yield SnippetsCommand(
       commandNames.getOrElse(List("snippets", "snippet", "snip")),
       snippets.getOrElse(Nil)

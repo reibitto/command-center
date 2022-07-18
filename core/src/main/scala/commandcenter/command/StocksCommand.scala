@@ -5,10 +5,9 @@ import commandcenter.command.StocksCommand.{StocksResult, Ticker}
 import commandcenter.CCRuntime.Env
 import commandcenter.HttpClient
 import io.circe.{Decoder, Json}
-import sttp.client3.{UriContext, basicRequest}
+import sttp.client3.{basicRequest, UriContext}
 import sttp.client3.circe.asJson
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]) extends Command[Unit] {
   val commandType: CommandType = CommandType.StocksCommand
@@ -22,7 +21,8 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       request = basicRequest
                   .get(uri"$stocksUrl$symbols")
                   .response(asJson[Json])
-      response <- request.send(HttpClient.backend)
+      response <- request
+                    .send(HttpClient.backend)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
@@ -80,9 +80,9 @@ object StocksCommand extends CommandPlugin[StocksCommand] {
       "regularMarketChangePercent"
     )(StocksResult.apply)
 
-  def make(config: Config): Managed[CommandPluginError, StocksCommand] =
+  def make(config: Config): IO[CommandPluginError, StocksCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
-      tickers      <- config.getManaged[List[Ticker]]("tickers")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      tickers      <- config.getZIO[List[Ticker]]("tickers")
     } yield StocksCommand(commandNames.getOrElse(List("stock", "stocks")), tickers)
 }

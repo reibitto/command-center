@@ -5,8 +5,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 final case class OpacityCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.OpacityCommand
@@ -42,8 +41,8 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
 
 object OpacityCommand extends CommandPlugin[OpacityCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, OpacityCommand] =
+  def make(config: Config): IO[CommandPluginError, OpacityCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield OpacityCommand(commandNames.getOrElse(List("opacity")))
 }

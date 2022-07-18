@@ -3,8 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.managed.*
-import zio.ZIO
+import zio.{IO, ZIO}
 
 // TODO: Work in progress
 final case class TerminalCommand(commandNames: List[String]) extends Command[Unit] {
@@ -21,8 +20,8 @@ final case class TerminalCommand(commandNames: List[String]) extends Command[Uni
 
 object TerminalCommand extends CommandPlugin[TerminalCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, TerminalCommand] =
+  def make(config: Config): IO[CommandPluginError, TerminalCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield TerminalCommand(commandNames.getOrElse(List("$", ">")))
 }

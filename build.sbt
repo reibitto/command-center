@@ -50,7 +50,6 @@ lazy val core = module("core")
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % Version.zio,
       "dev.zio" %% "zio-streams" % Version.zio,
-      "dev.zio" %% "zio-managed" % Version.zio,
       "dev.zio" %% "zio-prelude" % "1.0.0-RC15",
       "dev.zio" %% "zio-process" % "0.7.1",
       "dev.zio" %% "zio-cache" % "0.2.0",
