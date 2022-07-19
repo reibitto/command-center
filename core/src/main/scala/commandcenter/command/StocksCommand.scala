@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.command.StocksCommand.{StocksResult, Ticker}
 import commandcenter.CCRuntime.Env
-import commandcenter.HttpClient
+import commandcenter.Sttp
 import io.circe.{Decoder, Json}
 import sttp.client3.{basicRequest, UriContext}
 import sttp.client3.circe.asJson
@@ -21,8 +21,8 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       request = basicRequest
                   .get(uri"$stocksUrl$symbols")
                   .response(asJson[Json])
-      response <- request
-                    .send(HttpClient.backend)
+      response <- Sttp
+                    .send(request)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)

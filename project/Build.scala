@@ -51,11 +51,7 @@ object Build {
       "-Ywarn-unused:locals", // Warn if a local definition is unused.
       "-Ywarn-unused:privates", // Warn if a private member is unused.
       "-Ywarn-unused:implicits" // Warn if an implicit parameter is unused.
-    ).filter(_ => shouldWarnForUnusedCode) ++
-    Seq(
-      "-opt:l:inline",
-      "-opt-inline-from:**"
-    ).filter(_ => shouldOptimize)
+    ).filter(_ => shouldWarnForUnusedCode)
 
   def defaultSettings(projectName: String) =
     Seq(
@@ -74,7 +70,8 @@ object Build {
       autoAPIMappings := true,
       resolvers := Resolvers,
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
-      Test / fork := true,
+      fork := true,
+      run / connectInput := true,
       Test / logBuffered := false
     )
 
@@ -96,8 +93,6 @@ object Build {
 
     flagValue
   }
-
-  lazy val shouldOptimize: Boolean = compilerFlag("scalac.optimize", false)
 
   lazy val shouldWarnForUnusedCode: Boolean = compilerFlag("scalac.unused.enabled", false)
 

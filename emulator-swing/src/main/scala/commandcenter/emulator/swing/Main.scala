@@ -1,6 +1,6 @@
 package commandcenter.emulator.swing
 
-import commandcenter.{Conf, ConfigLive, GlobalActions}
+import commandcenter.*
 import commandcenter.emulator.swing.shortcuts.ShortcutsLive
 import commandcenter.emulator.swing.ui.SwingTerminal
 import commandcenter.shortcuts.Shortcuts
@@ -18,6 +18,8 @@ object Main extends ZIOApp {
     ConfigLive.layer,
     ShortcutsLive.layer,
     ToolsLive.make,
+    SttpLive.make,
+    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swing),
     Scope.default
   )
 

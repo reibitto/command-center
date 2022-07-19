@@ -50,6 +50,7 @@ lazy val core = module("core")
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % Version.zio,
       "dev.zio" %% "zio-streams" % Version.zio,
+      "dev.zio" %% "zio-logging" % "2.0.1",
       "dev.zio" %% "zio-prelude" % "1.0.0-RC15",
       "dev.zio" %% "zio-process" % "0.7.1",
       "dev.zio" %% "zio-cache" % "0.2.0",
@@ -134,7 +135,6 @@ lazy val emulatorCore = module("emulator-core")
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
   )
   .settings(
-    fork := true,
     run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
       "com.github.tulskiy" % "jkeymaster" % "1.3",
@@ -148,7 +148,6 @@ lazy val emulatorSwt = module("emulator-swt")
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
   )
   .settings(
-    fork := true,
     publishMavenStyle := false,
     run / baseDirectory := file("."),
     assembly / mainClass := Some("commandcenter.emulator.swt.Main"),
@@ -168,7 +167,6 @@ lazy val emulatorSwing = module("emulator-swing")
     (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
   )
   .settings(
-    fork := true,
     run / baseDirectory := file("."),
     assembly / mainClass := Some("commandcenter.emulator.swing.Main"),
     assembly / assemblyJarName := "cc-swing.jar",

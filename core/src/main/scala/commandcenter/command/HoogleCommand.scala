@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.command.HoogleCommand.HoogleResult
 import commandcenter.util.ProcessUtil
 import commandcenter.CCRuntime.Env
-import commandcenter.HttpClient
+import commandcenter.Sttp
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
@@ -20,8 +20,8 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
       request = basicRequest
                   .get(uri"https://hoogle.haskell.org?mode=json&format=text&hoogle=${input.rest}&start=1&count=5")
                   .response(asJson[Json])
-      response <- request
-                    .send(HttpClient.backend)
+      response <- Sttp
+                    .send(request)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)

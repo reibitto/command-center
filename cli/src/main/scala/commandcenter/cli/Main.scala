@@ -20,6 +20,8 @@ object Main extends ZIOApp {
     ConfigLive.layer,
     Shortcuts.unsupported,
     ToolsLive.make,
+    SttpLive.make,
+    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Cli),
     Scope.default
   )
 

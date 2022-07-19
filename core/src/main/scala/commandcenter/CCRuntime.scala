@@ -5,5 +5,5 @@ import commandcenter.tools.Tools
 
 object CCRuntime {
   type PartialEnv = Tools & Shortcuts
-  type Env = PartialEnv & Conf
+  type Env = PartialEnv & Conf & Sttp
 }

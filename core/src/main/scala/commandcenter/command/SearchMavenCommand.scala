@@ -5,7 +5,7 @@ import commandcenter.command.SearchMavenCommand.{BucketedMavenArtifact, MavenArt
 import commandcenter.tools.Tools
 import commandcenter.util.Orderings
 import commandcenter.CCRuntime.Env
-import commandcenter.HttpClient
+import commandcenter.Sttp
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
@@ -26,8 +26,8 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
       request = basicRequest
                   .get(uri"https://search.maven.org/solrsearch/select?q=${input.rest}&rows=100&wt=json")
                   .response(asJson[Json])
-      response <- request
-                    .send(HttpClient.backend)
+      response <- Sttp
+                    .send(request)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)

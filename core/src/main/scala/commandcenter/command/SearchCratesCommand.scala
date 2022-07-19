@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import commandcenter.HttpClient
+import commandcenter.Sttp
 import io.circe.Decoder
 import sttp.client3.*
 import sttp.client3.circe.*
@@ -26,8 +26,8 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
                          .get(uri"https://crates.io/api/v1/crates?page=$page&per_page=$pageSize&q=${input.rest}")
                          .response(asJson[CrateResults])
 
-                       request
-                         .send(HttpClient.backend)
+                       Sttp
+                         .send(request)
                          .map(_.body)
                          .absolve
                          .mapBoth(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))

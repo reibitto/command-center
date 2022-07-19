@@ -1,10 +1,10 @@
 package commandcenter.emulator.swt
 
-import commandcenter.{CCConfig, Conf, ConfigLive, GlobalActions}
+import commandcenter.*
 import commandcenter.emulator.swt.shortcuts.ShortcutsLive
 import commandcenter.emulator.swt.ui.{RawSwtTerminal, SwtTerminal}
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.tools.{Tools, ToolsLive}
+import commandcenter.tools.ToolsLive
 import commandcenter.CCRuntime.Env
 import zio.*
 
@@ -18,6 +18,8 @@ object Main {
           ShortcutsLive.layer,
           ConfigLive.layer,
           ToolsLive.make,
+          SttpLive.make,
+          Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swt),
           Scope.default
         )
       )
