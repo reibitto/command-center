@@ -467,8 +467,9 @@ final case class SwingTerminal(
 
 object SwingTerminal {
 
-  def create(runtime: Runtime[Env]): RIO[Scope & Env, SwingTerminal] =
+  def create: RIO[Scope & Env, SwingTerminal] =
     for {
+      runtime          <- ZIO.runtime[Env]
       debounceDelay    <- Conf.get(_.general.debounceDelay)
       searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
       commandCursorRef <- Ref.make(0)

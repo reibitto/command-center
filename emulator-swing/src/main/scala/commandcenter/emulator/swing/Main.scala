@@ -25,9 +25,8 @@ object Main extends ZIOApp {
 
   def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] = {
     (for {
-      runtime  <- ZIO.runtime[Env]
-      terminal <- SwingTerminal.create(runtime)
-      config   <- Conf.config
+      config   <- Conf.load
+      terminal <- SwingTerminal.create
       _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
              (for {
                _ <- ZIO.logDebug("Opening emulated terminal...")

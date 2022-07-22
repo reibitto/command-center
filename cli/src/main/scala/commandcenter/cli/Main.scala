@@ -36,7 +36,7 @@ object Main extends ZIOApp {
                            .fromQueue(terminal.renderQueue)
                            .foreach(terminal.render)
                            .forkDaemon
-                    config <- Conf.config
+                    config <- Conf.load
                     _ <- terminal
                            .processEvent(config.commands, config.aliases)
                            .repeatWhile {

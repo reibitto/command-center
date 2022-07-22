@@ -29,7 +29,6 @@ object CCConfig {
 
   def load: ZIO[Scope & Env, Throwable, CCConfig] =
     for {
-      _      <- ZIO.debug("loading CCConfig.............")
       file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
       _      <- ZIO.logDebug(s"Loading config file at ${file.getAbsolutePath}")
       config <- load(file)
