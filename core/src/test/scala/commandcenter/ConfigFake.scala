@@ -1,9 +1,7 @@
 package commandcenter
 
 import commandcenter.event.KeyboardShortcut
-import commandcenter.CCRuntime.PartialEnv
 import zio.*
-import zio.{RIO, UIO, ULayer, ZLayer}
 
 final case class ConfigFake() extends Conf {
 
@@ -18,7 +16,7 @@ final case class ConfigFake() extends Conf {
     )
   )
 
-  override def reload: RIO[PartialEnv, CCConfig] = config
+  override def reload: Task[CCConfig] = config
 }
 
 object ConfigFake {

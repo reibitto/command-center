@@ -8,7 +8,7 @@ import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{OS, ProcessUtil}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Scope, Task, ZIO}
+import zio.{IO, Scope, Task, ZIO}
 import zio.process.Command as PCommand
 
 final case class SuspendProcessCommand(commandNames: List[String], suspendShortcut: Option[KeyboardShortcut])
@@ -21,6 +21,7 @@ final case class SuspendProcessCommand(commandNames: List[String], suspendShortc
   val command = decline.Command("suspend", title)(Opts.argument[Long]("pid"))
 
   // TODO:: ??? call this and if it fails unload the plugin
+  // Return `Scope` for unloading?
   def initialize: ZIO[Env, CommandPluginError, Unit] = {
     for {
       _ <- ZIO
@@ -62,7 +63,7 @@ final case class SuspendProcessCommand(commandNames: List[String], suspendShortc
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
-  def make(config: Config): ZIO[Scope, CommandPluginError, SuspendProcessCommand] =
+  def make(config: Config): IO[CommandPluginError, SuspendProcessCommand] =
     for {
       commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
       suspendShortcut <- config.getZIO[Option[KeyboardShortcut]]("suspendShortcut")

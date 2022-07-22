@@ -40,7 +40,7 @@ object Main extends ZIOApp {
            )
       _ <- GlobalActions.setupCommon(config.globalActions)
       _ <- terminal.closePromise.await
-    } yield ()).tapErrorCause(c => ZIO.debug(c.prettyPrint)).exitCode
+    } yield ()).tapErrorCause(c => ZIO.logFatalCause(c)).exitCode
   }
 
 }

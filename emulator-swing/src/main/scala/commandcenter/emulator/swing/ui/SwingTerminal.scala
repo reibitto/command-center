@@ -257,7 +257,7 @@ final case class SwingTerminal(
                  case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
-                     _ <- preview.onRun.absorb.forkDaemon
+                     _ <- preview.onRunSandboxedLogged.forkDaemon
                      (results, restStream) <- ZIO.scoped {
                                                 rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
                                                   .mapError(_.toThrowable)
@@ -277,8 +277,7 @@ final case class SwingTerminal(
                    } yield ()
 
                  case _ =>
-                   // TODO: Log defects
-                   preview.onRun.absorb.forkDaemon *> reset
+                   preview.onRunSandboxedLogged.forkDaemon *> reset
                }
         } yield previewOpt
     }
@@ -358,7 +357,7 @@ final case class SwingTerminal(
             _ <- ZIO.foreachDiscard(bestMatch) { preview =>
                    for {
                      _ <- hide
-                     _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
+                     _ <- preview.onRunSandboxedLogged.forkDaemon
                      _ <- reset
                    } yield ()
                  }

@@ -1,5 +1,5 @@
-import sbt.*
-import Keys.*
+import sbt._
+import Keys._
 
 import scala.Console
 
@@ -8,19 +8,9 @@ object Build {
 
   val CommandCenterVersion = "0.0.1"
 
-  object Version {
-    val zio = "2.0.0"
-    val enumeratum = "1.7.0"
-    val circe = "0.14.2"
-    val sttp = "3.7.0"
-    val graal = "20.2.0"
-    val swt = "3.120.0"
-    val jna = "5.12.1"
-
-    // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
-    // and build a Linux image (e.g. setting it to s"$graal-java11").
-    val imageGraal: Option[String] = None
-  }
+  // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
+  // and build a Linux image (e.g. setting it to s"$graal-java11").
+  val imageGraal: Option[String] = None
 
   lazy val ScalacOptions = Seq(
     "-encoding",
@@ -63,8 +53,8 @@ object Build {
       unmanagedBase := baseDirectory.value / "plugins",
       libraryDependencies ++= Plugins.BaseCompilerPlugins,
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-test" % Version.zio % Test,
-        "dev.zio" %% "zio-test-sbt" % Version.zio % Test
+        "dev.zio" %% "zio-test" % V.zio % Test,
+        "dev.zio" %% "zio-test-sbt" % V.zio % Test
       ),
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true,

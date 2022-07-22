@@ -1,8 +1,8 @@
 package commandcenter
 
+import zio.{LogLevel, ZLayer}
 import zio.logging.{console, LogColor, LogFormat}
-import zio.logging.LogFormat.{fiberId, level, line, timestamp}
-import zio.ZLayer
+import zio.logging.LogFormat.*
 
 object CCLogging {
 
@@ -10,14 +10,16 @@ object CCLogging {
     timestamp.color(LogColor.BLUE) |-|
       level.highlight |-|
       fiberId.color(LogColor.WHITE) |-|
-      line.highlight
+      line.highlight |-|
+      newLine |-|
+      cause.highlight
 
   def addLoggerFor(terminalType: TerminalType): ZLayer[Any, Nothing, Unit] =
     terminalType match {
       case TerminalType.Cli => ZLayer.empty.unit // TODO: File logging
 
       case TerminalType.Swing | TerminalType.Swt =>
-        console(coloredFormat)
+        console(coloredFormat, LogLevel.Info)
 
       case TerminalType.Test => ZLayer.empty.unit
     }

@@ -11,7 +11,7 @@ import commandcenter.util.OS
 import commandcenter.util.WindowManager.fromCString
 import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.Env
-import zio.{Scope, System, Task, ZIO}
+import zio.{IO, Scope, System, Task, ZIO}
 import zio.process.Command as PCommand
 
 import java.io.File
@@ -120,7 +120,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
 
 object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
 
-  def make(config: Config): ZIO[Scope, CommandPluginError, Foobar2000Command] = {
+  def make(config: Config): IO[CommandPluginError, Foobar2000Command] = {
     import commandcenter.config.Decoders.*
 
     for {
@@ -130,7 +130,7 @@ object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
     } yield Foobar2000Command(commandNames.getOrElse(List("foobar", "fb")), foobarPath)
   }
 
-  private def findFoobarPath: ZIO[Any, CommandPluginError, File] =
+  private def findFoobarPath: IO[CommandPluginError, File] =
     System
       .env("ProgramFiles(x86)")
       .map(_.map(pf => Paths.get(pf).resolve("foobar2000/foobar2000.exe").toFile).filter(_.exists))

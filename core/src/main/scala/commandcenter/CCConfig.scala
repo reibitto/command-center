@@ -56,13 +56,6 @@ object CCConfig {
       globalActions.filter(_.shortcut.nonEmpty)
     )
 
-  def validateConfig: ZIO[Any, Throwable, Unit] =
-    for {
-      file <- envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
-      _    <- ZIO.logDebug(s"Validating config file at ${file.getAbsolutePath}")
-      _    <- attemptBlocking(ConfigFactory.parseFile(file))
-    } yield ()
-
   private def envConfigFile: ZIO[Any, Option[SecurityException], File] =
     for {
       configPathOpt <- zio.System.env("COMMAND_CENTER_CONFIG_PATH").asSomeError

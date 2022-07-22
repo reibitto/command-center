@@ -181,6 +181,7 @@ final case class CliTerminal[T <: Terminal](
                case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                    if totalRemaining.forall(_ > 0) =>
                  for {
+                   // TODO: Log defects (need file logging for this)
                    _ <- preview.onRun.absorb.forkDaemon
                    (results, restStream) <- ZIO.scoped {
                                               rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
@@ -200,7 +201,7 @@ final case class CliTerminal[T <: Terminal](
                  } yield ()
 
                case _ =>
-                 // TODO: Log defects
+                 // TODO: Log defects (need file logging for this)
                  preview.onRun.absorb.forkDaemon *> reset
              }
       } yield preview

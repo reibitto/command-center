@@ -39,8 +39,7 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
       results <- searchResultsRef.get
       previewResult = results.previews.lift(cursorIndex)
       _ <- ZIO.foreachDiscard(previewResult) { preview =>
-             // TODO: Log defects
-             preview.onRun.absorb.forkDaemon
+             preview.onRunSandboxedLogged.forkDaemon
            }
     } yield previewResult
 

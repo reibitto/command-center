@@ -24,6 +24,17 @@ sealed trait PreviewResult[+A] {
   def rendered(rendered: => Rendered): PreviewResult[A]
 
   def renderedAnsi(renderedAnsi: => fansi.Str): PreviewResult[A] = rendered(Rendered.Ansi(renderedAnsi))
+
+  def onRunSandboxedLogged: RIO[Env, Unit] = {
+    onRun.tapErrorCause { c =>
+      val commandName = this match {
+        case _: PreviewResult.None    => ""
+        case p: PreviewResult.Some[A] => p.source.getClass.getCanonicalName
+      }
+
+      ZIO.logWarningCause(s"Failed to run $commandName", c)
+    }.absorb
+  }
 }
 
 object PreviewResult {

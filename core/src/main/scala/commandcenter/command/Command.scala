@@ -130,7 +130,7 @@ object Command {
     }).tap { r =>
       ZIO.foreachDiscard(r.errors) {
         case CommandError.UnexpectedException(t) =>
-          ZIO.logWarningCause(s"Command encountered an unexpected exception with input: $input", Cause.fail(t))
+          ZIO.logWarningCause(s"Command encountered an unexpected exception with input: $input", Cause.die(t))
 
         case _ => ZIO.unit
       }

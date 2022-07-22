@@ -3,10 +3,10 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.config.ConfigParserExtensions
 import commandcenter.util.OS
-import zio.{RIO, Scope, ZIO}
+import zio.{Scope, Task, ZIO}
 
 trait CommandPlugin[A <: Command[?]] extends ConfigParserExtensions {
-  def make(config: Config): RIO[Scope, A]
+  def make(config: Config): Task[A]
 }
 
 object CommandPlugin {

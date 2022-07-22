@@ -9,7 +9,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
-import zio.{Scope, URIO, ZIO}
+import zio.{IO, Scope, URIO, ZIO}
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -131,7 +131,7 @@ final case class WorldTimesCommand(
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
 
-  def make(config: Config): ZIO[Scope, CommandPluginError, WorldTimesCommand] =
+  def make(config: Config): IO[CommandPluginError, WorldTimesCommand] =
     for {
       commandNames           <- config.getZIO[Option[List[String]]]("commandNames")
       dateTimeFormat         <- config.getZIO[Option[DateTimeFormatter]]("dateTimeFormat")

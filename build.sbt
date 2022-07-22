@@ -1,7 +1,6 @@
-import sbt.*
-import sbt.Keys.*
-import sbtwelcome.*
-import Build.Version
+import sbt._
+import sbt.Keys._
+import sbtwelcome._
 
 lazy val root = project
   .in(file("."))
@@ -48,28 +47,28 @@ lazy val root = project
 lazy val core = module("core")
   .settings(
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % Version.zio,
-      "dev.zio" %% "zio-streams" % Version.zio,
-      "dev.zio" %% "zio-logging" % "2.0.1",
-      "dev.zio" %% "zio-prelude" % "1.0.0-RC15",
-      "dev.zio" %% "zio-process" % "0.7.1",
-      "dev.zio" %% "zio-cache" % "0.2.0",
-      "org.scala-lang" % "scala-reflect" % "2.13.8",
-      "io.circe" %% "circe-core" % Version.circe,
-      "io.circe" %% "circe-parser" % Version.circe,
-      "io.circe" %% "circe-config" % "0.8.0",
-      "com.monovore" %% "decline" % "2.3.0",
-      "com.lihaoyi" %% "fansi" % "0.4.0",
-      "com.beachape" %% "enumeratum" % Version.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % Version.enumeratum,
-      "com.softwaremill.sttp.client3" %% "core" % Version.sttp,
-      "com.softwaremill.sttp.client3" %% "circe" % Version.sttp,
-      "com.softwaremill.sttp.client3" %% "zio" % Version.sttp,
-      "com.lihaoyi" %% "fastparse" % "2.3.3",
-      "org.typelevel" %% "spire" % "0.18.0",
-      "net.java.dev.jna" % "jna" % Version.jna,
-      "net.java.dev.jna" % "jna-platform" % Version.jna,
-      "org.ocpsoft.prettytime" % "prettytime-nlp" % "5.0.3.Final"
+      "dev.zio" %% "zio" % V.zio,
+      "dev.zio" %% "zio-streams" % V.zio,
+      "dev.zio" %% "zio-logging" % V.zioLogging,
+      "dev.zio" %% "zio-prelude" % V.zioPrelude,
+      "dev.zio" %% "zio-process" % V.zioProcess,
+      "dev.zio" %% "zio-cache" % V.zioCache,
+      "org.scala-lang" % "scala-reflect" % V.scalaReflect,
+      "io.circe" %% "circe-core" % V.circe,
+      "io.circe" %% "circe-parser" % V.circe,
+      "io.circe" %% "circe-config" % V.circeConfig,
+      "com.monovore" %% "decline" % V.decline,
+      "com.lihaoyi" %% "fansi" % V.fansi,
+      "com.beachape" %% "enumeratum" % V.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % V.enumeratum,
+      "com.softwaremill.sttp.client3" %% "core" % V.sttp,
+      "com.softwaremill.sttp.client3" %% "circe" % V.sttp,
+      "com.softwaremill.sttp.client3" %% "zio" % V.sttp,
+      "com.lihaoyi" %% "fastparse" % V.fastparse,
+      "org.typelevel" %% "spire" % V.spire,
+      "net.java.dev.jna" % "jna" % V.jna,
+      "net.java.dev.jna" % "jna-platform" % V.jna,
+      "org.ocpsoft.prettytime" % "prettytime-nlp" % V.prettytime
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, sbtVersion),
     buildInfoPackage := "commandcenter"
@@ -80,7 +79,7 @@ lazy val coreUI = module("core-ui")
   .dependsOn(core)
   .settings(
     libraryDependencies ++= Seq(
-      "com.googlecode.lanterna" % "lanterna" % "3.2.0-alpha1"
+      "com.googlecode.lanterna" % "lanterna" % V.lanterna
     )
   )
 
@@ -90,17 +89,17 @@ lazy val cli = module("cli")
     fork := true,
     run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
-      "org.scalameta" %% "svm-subs" % Version.graal
+      "org.scalameta" %% "svm-subs" % V.graal
     ),
     // Windows native terminal requires JNA.
-    libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % Version.jna).filter(_ => OS.os == OS.Windows),
+    libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % V.jna).filter(_ => OS.os == OS.Windows),
     assembly / mainClass := Some("commandcenter.cli.Main"),
     assembly / assemblyJarName := "cc.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
     },
-    graalVMNativeImageGraalVersion := Version.imageGraal,
+    graalVMNativeImageGraalVersion := Build.imageGraal,
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
       "-H:+TraceClassInitialization",
@@ -132,20 +131,20 @@ def optionalPlugin(project: Project): Option[ClasspathDependency] = {
 lazy val emulatorCore = module("emulator-core")
   .dependsOn(coreUI)
   .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq *
   )
   .settings(
     run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
-      "com.github.tulskiy" % "jkeymaster" % "1.3",
-      "org.slf4j" % "slf4j-nop" % "1.7.30" // Seems to be required for jkeymaster on Linux
+      "com.github.tulskiy" % "jkeymaster" % V.jkeymaster,
+      "org.slf4j" % "slf4j-nop" % V.slf4j // Seems to be required for jkeymaster on Linux
     )
   )
 
 lazy val emulatorSwt = module("emulator-swt")
   .dependsOn(emulatorCore)
   .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq *
   )
   .settings(
     publishMavenStyle := false,
@@ -164,7 +163,7 @@ lazy val emulatorSwt = module("emulator-swt")
 lazy val emulatorSwing = module("emulator-swing")
   .dependsOn(emulatorCore)
   .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq*
+    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
   )
   .settings(
     run / baseDirectory := file("."),
@@ -182,7 +181,7 @@ lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-o
 
 lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
   .dependsOn(core)
-  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject-ja" % "0.2.0+8-d9d4ec6d+20220716-2333-SNAPSHOT"))
+  .settings(libraryDependencies ++= Seq("com.github.reibitto" %% "ject-ja" % V.ject))
 
 lazy val extras = project
   .in(file("extras"))
@@ -191,11 +190,11 @@ lazy val extras = project
 def swtDependencies: Seq[ModuleID] =
   OS.os match {
     case OS.Windows =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % Version.swt intransitive ())
+      Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % V.swt intransitive ())
     case OS.MacOS =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % Version.swt intransitive ())
+      Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % V.swt intransitive ())
     case OS.Linux =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % Version.swt intransitive ())
+      Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % V.swt intransitive ())
     case OS.Other(name) =>
       println(s"SWT does not support OS '$name'")
       Seq.empty

@@ -80,10 +80,10 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
 
-  def make(config: Config): ZIO[Scope, CommandPluginError, FileNavigationCommand] =
+  def make(config: Config): IO[CommandPluginError, FileNavigationCommand] =
     for {
-      homeDirectory <- zio.System.property("user.home").catchAll { t =>
-                         ZIO.logWarningCause("Could not obtain location of home directory", Cause.fail(t)).as(None)
+      homeDirectory <- System.property("user.home").catchAll { t =>
+                         ZIO.logWarningCause("Could not obtain location of home directory", Cause.die(t)).as(None)
                        }
     } yield FileNavigationCommand(homeDirectory)
 }
