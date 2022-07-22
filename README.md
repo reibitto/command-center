@@ -169,8 +169,8 @@ You'll need to build the Lucene index first as described in the README. Then spe
 
 ```hocon
 {
-  type: "commandcenter.ject.JectCommand$",
-  dictionaryPath: "/path/to/ject/data/lucene"
+  type: "commandcenter.ject.JectJaCommand$",
+  dictionaryPath: "/path/to/ject/data/lucene/word-ja"
 }
 ```
 
@@ -191,7 +191,7 @@ To install the Kanji plugin, you need the following in `application.conf`:
 ```hocon
 {
   type: "commandcenter.ject.KanjiCommand$",
-  dictionaryPath: "/path/to/ject/data/lucene"
+  dictionaryPath: "/path/to/ject/data/lucene/kanji"
 }
 ```
 

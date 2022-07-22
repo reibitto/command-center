@@ -25,15 +25,14 @@ object Main {
       )
     }
 
-    val config = Unsafe.unsafe { implicit u =>
-      runtime.unsafe.run(CCConfig.load).getOrThrow()
-    }
-
-    val rawTerminal = new RawSwtTerminal(config)
-
     Unsafe.unsafe { implicit u =>
-      runtime.unsafe.fork {
-        for {
+      runtime.unsafe.run {
+        (for {
+          runtime <- ZIO.runtime[Env]
+          _ = println(s"THREAD@@@ ${Thread.currentThread().getName} ${Thread.currentThread().getId}")
+          config <- Conf.load
+//          config <- Conf.config
+          rawTerminal = new RawSwtTerminal(config)
           terminal <- SwtTerminal.create(runtime, rawTerminal)
           _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
                  (for {
@@ -46,11 +45,12 @@ object Main {
                  s"Ready to accept input. Press `${config.keyboard.openShortcut}` to open the terminal."
                )
           _ <- GlobalActions.setupCommon(config.globalActions)
-        } yield ()
+          // Written this way because SWT's UI loop must run from the main thread
+          _ = rawTerminal.loop()
+        } yield ()).tapErrorCause { c =>
+          ZIO.logFatalCause("Fatal error", c)
+        }
       }
     }
-
-    // Written this way because SWT's UI loop must run from the main thread
-    rawTerminal.loop()
   }
 }

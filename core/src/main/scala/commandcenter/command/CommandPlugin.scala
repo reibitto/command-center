@@ -3,15 +3,19 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.config.ConfigParserExtensions
 import commandcenter.util.OS
-import zio.{Scope, Task, ZIO}
+import commandcenter.CCRuntime.Env
+import zio.{RIO, Scope, ZIO}
 
 trait CommandPlugin[A <: Command[?]] extends ConfigParserExtensions {
-  def make(config: Config): Task[A]
+  def make(config: Config): RIO[Scope & Env, A]
 }
 
 object CommandPlugin {
 
-  def loadAll(config: Config, path: String) = {
+  def loadAll(
+    config: Config,
+    path: String
+  ): ZIO[Scope & Env, CommandPluginError.UnexpectedException, List[Command[?]]] = {
     import scala.jdk.CollectionConverters.*
 
     for {
@@ -51,27 +55,26 @@ object CommandPlugin {
     } yield commands.flatten.filter(c => c.supportedOS.isEmpty || c.supportedOS.contains(OS.os))
   }
 
-  def loadDynamically(c: Config, typeName: String): ZIO[Scope, CommandPluginError, Command[Any]] = {
-    ZIO.fail(CommandPluginError.PluginsNotSupported(typeName))
-//    val mirror = scala.reflect.runtime.universe.runtimeMirror(CommandPlugin.getClass.getClassLoader)
-//
-//    for {
-//      pluginClass <- ZIO
-//                       .attempt(Class.forName(typeName))
-//                       .mapError {
-//                         case e: ClassNotFoundException => CommandPluginError.PluginNotFound(typeName, e)
-//                         case other                     => CommandPluginError.UnexpectedException(other)
-//                       }
-//      plugin <- ZIO
-//                  .attempt(
-//                    mirror
-//                      .reflectModule(mirror.moduleSymbol(pluginClass))
-//                      .instance
-//                      .asInstanceOf[CommandPlugin[Command[?]]]
-//                  )
-//                  .mapError(CommandPluginError.UnexpectedException)
-//      command <- plugin.make(c).mapError(CommandPluginError.UnexpectedException)
-//    } yield command
+  def loadDynamically(c: Config, typeName: String): ZIO[Scope & Env, CommandPluginError, Command[Any]] = {
+    val mirror = scala.reflect.runtime.universe.runtimeMirror(CommandPlugin.getClass.getClassLoader)
+
+    for {
+      pluginClass <- ZIO
+                       .attempt(Class.forName(typeName))
+                       .mapError {
+                         case e: ClassNotFoundException => CommandPluginError.PluginNotFound(typeName, e)
+                         case other                     => CommandPluginError.UnexpectedException(other)
+                       }
+      plugin <- ZIO
+                  .attempt(
+                    mirror
+                      .reflectModule(mirror.moduleSymbol(pluginClass))
+                      .instance
+                      .asInstanceOf[CommandPlugin[Command[?]]]
+                  )
+                  .mapError(CommandPluginError.UnexpectedException)
+      command <- plugin.make(c).mapError(CommandPluginError.UnexpectedException)
+    } yield command
   }
 }
 

@@ -2,11 +2,14 @@ package commandcenter.ject
 
 import com.typesafe.config.Config
 import commandcenter.command.*
+import commandcenter.config.Decoders.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import ject.ja.docs.KanjiDoc
 import ject.ja.lucene.KanjiReader
-import zio.{IO, ZIO}
+import zio.{Scope, ZIO}
+
+import java.nio.file.Path
 
 final case class KanjiCommand(
   commandNames: List[String],
@@ -55,19 +58,18 @@ final case class KanjiCommand(
 
 object KanjiCommand extends CommandPlugin[KanjiCommand] {
 
-  def make(config: Config): IO[CommandPluginError, KanjiCommand] =
-    ZIO.fail(CommandPluginError.PluginsNotSupported("..."))
-  // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
-//    for {
-//      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
-//      dictionaryPath <- config.getZIO[Path]("dictionaryPath")
-//      luceneIndex    <- KanjiReader.make(dictionaryPath.resolve("kanji")).mapError(CommandPluginError.UnexpectedException)
-//      showScore      <- config.getZIO[Option[Boolean]]("showScore")
-//      quickPrefixes  <- config.getZIO[Option[List[String]]]("quickPrefixes")
-//    } yield KanjiCommand(
-//      commandNames.getOrElse(List("kanji", "k")),
-//      luceneIndex,
-//      quickPrefixes.getOrElse(Nil),
-//      showScore.getOrElse(false)
-//    )
+  def make(config: Config): ZIO[Scope, CommandPluginError, KanjiCommand] =
+    // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
+    for {
+      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
+      dictionaryPath <- config.getZIO[Path]("dictionaryPath")
+      luceneIndex    <- KanjiReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException)
+      showScore      <- config.getZIO[Option[Boolean]]("showScore")
+      quickPrefixes  <- config.getZIO[Option[List[String]]]("quickPrefixes")
+    } yield KanjiCommand(
+      commandNames.getOrElse(List("kanji", "k")),
+      luceneIndex,
+      quickPrefixes.getOrElse(Nil),
+      showScore.getOrElse(false)
+    )
 }

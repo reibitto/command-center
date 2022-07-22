@@ -16,7 +16,7 @@ final case class ConfigFake() extends Conf {
     )
   )
 
-  override def reload: Task[CCConfig] = config
+  override def load: Task[CCConfig] = config
 }
 
 object ConfigFake {

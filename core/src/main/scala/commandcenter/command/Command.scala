@@ -138,7 +138,7 @@ object Command {
 
   }
 
-  def parse(config: Config): ZIO[Scope, CommandPluginError, Command[?]] =
+  def parse(config: Config): ZIO[Scope & Env, CommandPluginError, Command[?]] =
     for {
       typeName <- ZIO.attempt(config.getString("type")).mapError(CommandPluginError.UnexpectedException)
       command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {

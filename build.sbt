@@ -150,7 +150,7 @@ lazy val emulatorSwt = module("emulator-swt")
     publishMavenStyle := false,
     run / baseDirectory := file("."),
     assembly / mainClass := Some("commandcenter.emulator.swt.Main"),
-    javaOptions := Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
+    javaOptions ++= Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
     assembly / assemblyJarName := "cc-swt.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines

@@ -9,6 +9,8 @@ import org.eclipse.swt.widgets.{Display, Shell, Text}
 import org.eclipse.swt.SWT
 
 class RawSwtTerminal(val initialConfig: CCConfig) {
+  println(s"(RawSwtTerminal) THREAD@@@ ${Thread.currentThread().getName} ${Thread.currentThread().getId}")
+
   val display = new Display()
   val shell = new Shell(display, SWT.MODELESS | SWT.DOUBLE_BUFFERED)
 

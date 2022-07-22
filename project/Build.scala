@@ -49,6 +49,7 @@ object Build {
       version := CommandCenterVersion,
       Test / javaOptions += "-Duser.timezone=UTC",
       scalacOptions := ScalacOptions,
+      javaOptions += "-Dfile.encoding=UTF-8",
       ThisBuild / scalaVersion := ScalaVersion,
       unmanagedBase := baseDirectory.value / "plugins",
       libraryDependencies ++= Plugins.BaseCompilerPlugins,

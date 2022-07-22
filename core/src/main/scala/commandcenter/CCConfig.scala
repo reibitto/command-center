@@ -6,6 +6,7 @@ import commandcenter.config.ConfigParserExtensions.*
 import commandcenter.config.Decoders.*
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.OS
+import commandcenter.CCRuntime.Env
 import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
 import io.circe.Decoder
@@ -26,20 +27,21 @@ final case class CCConfig(
 
 object CCConfig {
 
-  def load: ZIO[Scope, Throwable, CCConfig] =
+  def load: ZIO[Scope & Env, Throwable, CCConfig] =
     for {
+      _      <- ZIO.debug("loading CCConfig.............")
       file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
       _      <- ZIO.logDebug(s"Loading config file at ${file.getAbsolutePath}")
       config <- load(file)
     } yield config
 
-  def load(file: File) =
+  def load(file: File): ZIO[Scope & Env, Throwable, CCConfig] =
     for {
       config   <- attemptBlocking(ConfigFactory.parseFile(file))
       ccConfig <- loadFrom(config)
     } yield ccConfig
 
-  def loadFrom(config: TypesafeConfig) =
+  def loadFrom(config: TypesafeConfig): ZIO[Scope & Env, Exception, CCConfig] =
     for {
       commands       <- CommandPlugin.loadAll(config, "commands")
       aliases        <- ZIO.fromEither(config.as[Map[String, List[String]]]("aliases"))

@@ -8,7 +8,7 @@ import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{OS, ProcessUtil}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{IO, Scope, Task, ZIO}
+import zio.{Task, ZIO}
 import zio.process.Command as PCommand
 
 final case class SuspendProcessCommand(commandNames: List[String], suspendShortcut: Option[KeyboardShortcut])
@@ -19,24 +19,6 @@ final case class SuspendProcessCommand(commandNames: List[String], suspendShortc
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
 
   val command = decline.Command("suspend", title)(Opts.argument[Long]("pid"))
-
-  // TODO:: ??? call this and if it fails unload the plugin
-  // Return `Scope` for unloading?
-  def initialize: ZIO[Env, CommandPluginError, Unit] = {
-    for {
-      _ <- ZIO
-             .foreach(suspendShortcut) { suspendShortcut =>
-               Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
-                 (for {
-                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
-                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
-                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
-                 } yield ()).ignore
-               )
-             }
-             .mapError(CommandPluginError.UnexpectedException)
-    } yield ()
-  }
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
@@ -63,21 +45,21 @@ final case class SuspendProcessCommand(commandNames: List[String], suspendShortc
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
-  def make(config: Config): IO[CommandPluginError, SuspendProcessCommand] =
+  def make(config: Config): ZIO[Env, CommandPluginError, SuspendProcessCommand] =
     for {
       commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
       suspendShortcut <- config.getZIO[Option[KeyboardShortcut]]("suspendShortcut")
-//      _ <- ZIO
-//             .foreach(suspendShortcut) { suspendShortcut =>
-//               Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
-//                 (for {
-//                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
-//                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
-//                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
-//                 } yield ()).ignore
-//               )
-//             }
-//             .mapError(CommandPluginError.UnexpectedException)
+      _ <- ZIO
+             .foreach(suspendShortcut) { suspendShortcut =>
+               Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
+                 (for {
+                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
+                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
+                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
+                 } yield ()).ignore
+               )
+             }
+             .mapError(CommandPluginError.UnexpectedException)
     } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")), suspendShortcut)
 
   def isProcessSuspended(processId: Long): Task[Boolean] = {

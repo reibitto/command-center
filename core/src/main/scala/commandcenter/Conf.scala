@@ -5,7 +5,8 @@ import zio.*
 
 trait Conf {
   def config: UIO[CCConfig]
-  def reload: RIO[Any, CCConfig]
+  def load: RIO[Scope & Env, CCConfig]
+  def reload: RIO[Env, CCConfig]
 }
 
 object Conf {
@@ -13,36 +14,48 @@ object Conf {
 
   def config: URIO[Conf, CCConfig] = ZIO.serviceWithZIO[Conf](_.config)
 
-  def reload: RIO[Env, CCConfig] =
-    for {
-      conf   <- ZIO.service[Conf]
-      config <- conf.reload
-    } yield config
+  def load: RIO[Scope & Env, CCConfig] = ZIO.serviceWithZIO[Conf](_.load)
+
+  def reload: RIO[Env, CCConfig] = ZIO.serviceWithZIO[Conf](_.reload)
 }
 
-final case class ConfigLive(configRef: Ref[CCConfig]) extends Conf {
-  def config: UIO[CCConfig] = configRef.get
+final case class ConfigLive(configRef: Ref[Option[ReloadableConfig]]) extends Conf {
 
-  def reload: Task[CCConfig] =
+  def config: UIO[CCConfig] = configRef.get.some
+    .map(_.config)
+    .orDieWith(_ => new Exception("A config hasn't been loaded. You likely forgot to call `Config.load` on startup."))
+
+  def load: RIO[Scope & Env, CCConfig] =
+    (for {
+      (release, config) <- CCConfig.load.withEarlyRelease.provideSome[Env](ZLayer.succeed(Scope.global))
+      _                 <- configRef.set(Some(ReloadableConfig(config, release)))
+    } yield config).withFinalizer { _ =>
+      ZIO.whenCaseZIO(configRef.get) { case Some(reloadableConfig) =>
+        reloadableConfig.release
+      }
+    }
+
+  def reload: RIO[Env, CCConfig] = {
     for {
-      config <- ZIO.scoped {
-                  for {
-                    config <- CCConfig.load
-                    _      <- configRef.set(config)
-                  } yield config
-                }
+      _ <- ZIO.whenCaseZIO(configRef.get) { case Some(reloadableConfig) =>
+             reloadableConfig.release
+           }
+      (release, config) <- CCConfig.load.withEarlyRelease.provideSome(ZLayer.succeed(Scope.global))
+      _                 <- configRef.set(Some(ReloadableConfig(config, release)))
     } yield config
+  }
 }
 
 object ConfigLive {
 
-  def layer: ZLayer[Scope, Throwable, ConfigLive] = {
-    ZLayer.fromZIO(
+  def layer: ZLayer[Any, Nothing, ConfigLive] = {
+    ZLayer {
       for {
-        config    <- CCConfig.load
-        configRef <- Ref.make(config)
+        configRef <- Ref.make(Option.empty[ReloadableConfig])
       } yield ConfigLive(configRef)
-    )
+    }
 
   }
 }
+
+final case class ReloadableConfig(config: CCConfig, release: UIO[Unit])
