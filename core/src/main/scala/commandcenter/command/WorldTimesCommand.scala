@@ -9,7 +9,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
-import zio.{IO, URIO, ZIO}
+import zio.{IO, UIO, ZIO}
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -112,7 +112,7 @@ final case class WorldTimesCommand(
     )
   }
 
-  def configuredZones(context: CommandContext): URIO[Any, PreviewResults[Unit]] =
+  def configuredZones(context: CommandContext): UIO[PreviewResults[Unit]] =
     for {
       now <- zio.Clock.currentDateTime.map(_.toZonedDateTime)
       times = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.withZoneSameInstant(tz.zoneId)))

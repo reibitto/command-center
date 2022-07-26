@@ -1,6 +1,6 @@
 package commandcenter.util
 
-import zio.{RIO, ZIO}
+import zio.{Task, ZIO}
 import zio.process.Command as PCommand
 import zio.ZIO.attemptBlocking
 
@@ -10,7 +10,7 @@ import java.net.URI
 
 object ProcessUtil {
 
-  def openBrowser(url: String): RIO[Any, Unit] =
+  def openBrowser(url: String): Task[Unit] =
     OS.os match {
       case OS.MacOS =>
         PCommand("open", url).exitCode.unit
@@ -24,7 +24,7 @@ object ProcessUtil {
         )
     }
 
-  def frontProcessId: RIO[Any, Long] =
+  def frontProcessId: Task[Long] =
     OS.os match {
       case OS.MacOS =>
         for {
@@ -42,7 +42,7 @@ object ProcessUtil {
         )
     }
 
-  def browseToFile(file: File): RIO[Any, Unit] =
+  def browseToFile(file: File): Task[Unit] =
     OS.os match {
       case OS.MacOS =>
         val command =

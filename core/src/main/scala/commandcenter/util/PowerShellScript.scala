@@ -2,13 +2,13 @@ package commandcenter.util
 
 import zio.cache.Cache
 import zio.process.Command
-import zio.RIO
+import zio.Task
 
 object PowerShellScript {
 
   def loadFunction2[A, A2](
     cache: Cache[String, Nothing, String]
-  )(resource: String): (A, A2) => RIO[Any, String] =
+  )(resource: String): (A, A2) => Task[String] =
     (a, a2) =>
       for {
         script <- cache.get(resource)

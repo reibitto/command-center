@@ -5,7 +5,7 @@ import com.sun.jna.platform.win32.WinDef.{HDC, HWND, LPARAM, RECT}
 import com.sun.jna.platform.win32.WinUser.{MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT}
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.Pointer
-import zio.{RIO, Ref, Task, ZIO}
+import zio.{Ref, Task, ZIO}
 
 import java.util
 import scala.collection.mutable
@@ -108,7 +108,7 @@ object WindowManager {
 
   def cycleWindowSize(cycleWindowStateRef: Ref[Option[CycleWindowState]])(step: Int, name: String)(
     boundsList: Vector[WindowBounds]
-  ): RIO[Any, Unit] =
+  ): Task[Unit] =
     for {
       cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))
       newIndex = if (cycleWindowState.lastAction.contains(name)) {

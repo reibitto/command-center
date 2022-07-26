@@ -258,7 +258,7 @@ final case class CliTerminal[T <: Terminal](
       _ <- textCursorRef.get
     } yield eventResult).catchAll(t => ZIO.succeed(EventResult.UnexpectedError(t)))
 
-  def readInput: RIO[Any, KeyStroke] =
+  def readInput: Task[KeyStroke] =
     attemptBlocking {
       terminal.readInput()
     }
