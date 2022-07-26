@@ -5,7 +5,7 @@ import commandcenter.command.CommandError.*
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{UManaged, ZIO, ZManaged}
+import zio.{UIO, ZIO}
 
 import scala.util.matching.Regex
 
@@ -48,5 +48,5 @@ final case class TemperatureCommand() extends Command[Double] {
 }
 
 object TemperatureCommand extends CommandPlugin[TemperatureCommand] {
-  def make(config: Config): UManaged[TemperatureCommand] = ZManaged.succeed(TemperatureCommand())
+  def make(config: Config): UIO[TemperatureCommand] = ZIO.succeed(TemperatureCommand())
 }

@@ -11,7 +11,6 @@ import commandcenter.util.{Debouncer, OS}
 import commandcenter.view.{Rendered, Style}
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.blocking.Blocking
 import zio.stream.ZSink
 
 import java.awt.*
@@ -33,7 +32,10 @@ final case class SwingTerminal(
   val document = new DefaultStyledDocument
   val context = new StyleContext
   val frame = new JFrame("Command Center")
-  val preferredFont = runtime.unsafeRun(getPreferredFont)
+
+  val preferredFont = Unsafe.unsafe { implicit u =>
+    runtime.unsafe.run(getPreferredFont).getOrThrow()
+  }
 
   frame.setBackground(theme.background)
   frame.setFocusable(false)
@@ -65,17 +67,20 @@ final case class SwingTerminal(
     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
   ) {
 
-    override def getPreferredSize: Dimension =
-      runtime.unsafeRun {
-        for {
-          config              <- Conf.config
-          preferredFrameWidth <- getPreferredFrameWidth
-          searchResults       <- searchResultsRef.get
-          height = if (searchResults.previews.isEmpty) 0
-                   else
-                     outputTextPane.getPreferredSize.height min config.display.maxHeight
-        } yield new Dimension(preferredFrameWidth, height)
+    override def getPreferredSize: Dimension = {
+      Unsafe.unsafe { implicit u =>
+        runtime.unsafe.run {
+          for {
+            config              <- Conf.config
+            preferredFrameWidth <- getPreferredFrameWidth
+            searchResults       <- searchResultsRef.get
+            height = if (searchResults.previews.isEmpty) 0
+                     else
+                       outputTextPane.getPreferredSize.height min config.display.maxHeight
+          } yield new Dimension(preferredFrameWidth, height)
+        }.getOrThrow()
       }
+    }
   }
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
 
@@ -230,7 +235,7 @@ final case class SwingTerminal(
   def reset: UIO[Unit] =
     for {
       _ <- commandCursorRef.set(0)
-      _ <- UIO {
+      _ <- ZIO.succeed {
              inputTextField.setText("")
              document.remove(0, document.getLength)
            }
@@ -252,8 +257,11 @@ final case class SwingTerminal(
                  case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
-                     _                     <- preview.onRun.absorb.forkDaemon
-                     (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
+                     _ <- preview.onRunSandboxedLogged.forkDaemon
+                     (results, restStream) <- ZIO.scoped {
+                                                rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
+                                                  .mapError(_.toThrowable)
+                                              }
                      _ <- showMore(
                             results,
                             preview.moreResults(
@@ -269,8 +277,7 @@ final case class SwingTerminal(
                    } yield ()
 
                  case _ =>
-                   // TODO: Log defects
-                   preview.onRun.absorb.forkDaemon *> reset
+                   preview.onRunSandboxedLogged.forkDaemon *> reset
                }
         } yield previewOpt
     }
@@ -305,7 +312,7 @@ final case class SwingTerminal(
             _               <- searchDebouncer.triggerNowAwait
             previousResults <- searchResultsRef.get
             cursorIndex     <- commandCursorRef.get
-            resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => UIO.none)
+            resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
             _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
                    closePromise.succeed(())
                  }
@@ -347,10 +354,10 @@ final case class SwingTerminal(
                                 p.shortcuts.contains(shortcutPressed)
                               }
             bestMatch = eligibleResults.maxByOption(_.score)
-            _ <- ZIO.foreach_(bestMatch) { preview =>
+            _ <- ZIO.foreachDiscard(bestMatch) { preview =>
                    for {
                      _ <- hide
-                     _ <- preview.onRun.absorb.forkDaemon // TODO: Log defects
+                     _ <- preview.onRunSandboxedLogged.forkDaemon
                      _ <- reset
                    } yield ()
                  }
@@ -359,16 +366,24 @@ final case class SwingTerminal(
   })
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
-  frame.setMinimumSize(new Dimension(runtime.unsafeRun(getPreferredFrameWidth), 20))
+
+  frame.setMinimumSize(
+    new Dimension(
+      Unsafe.unsafe { implicit u =>
+        runtime.unsafe.run(getPreferredFrameWidth).getOrThrow()
+      },
+      20
+    )
+  )
   frame.pack()
 
   def clearScreen: UIO[Unit] =
-    UIO {
+    ZIO.succeed {
       document.remove(0, document.getLength)
     }
 
   def open: Task[Unit] =
-    Task {
+    ZIO.attempt {
       val bounds =
         GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
 
@@ -379,38 +394,41 @@ final case class SwingTerminal(
 
     }
 
-  def hide: UIO[Unit] = UIO {
+  def hide: UIO[Unit] = ZIO.succeed {
     frame.setVisible(false)
   }
 
-  def activate: RIO[Has[Tools] with Blocking, Unit] =
+  def activate: RIO[Tools, Unit] =
     OS.os match {
       case OS.MacOS => Tools.activate
       case _ =>
-        UIO {
+        ZIO.succeed {
           frame.toFront()
           frame.requestFocus()
           inputTextField.requestFocusInWindow()
         }
     }
 
-  def deactivate: RIO[Has[Tools] with Blocking, Unit] =
+  def deactivate: RIO[Tools, Unit] =
     OS.os match {
       case OS.MacOS => Tools.hide
-      case _        => UIO.unit
+      case _        => ZIO.unit
     }
 
-  def opacity: RIO[Env, Float] = UIO(frame.getOpacity)
+  def opacity: RIO[Env, Float] = ZIO.succeed(frame.getOpacity)
 
-  def setOpacity(opacity: Float): RIO[Env, Unit] = Task(frame.setOpacity(opacity)).whenM(isOpacitySupported)
+  def setOpacity(opacity: Float): RIO[Env, Unit] =
+    ZIO.attempt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported).unit
 
   def isOpacitySupported: URIO[Env, Boolean] =
-    Task(
-      GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
-        .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.TRANSLUCENT)
-    ).orElseSucceed(false)
+    ZIO
+      .attempt(
+        GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
+          .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.TRANSLUCENT)
+      )
+      .orElseSucceed(false)
 
-  def size: RIO[Env, Dimension] = UIO(frame.getSize)
+  def size: RIO[Env, Dimension] = ZIO.succeed(frame.getSize)
 
   def setSize(width: Int, maxHeight: Int): RIO[Env, Unit] = ZIO.unit
 
@@ -418,44 +436,49 @@ final case class SwingTerminal(
     for {
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
-      _ <- Task {
+      _ <- ZIO.attempt {
              inputTextField.setFont(preferredFont)
              outputTextPane.setFont(preferredFont)
            }
     } yield ()
 
-  def getPreferredFont: URIO[Has[Conf], Font] = {
+  def getPreferredFont: URIO[Conf, Font] = {
     def fallbackFont = new Font("Monospaced", Font.PLAIN, 18)
 
     (for {
-      fonts              <- Conf.get(_.display.fonts)
-      installedFontNames <- Task(GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet)
-    } yield fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(fallbackFont)).orElse(UIO(fallbackFont))
+      fonts <- Conf.get(_.display.fonts)
+      installedFontNames <-
+        ZIO.attempt(GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet)
+    } yield fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(fallbackFont))
+      .orElse(ZIO.succeed(fallbackFont))
   }
 
-  def getPreferredFrameWidth: URIO[Has[Conf], Int] =
+  def getPreferredFrameWidth: URIO[Conf, Int] =
     for {
       width <- Conf.get(_.display.width)
       screenWidth <-
-        Task(
-          GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
-        ).orElse(UIO(width))
+        ZIO
+          .attempt(
+            GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
+          )
+          .orElse(ZIO.succeed(width))
     } yield width min screenWidth
 }
 
 object SwingTerminal {
 
-  def create(runtime: CCRuntime): RManaged[Env, SwingTerminal] =
+  def create: RIO[Scope & Env, SwingTerminal] =
     for {
-      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
-      commandCursorRef <- Ref.makeManaged(0)
-      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-      closePromise     <- Promise.makeManaged[Nothing, Unit]
+      runtime          <- ZIO.runtime[Env]
+      debounceDelay    <- Conf.get(_.general.debounceDelay)
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      commandCursorRef <- Ref.make(0)
+      searchResultsRef <- Ref.make(SearchResults.empty[Any])
+      closePromise     <- Promise.make[Nothing, Unit]
       swingTerminal <-
-        ZManaged.make(
-          UIO(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
-        )(t => UIO(t.frame.dispose()))
-      _ <- swingTerminal.init.toManaged_
+        ZIO.acquireRelease(
+          ZIO.succeed(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
+        )(t => ZIO.succeed(t.frame.dispose()))
+      _ <- swingTerminal.init
     } yield swingTerminal
 }

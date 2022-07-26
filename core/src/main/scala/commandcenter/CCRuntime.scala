@@ -1,52 +1,8 @@
 package commandcenter
 
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.tools.{Tools, ToolsLive}
-import commandcenter.util.OS
-import commandcenter.CCRuntime.{Env, PartialEnv}
-import sttp.client3.httpclient.zio.{HttpClientZioBackend, SttpClient}
-import zio.{Has, Runtime, ULayer, ZEnv, ZLayer}
-import zio.internal.Platform
-import zio.logging.Logging
-
-import java.util.concurrent.Executor
-import scala.concurrent.ExecutionContext
-
-trait CCRuntime extends Runtime[Env] {
-
-  class DirectExecutor extends Executor {
-    def execute(command: Runnable): Unit = command.run()
-  }
-
-  lazy val runtime: Runtime[Env] = {
-    val platform =
-      if (OS.os == OS.MacOS && terminalType == TerminalType.Swt)
-        Platform.fromExecutionContext(ExecutionContext.fromExecutor(new DirectExecutor()))
-      else
-        Platform.default
-
-    import zio.magic.*
-
-    Runtime.unsafeFromLayer(
-      ZLayer.fromMagic[PartialEnv](
-        ZEnv.live,
-        CCLogging.make(terminalType),
-        ToolsLive.make.!,
-        shortcutsLayer,
-        HttpClientZioBackend.layer()
-      ) >+> ConfigLive.layer.!,
-      platform
-    )
-  }
-
-  def shortcutsLayer: ULayer[Has[Shortcuts]]
-  def terminalType: TerminalType
-
-  lazy val environment: Env = runtime.environment
-  lazy val platform: Platform = runtime.platform
-}
+import commandcenter.tools.Tools
 
 object CCRuntime {
-  type PartialEnv = ZEnv with Logging with SttpClient with Has[Tools] with Has[Shortcuts]
-  type Env = PartialEnv with Has[Conf]
+  type Env = Conf & Tools & Shortcuts & Sttp
 }

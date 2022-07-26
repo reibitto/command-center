@@ -17,11 +17,11 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
-                           clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high))
+                           Clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high))
                          } else {
                            input.rest.toLongOption match {
                              case Some(millis) =>
-                               Task {
+                               ZIO.attempt {
                                  val formatted = Instant
                                    .ofEpochMilli(millis)
                                    .atZone(ZoneId.systemDefault())
@@ -48,8 +48,8 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
 
 object EpochMillisCommand extends CommandPlugin[EpochMillisCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, EpochMillisCommand] =
+  def make(config: Config): IO[CommandPluginError, EpochMillisCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield EpochMillisCommand(commandNames.getOrElse(List("epochmillis")))
 }

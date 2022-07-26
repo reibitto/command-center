@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.{IO, ZIO}
 import zio.process.Command as PCommand
 
 // TODO: Sleep vs lock distinction?
@@ -30,8 +30,8 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
 
 object LockCommand extends CommandPlugin[LockCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, LockCommand] =
+  def make(config: Config): IO[CommandPluginError, LockCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield LockCommand(commandNames.getOrElse(List("lock")))
 }

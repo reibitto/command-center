@@ -5,10 +5,9 @@ import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.{JavaVM, OS}
 import commandcenter.view.{Rendered, Renderer}
-import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import zio.*
-import zio.logging.*
 import zio.stream.{ZSink, ZStream}
 
 import java.util.Locale
@@ -30,7 +29,7 @@ trait Command[+A] {
       PreviewResult.Some(
         Command.this,
         a,
-        UIO.unit,
+        ZIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
@@ -41,7 +40,7 @@ trait Command[+A] {
       PreviewResult.Some(
         ev(Command.this),
         (),
-        UIO.unit,
+        ZIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
@@ -52,7 +51,7 @@ trait Command[+A] {
       PreviewResult.Some(
         ev(Command.this),
         (),
-        UIO.unit,
+        ZIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
@@ -81,15 +80,17 @@ object Command {
     (for {
       chunks <- ZStream
                   .fromIterable(commands)
-                  .mapMPar(8) { command =>
+                  .mapZIOPar(8) { command =>
                     command
                       .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
                       .flatMap {
-                        case PreviewResults.Single(r)    => UIO(Chunk.single(r))
-                        case PreviewResults.Multiple(rs) => UIO(rs)
+                        case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
+                        case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
                         case p @ PreviewResults.Paginated(rs, pageSize, totalRemaining) =>
                           for {
-                            (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow
+                            (results, restStream) <- ZIO.scoped {
+                                                       rs.peel(ZSink.take[PreviewResult[A]](pageSize))
+                                                     }
                           } yield results match {
                             case beforeLast :+ last if results.length >= pageSize =>
                               beforeLast :+ last :+
@@ -127,18 +128,19 @@ object Command {
 
         SearchResults(input, results, errors)
     }).tap { r =>
-      ZIO.foreach_(r.errors) {
+      ZIO.foreachDiscard(r.errors) {
         case CommandError.UnexpectedException(t) =>
-          log.throwable(s"Command encountered an unexpected exception with input: $input", t)
+          ZIO.logWarningCause(s"Command encountered an unexpected exception with input: $input", Cause.die(t))
 
         case _ => ZIO.unit
       }
     }
+
   }
 
-  def parse(config: Config): ZManaged[PartialEnv, CommandPluginError, Command[?]] =
+  def parse(config: Config): ZIO[Scope & Env, CommandPluginError, Command[?]] =
     for {
-      typeName <- Task(config.getString("type")).mapError(CommandPluginError.UnexpectedException).toManaged_
+      typeName <- ZIO.attempt(config.getString("type")).mapError(CommandPluginError.UnexpectedException)
       command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
                    case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
                    case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
@@ -183,7 +185,7 @@ object Command {
                    case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
 
                    case CommandType.External(typeName) if JavaVM.isSubstrateVM =>
-                     ZManaged.fail(CommandPluginError.PluginsNotSupported(typeName))
+                     ZIO.fail(CommandPluginError.PluginsNotSupported(typeName))
 
                    case CommandType.External(typeName) =>
                      CommandPlugin.loadDynamically(config, typeName)

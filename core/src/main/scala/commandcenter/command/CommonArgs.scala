@@ -2,7 +2,7 @@ package commandcenter.command
 
 import cats.data.{Validated, ValidatedNel}
 import com.monovore.decline.Argument
-import zio.duration.Duration
+import zio.Duration
 
 object CommonArgs {
 

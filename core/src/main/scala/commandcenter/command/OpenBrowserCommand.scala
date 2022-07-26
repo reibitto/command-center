@@ -20,12 +20,12 @@ final case class OpenBrowserCommand() extends Command[Unit] {
     // TODO: also check endsWith TLD + URL.isValid
 
     if (startsWith)
-      UIO(PreviewResults.one(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
+      ZIO.succeed(PreviewResults.one(Preview.unit.onRun(ProcessUtil.openBrowser(input))))
     else
       ZIO.fail(NotApplicable)
   }
 }
 
 object OpenBrowserCommand extends CommandPlugin[OpenBrowserCommand] {
-  def make(config: Config): UManaged[OpenBrowserCommand] = ZManaged.succeed(OpenBrowserCommand())
+  def make(config: Config): UIO[OpenBrowserCommand] = ZIO.succeed(OpenBrowserCommand())
 }

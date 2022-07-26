@@ -41,7 +41,7 @@ final case class SearchUrlCommand(
       else {
         val url = urlTemplate.replace("{query}", URLEncoder.encode(searchInput.input, StandardCharsets.UTF_8))
 
-        UIO(
+        ZIO.succeed(
           PreviewResults.one(
             Preview.unit
               .score(Scores.high * 0.35)
@@ -59,13 +59,13 @@ final case class SearchUrlCommand(
 
 object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, SearchUrlCommand] =
+  def make(config: Config): IO[CommandPluginError, SearchUrlCommand] =
     for {
-      title        <- config.getManaged[String]("title")
-      urlTemplate  <- config.getManaged[String]("urlTemplate")
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
-      locales      <- config.getManaged[Option[Set[Locale]]]("locales")
-      shortcuts    <- config.getManaged[Option[Set[KeyboardShortcut]]]("shortcuts")
+      title        <- config.getZIO[String]("title")
+      urlTemplate  <- config.getZIO[String]("urlTemplate")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      locales      <- config.getZIO[Option[Set[Locale]]]("locales")
+      shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
     } yield SearchUrlCommand(
       title,
       urlTemplate,

@@ -5,12 +5,11 @@ import commandcenter.config.Decoders.*
 import commandcenter.tools.Tools
 import commandcenter.util.TimeZones
 import commandcenter.view.Rendered
-import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
-import zio.{UIO, URIO, ZIO, ZManaged}
-import zio.clock.Clock
+import zio.{IO, UIO, ZIO}
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -43,7 +42,7 @@ final case class WorldTimesCommand(
                           TimeZones.get(timeZoneString.trim)
                         ) match {
                           case (Some(date), Some(zone)) =>
-                            UIO(
+                            ZIO.succeed(
                               timeToSpecificZone(
                                 date.toInstant.atZone(ZoneId.systemDefault()),
                                 zone,
@@ -52,7 +51,7 @@ final case class WorldTimesCommand(
                             )
 
                           case (Some(date), None) =>
-                            UIO(
+                            ZIO.succeed(
                               timeToAllZones(
                                 date.toInstant.atZone(ZoneId.systemDefault()),
                                 input.context
@@ -66,7 +65,7 @@ final case class WorldTimesCommand(
                       case _ =>
                         parser.parse(input.rest).asScala.headOption match {
                           case Some(date) =>
-                            UIO(
+                            ZIO.succeed(
                               timeToAllZones(
                                 date.toInstant.atZone(ZoneId.systemDefault()),
                                 input.context
@@ -113,9 +112,9 @@ final case class WorldTimesCommand(
     )
   }
 
-  def configuredZones(context: CommandContext): URIO[Clock, PreviewResults[Unit]] =
+  def configuredZones(context: CommandContext): UIO[PreviewResults[Unit]] =
     for {
-      now <- zio.clock.currentDateTime.!.map(_.toZonedDateTime)
+      now <- zio.Clock.currentDateTime.map(_.toZonedDateTime)
       times = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.withZoneSameInstant(tz.zoneId)))
       _ = times.map(time => dateTimeFormat.format(time.dateTime))
     } yield PreviewResults.fromIterable(times.map { time =>
@@ -132,13 +131,13 @@ final case class WorldTimesCommand(
 
 object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
 
-  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, WorldTimesCommand] =
+  def make(config: Config): IO[CommandPluginError, WorldTimesCommand] =
     for {
-      commandNames           <- config.getManaged[Option[List[String]]]("commandNames")
-      dateTimeFormat         <- config.getManaged[Option[DateTimeFormatter]]("dateTimeFormat")
-      dateTimeDetailedFormat <- config.getManaged[Option[DateTimeFormatter]]("dateTimeDetailedFormat")
-      dateTimeWithZoneFormat <- config.getManaged[Option[DateTimeFormatter]]("dateTimeWithZoneFormat")
-      zones                  <- config.getManaged[List[TimeZone]]("zones")
+      commandNames           <- config.getZIO[Option[List[String]]]("commandNames")
+      dateTimeFormat         <- config.getZIO[Option[DateTimeFormatter]]("dateTimeFormat")
+      dateTimeDetailedFormat <- config.getZIO[Option[DateTimeFormatter]]("dateTimeDetailedFormat")
+      dateTimeWithZoneFormat <- config.getZIO[Option[DateTimeFormatter]]("dateTimeWithZoneFormat")
+      zones                  <- config.getZIO[List[TimeZone]]("zones")
     } yield WorldTimesCommand(
       commandNames.getOrElse(List("time", "times")),
       dateTimeFormat.getOrElse(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)),

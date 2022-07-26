@@ -13,8 +13,8 @@ import commandcenter.util.{Debouncer, TextUtils}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.blocking.*
 import zio.stream.ZSink
+import zio.ZIO.attemptBlocking
 
 import java.awt.Dimension
 
@@ -34,13 +34,14 @@ final case class CliTerminal[T <: Terminal](
   val prompt: String = "> "
   val terminalType: TerminalType = TerminalType.Cli
 
-  def opacity: RIO[Env, Float] = UIO(1.0f)
+  def opacity: RIO[Env, Float] = ZIO.succeed(1.0f)
 
   def setOpacity(opacity: Float): RIO[Env, Unit] = ZIO.unit
 
-  def isOpacitySupported: URIO[Env, Boolean] = UIO(false)
+  def isOpacitySupported: URIO[Env, Boolean] = ZIO.succeed(false)
 
-  def size: RIO[Env, Dimension] = UIO(new Dimension(screen.getTerminalSize.getColumns, screen.getTerminalSize.getRows))
+  def size: RIO[Env, Dimension] =
+    ZIO.succeed(new Dimension(screen.getTerminalSize.getColumns, screen.getTerminalSize.getRows))
 
   def setSize(width: Int, height: Int): RIO[Env, Unit] = ZIO.unit
 
@@ -57,25 +58,25 @@ final case class CliTerminal[T <: Terminal](
         case Some(RunOption.Exit)       => EventResult.Exit
         case Some(RunOption.RemainOpen) => EventResult.RemainOpen
         case _                          => EventResult.Success
-      }).catchAll(t => UIO(EventResult.UnexpectedError(t))),
+      }).catchAll(t => ZIO.succeed(EventResult.UnexpectedError(t))),
       new KeyStroke(KeyType.Backspace) -> (for {
         currentCursor <- textCursorRef.get
         _ <- if (buffer.nonEmpty && currentCursor.logical.column > 0) {
                val delta = buffer.lift(currentCursor.logical.column - 1).map(TextUtils.charWidth).getOrElse(0)
 
-               textCursorRef.update(_.offsetColumnBy(-1, -delta)) *> UIO(
+               textCursorRef.update(_.offsetColumnBy(-1, -delta)) *> ZIO.succeed(
                  buffer.deleteCharAt(currentCursor.logical.column - 1)
                )
              } else
-               UIO(currentCursor)
+               ZIO.succeed(currentCursor)
       } yield EventResult.Success),
-      new KeyStroke(KeyType.Escape) -> UIO(EventResult.Exit),
+      new KeyStroke(KeyType.Escape) -> ZIO.succeed(EventResult.Exit),
       new KeyStroke(KeyType.Delete) -> (for {
         currentCursor <- textCursorRef.get
         _ <- if (buffer.nonEmpty && currentCursor.logical.column < buffer.length)
-               UIO(buffer.deleteCharAt(currentCursor.logical.column))
+               ZIO.succeed(buffer.deleteCharAt(currentCursor.logical.column))
              else
-               UIO(currentCursor)
+               ZIO.succeed(currentCursor)
       } yield EventResult.Success),
       new KeyStroke(KeyType.ArrowDown) -> (
         for {
@@ -91,7 +92,7 @@ final case class CliTerminal[T <: Terminal](
                  val delta = buffer.lift(currentCursor.logical.column - 1).map(TextUtils.charWidth).getOrElse(0)
                  textCursorRef.update(_.offsetColumnBy(-1, -delta))
                } else
-                 UIO(currentCursor)
+                 ZIO.succeed(currentCursor)
         } yield EventResult.Success
       ),
       new KeyStroke(KeyType.ArrowRight) -> (
@@ -101,7 +102,7 @@ final case class CliTerminal[T <: Terminal](
                  val delta = buffer.lift(currentCursor.logical.column).map(TextUtils.charWidth).getOrElse(0)
                  textCursorRef.update(_.offsetColumnBy(1, delta))
                } else
-                 UIO(currentCursor)
+                 ZIO.succeed(currentCursor)
         } yield EventResult.Success
       )
     )
@@ -131,14 +132,14 @@ final case class CliTerminal[T <: Terminal](
 
   def render(results: SearchResults[Any]): Task[Unit] =
     for {
-      _             <- UIO(screen.clear())
+      _             <- ZIO.succeed(screen.clear())
       commandCursor <- commandCursorRef.get
       size          <- terminalSize
       rows = size.getRows
       columns = size.getColumns
       _ <- ZIO.foldLeft(results.rendered.take(rows - 1))(Cursor(prompt.length, 1))((s, r) => printRendered(r, s))
-      _ <- Task.when(results.previews.nonEmpty) {
-             Task {
+      _ <- ZIO.when(results.previews.nonEmpty) {
+             ZIO.attempt {
                val cursorRow = commandCursor + 1
 
                results.rendered.foldLeft((1, 1)) { case ((ci, di), d) =>
@@ -166,7 +167,7 @@ final case class CliTerminal[T <: Terminal](
       bufferDisplay = buffer.toString.takeRight(columns - prompt.length)
       _          <- putAnsiStr(prompt.length, 0, fansi.Color.White(bufferDisplay))
       textCursor <- textCursorRef.get
-      _ <- Task(
+      _ <- ZIO.attempt(
              screen
                .setCursorPosition(new TerminalPosition(prompt.length + (textCursor.actual.column min columns), 0))
            )
@@ -180,8 +181,11 @@ final case class CliTerminal[T <: Terminal](
                case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
                    if totalRemaining.forall(_ > 0) =>
                  for {
-                   _                     <- preview.onRun.absorb.forkDaemon
-                   (results, restStream) <- rs.peel(ZSink.take(pageSize)).useNow.mapError(_.toThrowable)
+                   // TODO: Log defects (need file logging for this)
+                   _ <- preview.onRun.absorb.forkDaemon
+                   (results, restStream) <- ZIO.scoped {
+                                              rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
+                                            }
                    _ <- showMore(
                           results,
                           preview.moreResults(
@@ -197,7 +201,7 @@ final case class CliTerminal[T <: Terminal](
                  } yield ()
 
                case _ =>
-                 // TODO: Log defects
+                 // TODO: Log defects (need file logging for this)
                  preview.onRun.absorb.forkDaemon *> reset
              }
       } yield preview
@@ -230,13 +234,13 @@ final case class CliTerminal[T <: Terminal](
       previousResults <- searchResultsRef.get
       eventResult <- for {
                        handlers <- keyHandlersRef.get
-                       result   <- handlers.getOrElse(keyStroke, UIO(EventResult.Success))
+                       result   <- handlers.getOrElse(keyStroke, ZIO.succeed(EventResult.Success))
                      } yield result
-      _ <- ZIO.foreach_(Option(keyStroke.getCharacter)) { c =>
-             UIO.when(!TerminalTextUtils.isControlCharacter(c)) {
+      _ <- ZIO.foreachDiscard(Option(keyStroke.getCharacter)) { c =>
+             ZIO.when(!TerminalTextUtils.isControlCharacter(c)) {
                for {
                  cursor <- textCursorRef.getAndUpdate(_.offsetColumnBy(1, TextUtils.charWidth(c)))
-                 _      <- UIO(buffer.insert(cursor.logical.column, c))
+                 _      <- ZIO.succeed(buffer.insert(cursor.logical.column, c))
                } yield ()
              }
            }
@@ -252,35 +256,35 @@ final case class CliTerminal[T <: Terminal](
              searchDebouncer(search(commands, aliases)(searchTerm)).flatMap(_.join).forkDaemon
            }
       _ <- textCursorRef.get
-    } yield eventResult).catchAll(t => UIO(EventResult.UnexpectedError(t)))
+    } yield eventResult).catchAll(t => ZIO.succeed(EventResult.UnexpectedError(t)))
 
-  def readInput: RIO[Blocking, KeyStroke] =
-    effectBlocking {
+  def readInput: Task[KeyStroke] =
+    attemptBlocking {
       terminal.readInput()
     }
 
   def terminalSize: Task[TerminalSize] =
-    Task(terminal.getTerminalSize)
+    ZIO.attempt(terminal.getTerminalSize)
 
   def swapBuffer: Task[Unit] =
-    Task(screen.refresh(RefreshType.DELTA))
+    ZIO.attempt(screen.refresh(RefreshType.DELTA))
 
   def putAnsiStr(str: fansi.Str): UIO[Unit] =
     for {
       cursor <- textCursorRef.get
-      _      <- UIO(graphics.putCSIStyledString(cursor.actual.column, cursor.actual.row, str.render))
+      _      <- ZIO.succeed(graphics.putCSIStyledString(cursor.actual.column, cursor.actual.row, str.render))
     } yield ()
 
   def putAnsiStr(column: Int, row: Int, str: fansi.Str): UIO[Unit] =
-    UIO(graphics.putCSIStyledString(column, row, str.render))
+    ZIO.succeed(graphics.putCSIStyledString(column, row, str.render))
 
   def putAnsiStrRaw(ansiString: String, cursor: Cursor): UIO[Unit] =
-    UIO(graphics.putCSIStyledString(cursor.column, cursor.row, ansiString))
+    ZIO.succeed(graphics.putCSIStyledString(cursor.column, cursor.row, ansiString))
 
   def printAnsiStr(string: fansi.Str, cursor: Cursor): UIO[Cursor] = {
     val lines = string.render.linesIterator.toVector
     for {
-      _ <- ZIO.foreach_(lines.zipWithIndex) { case (s, i) =>
+      _ <- ZIO.foreachDiscard(lines.zipWithIndex) { case (s, i) =>
              putAnsiStrRaw(s, cursor + Cursor(0, i))
            }
     } yield cursor + Cursor(0, lines.length)
@@ -299,27 +303,27 @@ final case class CliTerminal[T <: Terminal](
 
 object CliTerminal {
 
-  def createNative: RManaged[Has[Conf], CliTerminal[Terminal]] =
+  def createNative: RIO[Scope & Conf, CliTerminal[Terminal]] =
     create {
       val terminalFactory = new DefaultTerminalFactory()
 
-      ZManaged.fromAutoCloseable(Task {
+      ZIO.fromAutoCloseable(ZIO.attempt {
         terminalFactory.createHeadlessTerminal()
       })
     }
 
-  private def create[T <: Terminal](managedTerminal: Managed[Throwable, T]): RManaged[Has[Conf], CliTerminal[T]] =
+  private def create[T <: Terminal](managedTerminal: RIO[Scope, T]): RIO[Scope & Conf, CliTerminal[T]] =
     for {
       terminal         <- managedTerminal
-      screen           <- ZManaged.fromAutoCloseable(Task(new TerminalScreen(terminal)))
-      graphics         <- Task(screen.newTextGraphics()).toManaged_
-      commandCursorRef <- Ref.makeManaged(0)
-      textCursorRef    <- Ref.makeManaged(TextCursor.unit)
-      searchResultsRef <- Ref.makeManaged(SearchResults.empty[Any])
-      keyHandlersRef   <- Ref.makeManaged(Map.empty[KeyStroke, URIO[Env, EventResult]])
-      debounceDelay    <- Conf.get(_.general.debounceDelay).toManaged_
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay).toManaged_
-      renderQueue      <- Queue.sliding[SearchResults[Any]](1).toManaged_
+      screen           <- ZIO.fromAutoCloseable(ZIO.attempt(new TerminalScreen(terminal)))
+      graphics         <- ZIO.attempt(screen.newTextGraphics())
+      commandCursorRef <- Ref.make(0)
+      textCursorRef    <- Ref.make(TextCursor.unit)
+      searchResultsRef <- Ref.make(SearchResults.empty[Any])
+      keyHandlersRef   <- Ref.make(Map.empty[KeyStroke, URIO[Env, EventResult]])
+      debounceDelay    <- Conf.get(_.general.debounceDelay)
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      renderQueue      <- Queue.sliding[SearchResults[Any]](1)
     } yield CliTerminal(
       terminal,
       screen,

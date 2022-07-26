@@ -1,13 +1,12 @@
 package commandcenter
 
 import commandcenter.event.KeyboardShortcut
-import commandcenter.CCRuntime.PartialEnv
-import zio.{Has, RIO, UIO, ULayer, ZLayer}
-import zio.duration.*
+import commandcenter.CCRuntime.Env
+import zio.*
 
 final case class ConfigFake() extends Conf {
 
-  def config: UIO[CCConfig] = UIO(
+  def config: UIO[CCConfig] = ZIO.succeed(
     CCConfig(
       commands = Vector.empty,
       aliases = Map.empty,
@@ -18,9 +17,11 @@ final case class ConfigFake() extends Conf {
     )
   )
 
-  override def reload: RIO[PartialEnv, CCConfig] = config
+  def load: Task[CCConfig] = config
+
+  def reload: RIO[Env, CCConfig] = config
 }
 
 object ConfigFake {
-  def layer: ULayer[Has[Conf]] = ZLayer.succeed(ConfigFake())
+  def layer: ULayer[Conf] = ZLayer.succeed(ConfigFake())
 }

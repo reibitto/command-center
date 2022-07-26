@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.{clock, Managed, Task, ZIO}
+import zio.{Clock, IO, ZIO}
 
 import java.time.{Instant, ZoneId}
 import java.time.format.{DateTimeFormatter, FormatStyle}
@@ -17,11 +17,11 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
-                           clock.currentTime(TimeUnit.SECONDS).map(time => (time.toString, Scores.high))
+                           Clock.currentTime(TimeUnit.SECONDS).map(time => (time.toString, Scores.high))
                          } else {
                            input.rest.toLongOption match {
                              case Some(seconds) =>
-                               Task {
+                               ZIO.attempt {
                                  val formatted = Instant
                                    .ofEpochSecond(seconds)
                                    .atZone(ZoneId.systemDefault())
@@ -48,8 +48,8 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
 
 object EpochUnixCommand extends CommandPlugin[EpochUnixCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, EpochUnixCommand] =
+  def make(config: Config): IO[CommandPluginError, EpochUnixCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield EpochUnixCommand(commandNames.getOrElse(List("epochunix")))
 }

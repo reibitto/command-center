@@ -7,13 +7,12 @@ import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{OS, ProcessUtil}
 import commandcenter.view.Renderer
-import commandcenter.CCRuntime.{Env, PartialEnv}
-import zio.{RIO, ZIO, ZManaged}
-import zio.blocking.Blocking
-import zio.logging.log
+import commandcenter.CCRuntime.Env
+import zio.{Task, ZIO}
 import zio.process.Command as PCommand
 
-final case class SuspendProcessCommand(commandNames: List[String]) extends Command[Unit] {
+final case class SuspendProcessCommand(commandNames: List[String], suspendShortcut: Option[KeyboardShortcut])
+    extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
   val title: String = "Suspend/Resume Process"
 
@@ -46,36 +45,35 @@ final case class SuspendProcessCommand(commandNames: List[String]) extends Comma
 
 object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
-  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, SuspendProcessCommand] =
+  def make(config: Config): ZIO[Env, CommandPluginError, SuspendProcessCommand] =
     for {
-      commandNames    <- config.getManaged[Option[List[String]]]("commandNames")
-      suspendShortcut <- config.getManaged[Option[KeyboardShortcut]]("suspendShortcut")
+      commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
+      suspendShortcut <- config.getZIO[Option[KeyboardShortcut]]("suspendShortcut")
       _ <- ZIO
              .foreach(suspendShortcut) { suspendShortcut =>
                Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
                  (for {
-                   _   <- log.debug("Toggling suspend for frontmost process...")
+                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
                    pid <- SuspendProcessCommand.toggleSuspendFrontProcess
-                   _   <- log.debug(s"Toggled suspend for process $pid")
+                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
                  } yield ()).ignore
                )
              }
              .mapError(CommandPluginError.UnexpectedException)
-             .toManaged_
-    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")))
+    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")), suspendShortcut)
 
-  def isProcessSuspended(processId: Long): RIO[Blocking, Boolean] = {
+  def isProcessSuspended(processId: Long): Task[Boolean] = {
     val stateParam = if (OS.os == OS.MacOS) "state=" else "s="
 
     PCommand("ps", "-o", stateParam, "-p", processId.toString).string.map(_.trim == "T")
   }
 
-  def setProcessState(suspend: Boolean, pid: Long): RIO[Blocking, Unit] = {
+  def setProcessState(suspend: Boolean, pid: Long): Task[Unit] = {
     val targetState = if (suspend) "-STOP" else "-CONT"
     PCommand("kill", targetState, pid.toString).exitCode.unit
   }
 
-  def toggleSuspendFrontProcess: RIO[Blocking, Long] =
+  def toggleSuspendFrontProcess: Task[Long] =
     for {
       pid         <- ProcessUtil.frontProcessId
       isSuspended <- isProcessSuspended(pid)

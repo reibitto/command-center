@@ -5,15 +5,14 @@ import com.sun.jna.platform.win32.WinDef.{HDC, HWND, LPARAM, RECT}
 import com.sun.jna.platform.win32.WinUser.{MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT}
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.Pointer
-import zio.{RIO, Ref, Task}
-import zio.clock.Clock
+import zio.{Ref, Task, ZIO}
 
 import java.util
 import scala.collection.mutable
 
 object WindowManager {
 
-  def centerScreen: Task[Unit] = Task {
+  def centerScreen: Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -35,7 +34,7 @@ object WindowManager {
     User32.INSTANCE.SetWindowPos(window, null, x, y, windowWidth, windowHeight, WinUser.SWP_NOZORDER)
   }
 
-  def resizeToScreenSize: Task[Unit] = Task {
+  def resizeToScreenSize: Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -54,7 +53,7 @@ object WindowManager {
     User32.INSTANCE.SetWindowPos(window, null, x, y, monitorWidth, monitorHeight, WinUser.SWP_NOZORDER)
   }
 
-  def resizeFullHeightMaintainAspectRatio: Task[Unit] = Task {
+  def resizeFullHeightMaintainAspectRatio: Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -76,25 +75,25 @@ object WindowManager {
     User32.INSTANCE.SetWindowPos(window, null, x, y, windowWidth, monitorHeight, WinUser.SWP_NOZORDER)
   }
 
-  def minimizeWindow: Task[Unit] = Task {
+  def minimizeWindow: Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     User32.INSTANCE.ShowWindow(window, WinUser.SW_FORCEMINIMIZE)
   }
 
-  def maximizeWindow: Task[Unit] = Task {
+  def maximizeWindow: Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     User32.INSTANCE.ShowWindow(window, WinUser.SW_MAXIMIZE)
   }
 
-  def restoreWindow: Task[Unit] = Task {
+  def restoreWindow: Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
   }
 
-  def toggleMaximizeWindow: Task[Unit] = Task {
+  def toggleMaximizeWindow: Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     val windowPlacement = new WINDOWPLACEMENT()
@@ -109,7 +108,7 @@ object WindowManager {
 
   def cycleWindowSize(cycleWindowStateRef: Ref[Option[CycleWindowState]])(step: Int, name: String)(
     boundsList: Vector[WindowBounds]
-  ): RIO[Clock, Unit] =
+  ): Task[Unit] =
     for {
       cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))
       newIndex = if (cycleWindowState.lastAction.contains(name)) {
@@ -125,7 +124,7 @@ object WindowManager {
       _ <- cycleWindowStateRef.set(Some(CycleWindowState(newIndex, Some(name))))
     } yield ()
 
-  def transform(bounds: WindowBounds): Task[Unit] = Task {
+  def transform(bounds: WindowBounds): Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -165,7 +164,7 @@ object WindowManager {
 
   def moveToPreviousDisplay: Task[Unit] = moveToDisplay(-1)
 
-  def moveToDisplay(delta: Int): Task[Unit] = Task {
+  def moveToDisplay(delta: Int): Task[Unit] = ZIO.attempt {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -240,7 +239,7 @@ object WindowManager {
     )
   }
 
-  def commandCenterWindow: Task[Option[HWND]] = Task {
+  def commandCenterWindow: Task[Option[HWND]] = ZIO.attempt {
     val currentProcess = ProcessHandle.current()
     var ccWindow: Option[HWND] = None
 
@@ -262,7 +261,7 @@ object WindowManager {
     ccWindow
   }
 
-  def topLevelWindows: Task[List[TopLevelWindow]] = Task {
+  def topLevelWindows: Task[List[TopLevelWindow]] = ZIO.attempt {
     // This list comes from GoToWindow: https://github.com/christianrondeau/GoToWindow/blob/master/GoToWindow.Api/WindowsListFactory.cs
     val ignoredClasses: Set[String] = Set(
       "Button",
@@ -304,7 +303,7 @@ object WindowManager {
     windows.toList
   }
 
-  def giveWindowFocus(window: HWND): Task[Unit] = Task {
+  def giveWindowFocus(window: HWND): Task[Unit] = ZIO.attempt {
     val windowPlacement = new WINDOWPLACEMENT()
     User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
 

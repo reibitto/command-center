@@ -1,12 +1,11 @@
 package commandcenter.util
 
-import zio.blocking.*
 import zio.process.Command
-import zio.RIO
+import zio.Task
 
 object TTS {
 
   // TODO: Support other OSes
-  def say(text: String): RIO[Blocking, Unit] =
+  def say(text: String): Task[Unit] =
     Command("say", text).exitCode.unit
 }

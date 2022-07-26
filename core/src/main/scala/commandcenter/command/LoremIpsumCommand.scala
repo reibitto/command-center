@@ -72,13 +72,15 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
     case object Paragraph extends ChunkType
   }
 
-  def make(config: Config): Managed[CommandPluginError, LoremIpsumCommand] =
+  def make(config: Config): IO[CommandPluginError, LoremIpsumCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
-      lipsum <- ZManaged
-                  .fromAutoCloseable(Task(Source.fromResource("lipsum")))
-                  .mapEffect(_.getLines().mkString("\n"))
-                  .mapError(CommandPluginError.UnexpectedException)
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      lipsum <- ZIO.scoped {
+                  ZIO
+                    .fromAutoCloseable(ZIO.attempt(Source.fromResource("lipsum")))
+                    .mapAttempt(_.getLines().mkString("\n"))
+                    .mapError(CommandPluginError.UnexpectedException)
+                }
     } yield LoremIpsumCommand(commandNames.getOrElse(List("lipsum", "lorem", "ipsum")), lipsum)
 
 }

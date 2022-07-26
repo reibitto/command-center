@@ -19,8 +19,8 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command("", s"URL decodes the given string")(all).parse(input.args)
-      (valueToDecode, charset) <- IO.fromEither(parsedCommand).mapError(CommandError.CliError)
-      decoded                  <- Task(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
+      (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      decoded                  <- ZIO.attempt(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedException)
     } yield PreviewResults.one(
       Preview(decoded).onRun(Tools.setClipboard(decoded)).score(Scores.high(input.context))
     )
@@ -28,8 +28,8 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
 
 object DecodeUrlCommand extends CommandPlugin[DecodeUrlCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, DecodeUrlCommand] =
+  def make(config: Config): IO[CommandPluginError, DecodeUrlCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield DecodeUrlCommand(commandNames.getOrElse(List("decodeurl")))
 }

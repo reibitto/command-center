@@ -1,16 +1,14 @@
 package commandcenter.util
 
-import zio.blocking.Blocking
 import zio.cache.Cache
-import zio.clock.Clock
 import zio.process.Command
-import zio.RIO
+import zio.Task
 
 object PowerShellScript {
 
   def loadFunction2[A, A2](
     cache: Cache[String, Nothing, String]
-  )(resource: String): (A, A2) => RIO[Blocking with Clock, String] =
+  )(resource: String): (A, A2) => Task[String] =
     (a, a2) =>
       for {
         script <- cache.get(resource)

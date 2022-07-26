@@ -3,9 +3,8 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.command.CommandError.*
 import commandcenter.util.ProcessUtil
-import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CCRuntime.Env
 import zio.*
-import zio.logging.log
 import zio.stream.ZStream
 
 import java.io.File
@@ -59,18 +58,18 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
           listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
         }
 
-      UIO {
+      ZIO.succeed {
         PreviewResults.paginated(
           ZStream.succeed(
             Preview(file)
               .score(score)
               .renderedAnsi(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
-              .onRun(ProcessUtil.browseFile(file))
+              .onRun(ProcessUtil.browseToFile(file))
           ) ++ (sameLevel ++ children).map { f =>
             Preview(f)
               .score(score)
               .renderedAnsi(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
-              .onRun(ProcessUtil.browseFile(f))
+              .onRun(ProcessUtil.browseToFile(f))
           },
           pageSize = 10
         )
@@ -81,10 +80,10 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
 
 object FileNavigationCommand extends CommandPlugin[FileNavigationCommand] {
 
-  def make(config: Config): ZManaged[PartialEnv, CommandPluginError, FileNavigationCommand] =
-    (for {
-      homeDirectory <- zio.system.property("user.home").catchAll { t =>
-                         log.throwable("Could not obtain location of home directory", t) *> ZIO.none
+  def make(config: Config): IO[CommandPluginError, FileNavigationCommand] =
+    for {
+      homeDirectory <- System.property("user.home").catchAll { t =>
+                         ZIO.logWarningCause("Could not obtain location of home directory", Cause.die(t)).as(None)
                        }
-    } yield FileNavigationCommand(homeDirectory)).toManaged_
+    } yield FileNavigationCommand(homeDirectory)
 }

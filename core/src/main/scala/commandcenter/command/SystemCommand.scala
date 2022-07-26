@@ -10,7 +10,7 @@ import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.util.OS
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, Task, ZIO}
+import zio.{IO, ZIO}
 
 final case class SystemCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SystemCommand
@@ -49,7 +49,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                          case SystemSubcommand.Sleep =>
                            Tuple2(
                              Renderer.renderDefault("Sleep", "Put computer to sleep"),
-                             Task {
+                             ZIO.attempt {
                                PowrProf
                                  .SetSuspendState(bHibernate = false, bForce = false, bWakeupEventsDisabled = false)
                                ()
@@ -59,7 +59,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                          case SystemSubcommand.MonitorOff =>
                            Tuple2(
                              Renderer.renderDefault("Turn off monitor", ""),
-                             Task {
+                             ZIO.attempt {
                                User32.INSTANCE.SendMessage(
                                  WinUser.HWND_BROADCAST,
                                  WinUser.WM_SYSCOMMAND,
@@ -73,7 +73,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                          case SystemSubcommand.Screensaver =>
                            Tuple2(
                              Renderer.renderDefault("Activate screensaver", ""),
-                             Task {
+                             ZIO.attempt {
                                User32.INSTANCE.SendMessage(
                                  WinUser.HWND_BROADCAST,
                                  WinUser.WM_SYSCOMMAND,
@@ -100,9 +100,9 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
 object SystemCommand extends CommandPlugin[SystemCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, SystemCommand] =
+  def make(config: Config): IO[CommandPluginError, SystemCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield SystemCommand(commandNames.getOrElse(List("system")))
 
   sealed trait SystemSubcommand

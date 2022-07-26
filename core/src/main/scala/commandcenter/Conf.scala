@@ -1,57 +1,61 @@
 package commandcenter
 
-import commandcenter.CCRuntime.{Env, PartialEnv}
+import commandcenter.CCRuntime.Env
 import zio.*
-import zio.logging.log
 
 trait Conf {
   def config: UIO[CCConfig]
-  def reload: RIO[PartialEnv, CCConfig]
+  def load: RIO[Scope & Env, CCConfig]
+  def reload: RIO[Env, CCConfig]
 }
 
 object Conf {
-  def get[A](f: CCConfig => A): URIO[Has[Conf], A] = config.map(f)
+  def get[A](f: CCConfig => A): URIO[Conf, A] = config.map(f)
 
-  def config: URIO[Has[Conf], CCConfig] = ZIO.serviceWith[Conf](_.config)
+  def config: URIO[Conf, CCConfig] = ZIO.serviceWithZIO[Conf](_.config)
 
-  def reload: RIO[Env, CCConfig] =
-    for {
-      conf   <- ZIO.service[Conf]
-      config <- conf.reload
-    } yield config
+  def load: RIO[Scope & Env, CCConfig] = ZIO.serviceWithZIO[Conf](_.load)
+
+  def reload: RIO[Env, CCConfig] = ZIO.serviceWithZIO[Conf](_.reload)
 }
 
-final case class ConfigLive(configRef: Ref[CCConfig], reservationRef: Ref[Reservation[PartialEnv, Throwable, CCConfig]])
-    extends Conf {
-  def config: UIO[CCConfig] = configRef.get
+final case class ConfigLive(configRef: Ref[Option[ReloadableConfig]]) extends Conf {
 
-  def reload: RIO[PartialEnv, CCConfig] =
+  def config: UIO[CCConfig] = configRef.get.some
+    .map(_.config)
+    .orDieWith(_ => new Exception("A config hasn't been loaded. You likely forgot to call `Config.load` on startup."))
+
+  def load: RIO[Scope & Env, CCConfig] =
     (for {
-      _                   <- CCConfig.validateConfig
-      previousReservation <- reservationRef.get
-      _                   <- previousReservation.release(Exit.unit)
-      reservation         <- CCConfig.load.reserve
-      config <- reservation.acquire.tapError { t =>
-                  log.throwable(
-                    "Command Center did not load properly with the new config and might now be in an invalid state.",
-                    t
-                  )
-                }
-      _ <- configRef.set(config)
-      _ <- reservationRef.set(reservation)
-    } yield config).tapError { t =>
-      log.throwable("Could not reload config because the config file is not valid", t)
+      (release, config) <- CCConfig.load.withEarlyRelease.provideSome[Env](ZLayer.succeed(Scope.global))
+      _                 <- configRef.set(Some(ReloadableConfig(config, release)))
+    } yield config).withFinalizer { _ =>
+      ZIO.whenCaseZIO(configRef.get) { case Some(reloadableConfig) =>
+        reloadableConfig.release
+      }
     }
+
+  def reload: RIO[Env, CCConfig] = {
+    for {
+      _ <- ZIO.whenCaseZIO(configRef.get) { case Some(reloadableConfig) =>
+             reloadableConfig.release
+           }
+      (release, config) <- CCConfig.load.withEarlyRelease.provideSome(ZLayer.succeed(Scope.global))
+      _                 <- configRef.set(Some(ReloadableConfig(config, release)))
+    } yield config
+  }
 }
 
 object ConfigLive {
 
-  def layer: RLayer[PartialEnv, Has[Conf]] =
-    (for {
-      reservation    <- CCConfig.load.reserve.toManaged_
-      config         <- reservation.acquire.toManaged_
-      ref            <- Ref.makeManaged(config)
-      reservationRef <- Ref.makeManaged(reservation)
-      _              <- ZIO.unit.toManaged(_ => reservation.release(Exit.unit))
-    } yield ConfigLive(ref, reservationRef)).toLayer
+  def layer: ZLayer[Any, Nothing, ConfigLive] = {
+    ZLayer {
+      for {
+        configRef <- Ref.make(Option.empty[ReloadableConfig])
+      } yield ConfigLive(configRef)
+    }
+
+  }
 }
+
+final case class ReloadableConfig(config: CCConfig, release: UIO[Unit])

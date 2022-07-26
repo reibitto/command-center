@@ -1,20 +1,26 @@
 package commandcenter
 
-import zio.*
-import zio.clock.Clock
-import zio.console.*
-import zio.logging.*
+import zio.{LogLevel, ZLayer}
+import zio.logging.{console, LogColor, LogFormat}
+import zio.logging.LogFormat.*
 
 object CCLogging {
 
-  def make(terminalType: TerminalType): ZLayer[Console with Clock, Nothing, Logging] =
+  val coloredFormat: LogFormat =
+    timestamp.color(LogColor.BLUE) |-|
+      level.highlight |-|
+      fiberId.color(LogColor.WHITE) |-|
+      line.highlight |-|
+      newLine |-|
+      cause.highlight
+
+  def addLoggerFor(terminalType: TerminalType): ZLayer[Any, Nothing, Unit] =
     terminalType match {
-      case TerminalType.Cli => Logging.ignore // TODO: File logging
+      case TerminalType.Cli => ZLayer.empty.unit // TODO: File logging
 
       case TerminalType.Swing | TerminalType.Swt =>
-        val format = LogFormat.ColoredLogFormat((_, s) => s)
-        Logging.console(LogLevel.Trace, format)
+        console(coloredFormat, LogLevel.Info)
 
-      case TerminalType.Test => Logging.ignore
+      case TerminalType.Test => ZLayer.empty.unit
     }
 }

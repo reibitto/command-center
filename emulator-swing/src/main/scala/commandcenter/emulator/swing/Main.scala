@@ -1,35 +1,45 @@
 package commandcenter.emulator.swing
 
-import commandcenter.{CCApp, CCConfig, GlobalActions, TerminalType}
+import commandcenter.*
 import commandcenter.emulator.swing.shortcuts.ShortcutsLive
 import commandcenter.emulator.swing.ui.SwingTerminal
 import commandcenter.shortcuts.Shortcuts
+import commandcenter.tools.ToolsLive
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.logging.log
 
-object Main extends CCApp {
-  val terminalType: TerminalType = TerminalType.Swing
-  val shortcutsLayer: ULayer[Has[Shortcuts]] = ShortcutsLive.layer(this).!
+object Main extends ZIOApp {
 
-  def run(args: List[String]): URIO[Env, ExitCode] =
+  override type Environment = Env
+
+  val environmentTag: EnvironmentTag[Environment] = EnvironmentTag[Environment]
+
+  override def bootstrap: ZLayer[Scope, Any, Environment] = ZLayer.make[Environment](
+    ConfigLive.layer,
+    ShortcutsLive.layer,
+    ToolsLive.make,
+    SttpLive.make,
+    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swing),
+    Scope.default
+  )
+
+  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] = {
     (for {
-      config   <- CCConfig.load
-      terminal <- SwingTerminal.create(this)
-      _ <- (for {
-             _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
-                    (for {
-                      _ <- log.debug("Opening emulated terminal...")
-                      _ <- terminal.open
-                      _ <- terminal.activate
-                    } yield ()).ignore
-                  )
-             _ <- log.info(
-                    s"Ready to accept input. Press `${config.keyboard.openShortcut}` to open the terminal."
-                  )
-             _ <- GlobalActions.setupCommon(config.globalActions)
-           } yield ()).toManaged_
-    } yield terminal).use { terminal =>
-      terminal.closePromise.await
-    }.exitCode
+      config   <- Conf.load
+      terminal <- SwingTerminal.create
+      _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
+             (for {
+               _ <- ZIO.logDebug("Opening emulated terminal...")
+               _ <- terminal.open
+               _ <- terminal.activate
+             } yield ()).ignore
+           )
+      _ <- ZIO.logInfo(
+             s"Ready to accept input. Press `${config.keyboard.openShortcut}` to open the terminal."
+           )
+      _ <- GlobalActions.setupCommon(config.globalActions)
+      _ <- terminal.closePromise.await
+    } yield ()).tapErrorCause(c => ZIO.logFatalCause(c)).exitCode
+  }
+
 }

@@ -6,15 +6,12 @@ import commandcenter.config.ConfigParserExtensions.*
 import commandcenter.config.Decoders.*
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.OS
-import commandcenter.CCRuntime.PartialEnv
+import commandcenter.CCRuntime.Env
 import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
 import io.circe.Decoder
-import zio.{RManaged, UIO, ZIO, ZManaged}
-import zio.blocking.*
-import zio.duration.*
-import zio.logging.{log, Logging}
-import zio.system.System
+import zio.*
+import zio.ZIO.attemptBlocking
 
 import java.awt.Font
 import java.io.File
@@ -30,27 +27,27 @@ final case class CCConfig(
 
 object CCConfig {
 
-  def load: RManaged[PartialEnv, CCConfig] =
+  def load: ZIO[Scope & Env, Throwable, CCConfig] =
     for {
-      file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => UIO(new File("application.conf"))).toManaged_
-      _      <- log.debug(s"Loading config file at ${file.getAbsolutePath}").toManaged_
+      file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
+      _      <- ZIO.logDebug(s"Loading config file at ${file.getAbsolutePath}")
       config <- load(file)
     } yield config
 
-  def load(file: File): RManaged[PartialEnv, CCConfig] =
+  def load(file: File): ZIO[Scope & Env, Throwable, CCConfig] =
     for {
-      config   <- effectBlocking(ConfigFactory.parseFile(file)).toManaged_
+      config   <- attemptBlocking(ConfigFactory.parseFile(file))
       ccConfig <- loadFrom(config)
     } yield ccConfig
 
-  def loadFrom(config: TypesafeConfig): RManaged[PartialEnv, CCConfig] =
+  def loadFrom(config: TypesafeConfig): ZIO[Scope & Env, Exception, CCConfig] =
     for {
       commands       <- CommandPlugin.loadAll(config, "commands")
-      aliases        <- ZManaged.fromEither(config.as[Map[String, List[String]]]("aliases"))
-      generalConfig  <- ZManaged.fromEither(config.as[GeneralConfig]("general"))
-      displayConfig  <- ZManaged.fromEither(config.as[DisplayConfig]("display"))
-      keyboardConfig <- ZManaged.fromEither(config.as[KeyboardConfig]("keyboard"))
-      globalActions  <- ZManaged.fromEither(config.get[Vector[GlobalAction]]("globalActions"))
+      aliases        <- ZIO.fromEither(config.as[Map[String, List[String]]]("aliases"))
+      generalConfig  <- ZIO.fromEither(config.as[GeneralConfig]("general"))
+      displayConfig  <- ZIO.fromEither(config.as[DisplayConfig]("display"))
+      keyboardConfig <- ZIO.fromEither(config.as[KeyboardConfig]("keyboard"))
+      globalActions  <- ZIO.fromEither(config.get[Vector[GlobalAction]]("globalActions"))
     } yield CCConfig(
       commands.toVector,
       aliases,
@@ -60,23 +57,16 @@ object CCConfig {
       globalActions.filter(_.shortcut.nonEmpty)
     )
 
-  def validateConfig: ZIO[Blocking with Logging with System, Throwable, Unit] =
+  private def envConfigFile: ZIO[Any, Option[SecurityException], File] =
     for {
-      file <- envConfigFile.orElse(homeConfigFile).catchAll(_ => UIO(new File("application.conf")))
-      _    <- log.debug(s"Validating config file at ${file.getAbsolutePath}")
-      _    <- effectBlocking(ConfigFactory.parseFile(file))
-    } yield ()
-
-  private def envConfigFile: ZIO[System, Option[SecurityException], File] =
-    for {
-      configPathOpt <- zio.system.env("COMMAND_CENTER_CONFIG_PATH").asSomeError
+      configPathOpt <- zio.System.env("COMMAND_CENTER_CONFIG_PATH").asSomeError
       configPath    <- ZIO.fromOption(configPathOpt)
       file = new File(configPath)
     } yield if (file.isDirectory) new File(file, "application.conf") else file
 
-  private def homeConfigFile: ZIO[System, Option[Throwable], File] =
+  private def homeConfigFile: ZIO[Any, Option[Throwable], File] =
     for {
-      userHome <- zio.system.propertyOrElse("user.home", "").asSomeError
+      userHome <- zio.System.propertyOrElse("user.home", "").asSomeError
       potentialFile = new File(userHome, "/.command-center/application.conf")
       file <- ZIO.fromOption(Option.when(potentialFile.exists())(potentialFile))
     } yield file

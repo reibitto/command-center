@@ -1,5 +1,5 @@
-import sbt.*
-import Keys.*
+import sbt._
+import Keys._
 
 import scala.Console
 
@@ -8,19 +8,9 @@ object Build {
 
   val CommandCenterVersion = "0.0.1"
 
-  object Version {
-    val zio = "1.0.15"
-    val enumeratum = "1.7.0"
-    val circe = "0.14.2"
-    val sttp = "3.3.18"
-    val graal = "20.2.0"
-    val swt = "3.120.0"
-    val jna = "5.12.1"
-
-    // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
-    // and build a Linux image (e.g. setting it to s"$graal-java11").
-    val imageGraal: Option[String] = None
-  }
+  // If you set this to None you can test with your locally installed version of Graal. Otherwise it will run in Docker
+  // and build a Linux image (e.g. setting it to s"$graal-java11").
+  val imageGraal: Option[String] = None
 
   lazy val ScalacOptions = Seq(
     "-encoding",
@@ -51,11 +41,7 @@ object Build {
       "-Ywarn-unused:locals", // Warn if a local definition is unused.
       "-Ywarn-unused:privates", // Warn if a private member is unused.
       "-Ywarn-unused:implicits" // Warn if an implicit parameter is unused.
-    ).filter(_ => shouldWarnForUnusedCode) ++
-    Seq(
-      "-opt:l:inline",
-      "-opt-inline-from:**"
-    ).filter(_ => shouldOptimize)
+    ).filter(_ => shouldWarnForUnusedCode)
 
   def defaultSettings(projectName: String) =
     Seq(
@@ -63,18 +49,20 @@ object Build {
       version := CommandCenterVersion,
       Test / javaOptions += "-Duser.timezone=UTC",
       scalacOptions := ScalacOptions,
+      javaOptions += "-Dfile.encoding=UTF-8",
       ThisBuild / scalaVersion := ScalaVersion,
       unmanagedBase := baseDirectory.value / "plugins",
       libraryDependencies ++= Plugins.BaseCompilerPlugins,
       libraryDependencies ++= Seq(
-        "dev.zio" %% "zio-test" % Version.zio % Test,
-        "dev.zio" %% "zio-test-sbt" % Version.zio % Test
+        "dev.zio" %% "zio-test" % V.zio % Test,
+        "dev.zio" %% "zio-test-sbt" % V.zio % Test
       ),
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true,
       resolvers := Resolvers,
       testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
-      Test / fork := true,
+      fork := true,
+      run / connectInput := true,
       Test / logBuffered := false
     )
 
@@ -96,8 +84,6 @@ object Build {
 
     flagValue
   }
-
-  lazy val shouldOptimize: Boolean = compilerFlag("scalac.optimize", false)
 
   lazy val shouldWarnForUnusedCode: Boolean = compilerFlag("scalac.unused.enabled", false)
 

@@ -2,35 +2,28 @@ package commandcenter
 
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.ToolsLive
-import commandcenter.TestRuntime.{TestEnv, TestPartialEnv}
-import sttp.client3.httpclient.zio.HttpClientZioBackend
-import zio.{Layer, ZLayer}
-import zio.duration.*
-import zio.test.{RunnableSpec, TestAspect, TestExecutor, TestRunner}
-import zio.test.environment.testEnvironment
+import commandcenter.CCRuntime.Env
+import zio.*
+import zio.test.{TestEnvironment, ZIOSpec}
 
 import java.util.Locale
 
-trait CommandBaseSpec extends RunnableSpec[TestEnv, Any] {
+trait CommandBaseSpec extends ZIOSpec[TestEnvironment & Env] {
 
-  val testEnv: Layer[Throwable, TestEnv] = {
-    import zio.magic.*
-
-    ZLayer.fromMagic[TestPartialEnv](
-      testEnvironment,
-      CCLogging.make(TerminalType.Test),
-      ToolsLive.make.!,
-      Shortcuts.unsupported,
-      HttpClientZioBackend.layer()
-    ) ++ ConfigFake.layer
-  }
+  override def bootstrap: ZLayer[Scope, Any, TestEnvironment & Env] =
+    zio.test.testEnvironment ++ CommandBaseSpec.testLayer
 
   val defaultCommandContext: CommandContext =
     CommandContext(Locale.ENGLISH, TestTerminal, 1.0)
+}
 
-  override def aspects: List[TestAspect[Nothing, TestEnv, Nothing, Any]] =
-    List(TestAspect.timeoutWarning(60.seconds))
+object CommandBaseSpec {
 
-  override def runner: TestRunner[TestEnv, Any] =
-    TestRunner(TestExecutor.default(testEnv.!))
+  val testLayer: ZLayer[Any, Any, Env] = ZLayer.make[Env](
+    ConfigFake.layer,
+    Shortcuts.unsupported,
+    ToolsLive.make,
+    SttpLive.make,
+    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Test)
+  )
 }

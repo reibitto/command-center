@@ -7,7 +7,7 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.{IO, ZIO}
 
 import scala.util.Try
 
@@ -53,8 +53,8 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
 
 object RadixCommand extends CommandPlugin[RadixCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, RadixCommand] =
+  def make(config: Config): IO[CommandPluginError, RadixCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield RadixCommand(commandNames.getOrElse(List("radix", "base")))
 }

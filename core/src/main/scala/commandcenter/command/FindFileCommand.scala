@@ -6,7 +6,7 @@ import commandcenter.command.CommandError.*
 import commandcenter.util.OS
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
+import zio.{IO, ZIO}
 import zio.process.Command as PCommand
 
 import java.io.File
@@ -44,8 +44,8 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
 
 object FindFileCommand extends CommandPlugin[FindFileCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, FindFileCommand] =
+  def make(config: Config): IO[CommandPluginError, FindFileCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield FindFileCommand(commandNames.getOrElse(List("find")))
 }

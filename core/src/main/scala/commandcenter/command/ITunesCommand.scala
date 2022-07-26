@@ -7,9 +7,8 @@ import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Managed, UIO, ZIO}
+import zio.*
 import zio.cache.{Cache, Lookup}
-import zio.duration.*
 
 import scala.io.Source
 
@@ -68,21 +67,21 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
       parsed = itunesCommand.parse(input.args)
       message <- ZIO
                    .fromEither(parsed)
-                   .foldM(
-                     help => UIO(HelpMessage.formatted(help)),
+                   .foldZIO(
+                     help => ZIO.succeed(HelpMessage.formatted(help)),
                      {
-                       case Some(Opt.Play)          => UIO(fansi.Str(playCommand.header))
-                       case Some(Opt.Pause)         => UIO(fansi.Str(pauseCommand.header))
-                       case Some(Opt.Stop)          => UIO(fansi.Str(stopCommand.header))
-                       case Some(Opt.NextTrack)     => UIO(fansi.Str(nextTrackCommand.header))
-                       case Some(Opt.PreviousTrack) => UIO(fansi.Str(previousTrackCommand.header))
-                       case Some(Opt.Rewind)        => UIO(fansi.Str("Rewind current track to the beginning"))
+                       case Some(Opt.Play)          => ZIO.succeed(fansi.Str(playCommand.header))
+                       case Some(Opt.Pause)         => ZIO.succeed(fansi.Str(pauseCommand.header))
+                       case Some(Opt.Stop)          => ZIO.succeed(fansi.Str(stopCommand.header))
+                       case Some(Opt.NextTrack)     => ZIO.succeed(fansi.Str(nextTrackCommand.header))
+                       case Some(Opt.PreviousTrack) => ZIO.succeed(fansi.Str(previousTrackCommand.header))
+                       case Some(Opt.Rewind)        => ZIO.succeed(fansi.Str("Rewind current track to the beginning"))
                        case Some(Opt.Seek(seconds)) if seconds >= 0 =>
-                         UIO(fansi.Str(s"Skip forward by $seconds seconds"))
-                       case Some(Opt.Seek(seconds)) => UIO(fansi.Str(s"Skip backward by $seconds seconds"))
-                       case Some(Opt.Rate(rating))  => UIO(fansi.Str(s"Rate track $rating stars"))
-                       case Some(Opt.DeleteTrack)   => UIO(fansi.Str(deleteTrackCommand.header))
-                       case Some(Opt.Help)          => UIO(fansi.Str(itunesCommand.showHelp))
+                         ZIO.succeed(fansi.Str(s"Skip forward by $seconds seconds"))
+                       case Some(Opt.Seek(seconds)) => ZIO.succeed(fansi.Str(s"Skip backward by $seconds seconds"))
+                       case Some(Opt.Rate(rating))  => ZIO.succeed(fansi.Str(s"Rate track $rating stars"))
+                       case Some(Opt.DeleteTrack)   => ZIO.succeed(fansi.Str(deleteTrackCommand.header))
+                       case Some(Opt.Help)          => ZIO.succeed(fansi.Str(itunesCommand.showHelp))
                        case None                    =>
                          // TODO: Always show track details at top for every command. May want to also cache this?
                          (for {
@@ -125,16 +124,15 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
 
 object ITunesCommand extends CommandPlugin[ITunesCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ITunesCommand] =
+  def make(config: Config): IO[CommandPluginError, ITunesCommand] =
     for {
       cache <- Cache
                  .make(
                    1024,
                    Duration.Infinity,
-                   Lookup((resource: String) => UIO(Source.fromResource(resource)).map(_.mkString))
+                   Lookup((resource: String) => ZIO.succeed(Source.fromResource(resource)).map(_.mkString))
                  )
-                 .toManaged_
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ITunesCommand(commandNames.getOrElse(List("itunes")), cache)
 
   sealed trait Opt

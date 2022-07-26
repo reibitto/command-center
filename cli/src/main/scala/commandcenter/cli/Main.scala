@@ -3,28 +3,39 @@ package commandcenter.cli
 import commandcenter.*
 import commandcenter.command.*
 import commandcenter.shortcuts.Shortcuts
+import commandcenter.tools.ToolsLive
 import commandcenter.ui.{CliTerminal, EventResult}
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.console.*
 import zio.stream.ZStream
+import zio.Console.printLine
 
-object Main extends CCApp {
-  val terminalType: TerminalType = TerminalType.Cli
-  val shortcutsLayer: ULayer[Has[Shortcuts]] = Shortcuts.unsupported
+object Main extends ZIOApp {
 
-  def uiLoop: RManaged[Env, ExitCode] =
+  override type Environment = Env
+
+  val environmentTag: EnvironmentTag[Environment] = EnvironmentTag[Environment]
+
+  override def bootstrap: ZLayer[Scope, Any, Environment] = ZLayer.make[Environment](
+    ConfigLive.layer,
+    Shortcuts.unsupported,
+    ToolsLive.make,
+    SttpLive.make,
+    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Cli)
+  )
+
+  def uiLoop: RIO[Scope & Env, ExitCode] =
     for {
       terminal <- CliTerminal.createNative
       exitCode <- (for {
                     _ <- terminal.keyHandlersRef.set(terminal.defaultKeyHandlers)
-                    _ <- Task(terminal.screen.startScreen())
+                    _ <- ZIO.attempt(terminal.screen.startScreen())
                     _ <- terminal.render(SearchResults.empty)
                     _ <- ZStream
                            .fromQueue(terminal.renderQueue)
                            .foreach(terminal.render)
                            .forkDaemon
-                    config <- Conf.config
+                    config <- Conf.load
                     _ <- terminal
                            .processEvent(config.commands, config.aliases)
                            .repeatWhile {
@@ -34,25 +45,30 @@ object Main extends CCApp {
                                true
                              case EventResult.Success | EventResult.RemainOpen => true
                            }
-                  } yield ()).exitCode.toManaged_
+                  } yield ()).exitCode
     } yield exitCode
 
-  def run(args: List[String]): URIO[Env, ExitCode] =
-    CliArgs.rootCommand
-      .parse(args)
-      .fold(
-        help => putStrLn(help.toString),
-        {
-          case CliCommand.Standalone =>
-            uiLoop.useNow.tapError { t =>
-              UIO(t.printStackTrace())
-            }
+  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] = {
+    for {
+      args <- ZIOAppArgs.getArgs
+      exitCode <- CliArgs.rootCommand
+                    .parse(args)
+                    .fold(
+                      help => printLine(help.toString),
+                      {
+                        case CliCommand.Standalone =>
+                          uiLoop.tapError { t =>
+                            ZIO.succeed(t.printStackTrace())
+                          }
 
-          case CliCommand.Help =>
-            putStrLn(CliArgs.rootCommand.showHelp)
+                        case CliCommand.Help =>
+                          printLine(CliArgs.rootCommand.showHelp)
 
-          case CliCommand.Version => putStrLn(s"Command Center CLI v${commandcenter.BuildInfo.version}")
-        }
-      )
-      .exitCode
+                        case CliCommand.Version => printLine(s"Command Center CLI v${commandcenter.BuildInfo.version}")
+                      }
+                    )
+                    .exitCode
+    } yield exitCode
+  }
+
 }

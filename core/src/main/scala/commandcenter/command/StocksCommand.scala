@@ -3,11 +3,11 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.command.StocksCommand.{StocksResult, Ticker}
 import commandcenter.CCRuntime.Env
+import commandcenter.Sttp
 import io.circe.{Decoder, Json}
 import sttp.client3.{basicRequest, UriContext}
 import sttp.client3.circe.asJson
-import sttp.client3.httpclient.zio.*
-import zio.{IO, Managed, ZIO}
+import zio.{IO, ZIO}
 
 final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]) extends Command[Unit] {
   val commandType: CommandType = CommandType.StocksCommand
@@ -21,13 +21,16 @@ final case class StocksCommand(commandNames: List[String], tickers: List[Ticker]
       request = basicRequest
                   .get(uri"$stocksUrl$symbols")
                   .response(asJson[Json])
-      response <- send(request)
+      response <- Sttp
+                    .send(request)
                     .map(_.body)
                     .absolve
                     .mapError(CommandError.UnexpectedException)
-      stocks <- IO.fromEither(
-                  response.hcursor.downField("quoteResponse").downField("result").as[List[StocksResult]]
-                ).mapError(CommandError.UnexpectedException)
+      stocks <- ZIO
+                  .fromEither(
+                    response.hcursor.downField("quoteResponse").downField("result").as[List[StocksResult]]
+                  )
+                  .mapError(CommandError.UnexpectedException)
     } yield PreviewResults.fromIterable(stocks.map { stock =>
       Preview.unit
         .score(Scores.high(input.context))
@@ -77,9 +80,9 @@ object StocksCommand extends CommandPlugin[StocksCommand] {
       "regularMarketChangePercent"
     )(StocksResult.apply)
 
-  def make(config: Config): Managed[CommandPluginError, StocksCommand] =
+  def make(config: Config): IO[CommandPluginError, StocksCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
-      tickers      <- config.getManaged[List[Ticker]]("tickers")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      tickers      <- config.getZIO[List[Ticker]]("tickers")
     } yield StocksCommand(commandNames.getOrElse(List("stock", "stocks")), tickers)
 }

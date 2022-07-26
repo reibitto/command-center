@@ -3,8 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{Managed, ZIO}
-import zio.blocking.Blocking
+import zio.{IO, ZIO}
 import zio.process.{Command as PCommand, CommandError as PCommandError}
 
 final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Command[Unit] {
@@ -25,7 +24,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
       PreviewResults.one(Preview.unit.onRun(run).score(Scores.high(input.context)))
     }
 
-  private def runMacOS: ZIO[Blocking, PCommandError, Unit] =
+  private def runMacOS: ZIO[Any, PCommandError, Unit] =
     for {
       showingAll <- PCommand("defaults", "read", "com.apple.finder", "AppleShowAllFiles").string.map(_.trim == "1")
       _ <- PCommand(
@@ -39,7 +38,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
       _ <- PCommand("killall", "Finder").exitCode
     } yield ()
 
-  private def runWindows: ZIO[Blocking, PCommandError, Unit] =
+  private def runWindows: ZIO[Any, PCommandError, Unit] =
     for {
       showingAllFlag <-
         PCommand(
@@ -63,8 +62,8 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
 
 object ToggleHiddenFilesCommand extends CommandPlugin[ToggleHiddenFilesCommand] {
 
-  def make(config: Config): Managed[CommandPluginError, ToggleHiddenFilesCommand] =
+  def make(config: Config): IO[CommandPluginError, ToggleHiddenFilesCommand] =
     for {
-      commandNames <- config.getManaged[Option[List[String]]]("commandNames")
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ToggleHiddenFilesCommand(commandNames.getOrElse(List("hidden")))
 }
