@@ -29,7 +29,7 @@ object Main {
       runtime.unsafe.run {
         (for {
           runtime <- ZIO.runtime[Env]
-          config <- Conf.load
+          config  <- Conf.load
           rawTerminal = new RawSwtTerminal(config)
           terminal <- SwtTerminal.create(runtime, rawTerminal)
           _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>

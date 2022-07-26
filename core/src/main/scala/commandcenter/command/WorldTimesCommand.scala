@@ -9,7 +9,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
-import zio.{IO, Scope, URIO, ZIO}
+import zio.{IO, URIO, ZIO}
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, FormatStyle}

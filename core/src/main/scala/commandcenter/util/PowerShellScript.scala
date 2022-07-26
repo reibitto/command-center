@@ -2,7 +2,6 @@ package commandcenter.util
 
 import zio.cache.Cache
 import zio.process.Command
-import zio.Clock
 import zio.RIO
 
 object PowerShellScript {

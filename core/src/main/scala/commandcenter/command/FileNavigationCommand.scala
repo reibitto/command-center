@@ -64,12 +64,12 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
             Preview(file)
               .score(score)
               .renderedAnsi(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
-              .onRun(ProcessUtil.browseFile(file))
+              .onRun(ProcessUtil.browseToFile(file))
           ) ++ (sameLevel ++ children).map { f =>
             Preview(f)
               .score(score)
               .renderedAnsi(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
-              .onRun(ProcessUtil.browseFile(f))
+              .onRun(ProcessUtil.browseToFile(f))
           },
           pageSize = 10
         )

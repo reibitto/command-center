@@ -1,6 +1,7 @@
 package commandcenter
 
 import commandcenter.event.KeyboardShortcut
+import commandcenter.CCRuntime.Env
 import zio.*
 
 final case class ConfigFake() extends Conf {
@@ -16,7 +17,9 @@ final case class ConfigFake() extends Conf {
     )
   )
 
-  override def load: Task[CCConfig] = config
+  def load: Task[CCConfig] = config
+
+  def reload: RIO[Env, CCConfig] = config
 }
 
 object ConfigFake {

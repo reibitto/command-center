@@ -11,7 +11,7 @@ import commandcenter.util.OS
 import commandcenter.util.WindowManager.fromCString
 import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.Env
-import zio.{IO, Scope, System, Task, ZIO}
+import zio.{IO, System, Task, ZIO}
 import zio.process.Command as PCommand
 
 import java.io.File

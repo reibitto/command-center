@@ -21,8 +21,7 @@ object Main extends ZIOApp {
     Shortcuts.unsupported,
     ToolsLive.make,
     SttpLive.make,
-    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Cli),
-    Scope.default
+    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Cli)
   )
 
   def uiLoop: RIO[Scope & Env, ExitCode] =

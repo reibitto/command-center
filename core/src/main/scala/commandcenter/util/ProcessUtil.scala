@@ -1,6 +1,6 @@
 package commandcenter.util
 
-import zio.{RIO, UIO, ZIO}
+import zio.{RIO, ZIO}
 import zio.process.Command as PCommand
 import zio.ZIO.attemptBlocking
 
@@ -42,7 +42,7 @@ object ProcessUtil {
         )
     }
 
-  def browseFile(file: File): RIO[Any, Unit] =
+  def browseToFile(file: File): RIO[Any, Unit] =
     OS.os match {
       case OS.MacOS =>
         val command =

@@ -5,7 +5,7 @@ import com.sun.jna.platform.win32.WinDef.{HDC, HWND, LPARAM, RECT}
 import com.sun.jna.platform.win32.WinUser.{MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT}
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.Pointer
-import zio.{Clock, RIO, Ref, Task, ZIO}
+import zio.{RIO, Ref, Task, ZIO}
 
 import java.util
 import scala.collection.mutable
