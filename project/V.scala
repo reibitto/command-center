@@ -21,7 +21,7 @@ object V {
 
   val lanterna = "3.2.0-alpha1"
 
-  val prettytime = "5.0.3.Final"
+  val prettytime = "5.0.4.Final"
 
   val scalaReflect = "2.13.8"
 
