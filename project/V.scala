@@ -33,7 +33,7 @@ object V {
 
   val swt = "3.121.0"
 
-  val zio = "2.0.2"
+  val zio = "2.0.4"
 
   val zioCache = "0.2.0"
 
