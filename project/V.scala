@@ -1,5 +1,5 @@
 object V {
-  val circe = "0.14.2"
+  val circe = "0.14.5"
 
   val circeConfig = "0.8.0"
 
