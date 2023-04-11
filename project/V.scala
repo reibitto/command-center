@@ -29,7 +29,7 @@ object V {
 
   val spire = "0.18.0"
 
-  val sttp = "3.8.3"
+  val sttp = "3.8.15"
 
   val swt = "3.123.0"
 
