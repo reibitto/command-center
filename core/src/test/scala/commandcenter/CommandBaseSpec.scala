@@ -10,7 +10,7 @@ import java.util.Locale
 
 trait CommandBaseSpec extends ZIOSpec[TestEnvironment & Env] {
 
-  override def bootstrap: ZLayer[Scope, Any, TestEnvironment & Env] =
+  override def bootstrap: ZLayer[Any, Any, TestEnvironment & Env] =
     zio.test.testEnvironment ++ CommandBaseSpec.testLayer
 
   val defaultCommandContext: CommandContext =

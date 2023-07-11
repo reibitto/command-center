@@ -1,7 +1,7 @@
 package commandcenter
 
 import zio.{LogLevel, ZLayer}
-import zio.logging.{console, LogColor, LogFormat}
+import zio.logging.*
 import zio.logging.LogFormat.*
 
 object CCLogging {
@@ -19,7 +19,7 @@ object CCLogging {
       case TerminalType.Cli => ZLayer.empty.unit // TODO: File logging
 
       case TerminalType.Swing | TerminalType.Swt =>
-        console(coloredFormat, LogLevel.Info)
+        consoleLogger(ConsoleLoggerConfig(coloredFormat, LogFilter.logLevel(LogLevel.Info)))
 
       case TerminalType.Test => ZLayer.empty.unit
     }

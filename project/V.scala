@@ -1,11 +1,11 @@
 object V {
-  val circe = "0.14.2"
+  val circe = "0.14.5"
 
   val circeConfig = "0.10.0"
 
   val decline = "2.4.1"
 
-  val enumeratum = "1.7.0"
+  val enumeratum = "1.7.2"
 
   val fansi = "0.4.0"
 
@@ -29,17 +29,17 @@ object V {
 
   val spire = "0.18.0"
 
-  val sttp = "3.8.3"
+  val sttp = "3.8.16"
 
   val swt = "3.124.0"
 
-  val zio = "2.0.2"
+  val zio = "2.0.15"
 
-  val zioCache = "0.2.0"
+  val zioCache = "0.2.3"
 
-  val zioLogging = "2.1.5"
+  val zioLogging = "2.1.13"
 
-  val zioPrelude = "1.0.0-RC16"
+  val zioPrelude = "1.0.0-RC19"
 
-  val zioProcess = "0.7.1"
+  val zioProcess = "0.7.2"
 }

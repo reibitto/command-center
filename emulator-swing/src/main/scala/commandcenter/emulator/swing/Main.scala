@@ -14,7 +14,7 @@ object Main extends ZIOApp {
 
   val environmentTag: EnvironmentTag[Environment] = EnvironmentTag[Environment]
 
-  override def bootstrap: ZLayer[Scope, Any, Environment] = ZLayer.make[Environment](
+  override def bootstrap: ZLayer[Any, Any, Environment] = ZLayer.make[Environment](
     ConfigLive.layer,
     ShortcutsLive.layer,
     ToolsLive.make,
