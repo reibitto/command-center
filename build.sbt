@@ -24,20 +24,18 @@ lazy val root = project
          |
          |""".stripMargin,
     usefulTasks := Seq(
-      UsefulTask("a", "~compile", "Compile all modules with file-watch enabled"),
-      UsefulTask("b", "fmt", "Run scalafmt on the entire project"),
-      UsefulTask("c", "cli/run", "Run the Command Center CLI client (interactive mode by default)"),
-      UsefulTask("d", "cli/assembly", "Create an executable JAR for running command line utility"),
+      UsefulTask("~compile", "Compile all modules with file-watch enabled"),
+      UsefulTask("fmt", "Run scalafmt on the entire project"),
+      UsefulTask("cli/run", "Run the Command Center CLI client (interactive mode by default)"),
+      UsefulTask("cli/assembly", "Create an executable JAR for running command line utility"),
       UsefulTask(
-        "e",
         "cli/graalvm-native-image:packageBin",
         s"Create a native executable of the CLI client ${scala.Console.RED}(Windows not yet supported)"
       ),
-      UsefulTask("f", "emulator-swt/run", "Run the Command Center emulated terminal (SWT)"),
-      UsefulTask("g", "emulator-swt/assembly", "Create an executable JAR for running in terminal emulator mode (SWT)"),
-      UsefulTask("h", "emulator-swing/run", "Run the Command Center emulated terminal (Swing)"),
+      UsefulTask("emulator-swt/run", "Run the Command Center emulated terminal (SWT)"),
+      UsefulTask("emulator-swt/assembly", "Create an executable JAR for running in terminal emulator mode (SWT)"),
+      UsefulTask("emulator-swing/run", "Run the Command Center emulated terminal (Swing)"),
       UsefulTask(
-        "i",
         "emulator-swing/assembly",
         "Create an executable JAR for running in terminal emulator mode (Swing)"
       )
