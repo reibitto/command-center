@@ -3,7 +3,7 @@ object V {
 
   val circeConfig = "0.8.0"
 
-  val decline = "2.4.0"
+  val decline = "2.4.1"
 
   val enumeratum = "1.7.0"
 
@@ -17,7 +17,7 @@ object V {
 
   val jkeymaster = "1.3"
 
-  val jna = "5.12.1"
+  val jna = "5.13.0"
 
   val lanterna = "3.2.0-alpha1"
 
@@ -31,7 +31,7 @@ object V {
 
   val sttp = "3.8.3"
 
-  val swt = "3.121.0"
+  val swt = "3.123.0"
 
   val zio = "2.0.2"
 
