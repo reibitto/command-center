@@ -24,16 +24,16 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
                     .send(request)
                     .map(_.body)
                     .absolve
-                    .mapError(CommandError.UnexpectedException)
+                    .mapError(CommandError.UnexpectedError(this))
       results <- ZIO
                    .fromEither(
                      response.as[List[HoogleResult]]
                    )
-                   .mapError(CommandError.UnexpectedException)
+                   .mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.fromIterable(results.map { result =>
       Preview.unit
         .onRun(ProcessUtil.openBrowser(result.url))
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .renderedAnsi(
           fansi.Color.Magenta(result.item) ++ " " ++ fansi.Color.Yellow(result.module.name) ++ " " ++ fansi.Color
             .Cyan(result.`package`.name) ++ "\n" ++ result.docs

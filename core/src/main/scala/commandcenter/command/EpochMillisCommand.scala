@@ -17,7 +17,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
-                           Clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.high))
+                           Clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.veryHigh))
                          } else {
                            input.rest.toLongOption match {
                              case Some(millis) =>
@@ -28,13 +28,13 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
                                    .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
 
                                  val score = if (millis < 100000000000L) {
-                                   Scores.high(input.context) * 0.9
+                                   Scores.veryHigh(input.context) * 0.9
                                  } else {
-                                   Scores.high(input.context)
+                                   Scores.veryHigh(input.context)
                                  }
 
                                  (formatted, score)
-                               }.mapError(CommandError.UnexpectedException)
+                               }.mapError(CommandError.UnexpectedError(this))
 
                              case None => ZIO.fail(CommandError.NotApplicable)
                            }

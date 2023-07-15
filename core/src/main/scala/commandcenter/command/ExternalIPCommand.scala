@@ -17,7 +17,7 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
       externalIP <- getExternalIP
     } yield PreviewResults.one(
       Preview(externalIP)
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .onRun(Tools.setClipboard(externalIP))
     )
 
@@ -29,11 +29,12 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
           lines <- PCommand("nslookup", "myip.opendns.com", "resolver1.opendns.com").lines
         } yield lines.filter(_.startsWith("Address:")).drop(1).headOption.map { a =>
           a.drop(prefix.length).trim
-        }).mapError(CommandError.UnexpectedException)
-          .someOrFail(CommandError.InternalError("Could not parse nslookup results"))
+        }).mapError(CommandError.UnexpectedError(this))
+          .someOrFail(CommandError.UnexpectedError.fromMessage(this)("Could not parse nslookup results"))
       case _ =>
         PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
-          .mapBoth(CommandError.UnexpectedException, _.trim)
+          .mapError(CommandError.UnexpectedError(this))
+          .map(_.trim)
     }
 }
 

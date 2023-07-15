@@ -16,7 +16,7 @@ final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       uuid = UUID.randomUUID()
     } yield PreviewResults.one(
-      Preview(uuid).onRun(Tools.setClipboard(uuid.toString)).score(Scores.high(input.context))
+      Preview(uuid).onRun(Tools.setClipboard(uuid.toString)).score(Scores.veryHigh(input.context))
     )
 }
 

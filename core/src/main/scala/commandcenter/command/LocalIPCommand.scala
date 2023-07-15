@@ -26,11 +26,11 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
                           interface.getDisplayName -> address.getHostAddress
                         }
                       }
-                  }.mapError(CommandError.UnexpectedException)
+                  }.mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.fromIterable(localIps.map { case (interfaceName, localIp) =>
       Preview(localIp)
         .onRun(Tools.setClipboard(localIp))
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .rendered(
           Renderer.renderDefault(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp))
         )

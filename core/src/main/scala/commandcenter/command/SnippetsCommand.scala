@@ -21,11 +21,11 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
     } yield PreviewResults.fromIterable(snippets.map { snip =>
       val score =
         if (isPrefixed)
-          Scores.high(searchInput.context)
+          Scores.veryHigh(searchInput.context)
         else {
           // TODO: Implement better scoring algorithm (like Sublime Text fuzzy search)
           val matchScore = LengthScorer.scoreDefault(snip.keyword, snippetSearch)
-          Scores.high(searchInput.context) * matchScore
+          Scores.veryHigh(searchInput.context) * matchScore
         }
 
       (snip, score)

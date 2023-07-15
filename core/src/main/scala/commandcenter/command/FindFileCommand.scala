@@ -36,9 +36,9 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
                         Preview(file)
                           .rendered(Renderer.renderDefault(shortenedPath, "Open file"))
                           .onRun(PCommand("open", file.getAbsolutePath).exitCode.unit)
-                          .score(Scores.high(input.context))
+                          .score(Scores.veryHigh(input.context))
                       }
-          } yield PreviewResults.fromIterable(results)).mapError(UnexpectedException)
+          } yield PreviewResults.fromIterable(results)).mapError(CommandError.UnexpectedError(this))
     } yield result
 }
 

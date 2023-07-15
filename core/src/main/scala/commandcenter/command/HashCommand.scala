@@ -24,10 +24,10 @@ final case class HashCommand(algorithm: String) extends Command[String] {
       (valueToHash, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
       hashResult <- ZIO
                       .fromEither(HashUtil.hash(algorithm)(valueToHash, charset))
-                      .mapError(CommandError.UnexpectedException)
+                      .mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.one(
       Preview(hashResult)
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .onRun(Tools.setClipboard(hashResult))
         .rendered(Renderer.renderDefault(algorithm, hashResult))
     )

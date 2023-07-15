@@ -50,7 +50,8 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
         ZIO
           .fromEither(foobarCommand.parse(input.args))
           .mapBoth(
-            help => CommandError.ShowMessage(Rendered.Ansi(HelpMessage.formatted(help)), Scores.high(input.context)),
+            help =>
+              CommandError.ShowMessage(Rendered.Ansi(HelpMessage.formatted(help)), Scores.veryHigh(input.context)),
             _.getOrElse(Opt.Show)
           )
       run = opt match {
@@ -93,7 +94,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
     } yield PreviewResults.one(
       Preview.unit
         .onRun(run.unit)
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .rendered(Renderer.renderDefault(title, message))
     )
 

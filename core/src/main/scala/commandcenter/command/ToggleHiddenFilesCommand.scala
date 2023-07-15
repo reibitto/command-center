@@ -21,7 +21,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
         case _        => runWindows
       }
 
-      PreviewResults.one(Preview.unit.onRun(run).score(Scores.high(input.context)))
+      PreviewResults.one(Preview.unit.onRun(run).score(Scores.veryHigh(input.context)))
     }
 
   private def runMacOS: ZIO[Any, PCommandError, Unit] =

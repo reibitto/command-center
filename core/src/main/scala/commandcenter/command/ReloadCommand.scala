@@ -15,7 +15,7 @@ final case class ReloadCommand(commandNames: List[String]) extends Command[Unit]
     } yield PreviewResults.one(
       Preview.unit
         .onRun(input.context.terminal.reload.!)
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .rendered(Renderer.renderDefault(title, ""))
     )
 }

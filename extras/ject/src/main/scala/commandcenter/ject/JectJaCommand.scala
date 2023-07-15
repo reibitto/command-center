@@ -30,7 +30,7 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
                      ZIO.fail(CommandError.NotApplicable)
                  }
       searchPattern = SearchPattern(input)
-      wordStream = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedException)
+      wordStream = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.paginated(
       wordStream.map { word =>
         Preview.unit
@@ -38,7 +38,8 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
           .onRun(Tools.setClipboard(input))
           .renderedAnsi(renderWord(word.doc, word.score))
       },
-      pageSize = 10
+      initialPageSize = 10,
+      morePageSize = 30
     )
 
   def renderWord(word: WordDoc, score: Double): fansi.Str = {

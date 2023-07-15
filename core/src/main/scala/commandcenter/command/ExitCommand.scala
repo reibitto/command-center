@@ -15,7 +15,7 @@ final case class ExitCommand(commandNames: List[String]) extends Command[Unit] {
     } yield PreviewResults.one(
       Preview.unit
         .rendered(Renderer.renderDefault(title, ""))
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .runOption(RunOption.Exit)
     )
 }

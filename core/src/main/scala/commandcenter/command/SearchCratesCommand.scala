@@ -30,15 +30,19 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
                          .send(request)
                          .map(_.body)
                          .absolve
-                         .mapBoth(CommandError.UnexpectedException, r => (r.crates, r.meta.nextPage.map(_ => page + 1)))
+                         .mapBoth(
+                           CommandError.UnexpectedError(this),
+                           r => (r.crates, r.meta.nextPage.map(_ => page + 1))
+                         )
                      }
     } yield PreviewResults.paginated(
       cratesStream.map { result =>
         Preview.unit
           .onRun(Tools.setClipboard(result.render))
-          .score(Scores.high(input.context))
+          .score(Scores.veryHigh(input.context))
           .renderedAnsi(result.renderColored)
       },
+      pageSize,
       pageSize
     )
 }

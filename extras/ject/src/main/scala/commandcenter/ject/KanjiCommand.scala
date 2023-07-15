@@ -32,15 +32,16 @@ final case class KanjiCommand(
               .map(_.rest)
           )
           .orElseFail(CommandError.NotApplicable)
-      kanjiStream = luceneIndex.searchByParts(input).mapError(CommandError.UnexpectedException)
+      kanjiStream = luceneIndex.searchByParts(input).mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.paginated(
       kanjiStream.map { kanji =>
         Preview.unit
-          .score(Scores.high(searchInput.context) * 1.5)
+          .score(Scores.veryHigh(searchInput.context) * 1.5)
           .onRun(Tools.setClipboard(kanji.doc.kanji))
           .renderedAnsi(render(kanji.doc, kanji.score))
       },
-      pageSize = 20
+      initialPageSize = 10,
+      morePageSize = 30
     )
 
   // TODO: Consider creating a StrBuilder class to make this nicer

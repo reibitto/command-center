@@ -43,7 +43,7 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
                                 )
     } yield PreviewResults.one(
       Preview(BigDecimal(0.0))
-        .score(Scores.high(searchInput.context))
+        .score(Scores.veryHigh(searchInput.context))
         .rendered(Renderer.renderDefault(helpTitle, message))
     )
 
@@ -56,7 +56,7 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
       Preview(evaluatedValue)
         .renderedAnsi(parameters.format(evaluatedValue))
         .onRun(Tools.setClipboard(parameters.format(evaluatedValue)))
-        .score(Scores.high(searchInput.context))
+        .score(Scores.veryHigh(searchInput.context))
     )
 }
 

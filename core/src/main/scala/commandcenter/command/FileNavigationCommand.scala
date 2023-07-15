@@ -71,7 +71,8 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
               .renderedAnsi(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
               .onRun(ProcessUtil.browseToFile(f))
           },
-          pageSize = 10
+          initialPageSize = 10,
+          morePageSize = 20
         )
       }
     }

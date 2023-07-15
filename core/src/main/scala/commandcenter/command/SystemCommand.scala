@@ -43,7 +43,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
       preview <- ZIO
                    .fromEither(parsed)
                    .fold(
-                     h => Preview.help(h).score(Scores.high(input.context)),
+                     h => Preview.help(h).score(Scores.veryHigh(input.context)),
                      subcommand => {
                        val (rendered, run) = subcommand match {
                          case SystemSubcommand.Sleep =>
@@ -92,7 +92,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
                        }
 
-                       Preview.unit.onRun(run).rendered(rendered).score(Scores.high(input.context))
+                       Preview.unit.onRun(run).rendered(rendered).score(Scores.veryHigh(input.context))
                      }
                    )
     } yield PreviewResults.one(preview)

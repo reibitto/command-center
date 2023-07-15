@@ -17,7 +17,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
-                           Clock.currentTime(TimeUnit.SECONDS).map(time => (time.toString, Scores.high))
+                           Clock.currentTime(TimeUnit.SECONDS).map(time => (time.toString, Scores.veryHigh))
                          } else {
                            input.rest.toLongOption match {
                              case Some(seconds) =>
@@ -28,13 +28,13 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
                                    .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
 
                                  val score = if (seconds < 100000000000L) {
-                                   Scores.high(input.context)
+                                   Scores.veryHigh(input.context)
                                  } else {
-                                   Scores.high(input.context) * 0.9
+                                   Scores.veryHigh(input.context) * 0.9
                                  }
 
                                  (formatted, score)
-                               }.mapError(CommandError.UnexpectedException)
+                               }.mapError(CommandError.UnexpectedError(this))
 
                              case None => ZIO.fail(CommandError.NotApplicable)
                            }

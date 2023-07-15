@@ -16,10 +16,11 @@ object PreviewResults {
 
   def paginated[A](
     stream: ZStream[Env, CommandError, PreviewResult[A]],
-    pageSize: Int,
+    initialPageSize: Int,
+    morePageSize: Int,
     totalRemaining: Option[Long] = None
   ): PreviewResults[A] =
-    PreviewResults.Paginated(stream, pageSize, totalRemaining)
+    PreviewResults.Paginated(stream, initialPageSize, morePageSize, totalRemaining)
 
   final case class Single[A](result: PreviewResult[A]) extends PreviewResults[A]
 
@@ -27,7 +28,8 @@ object PreviewResults {
 
   final case class Paginated[A](
     results: ZStream[Env, CommandError, PreviewResult[A]],
-    pageSize: Int,
+    initialPageSize: Int,
+    morePageSize: Int,
     totalRemaining: Option[Long]
   ) extends PreviewResults[A]
 }

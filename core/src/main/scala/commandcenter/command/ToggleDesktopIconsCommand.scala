@@ -23,7 +23,7 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
         _ <- PCommand("killall", "Finder").exitCode
       } yield ()
 
-      PreviewResults.one(Preview.unit.onRun(run).score(Scores.high(input.context)))
+      PreviewResults.one(Preview.unit.onRun(run).score(Scores.veryHigh(input.context)))
     }
 }
 

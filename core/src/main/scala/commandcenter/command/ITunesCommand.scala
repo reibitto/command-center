@@ -93,7 +93,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
 
                                                 case _ => fansi.Str("not playing")
                                               }
-                         } yield detailsFormatted).mapError(CommandError.UnexpectedException)
+                         } yield detailsFormatted).mapError(CommandError.UnexpectedError(this))
                      }
                    )
     } yield {
@@ -116,7 +116,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
       PreviewResults.one(
         Preview.unit
           .onRun(run)
-          .score(Scores.high(input.context))
+          .score(Scores.veryHigh(input.context))
           .rendered(Renderer.renderDefault(title, message))
       )
     }

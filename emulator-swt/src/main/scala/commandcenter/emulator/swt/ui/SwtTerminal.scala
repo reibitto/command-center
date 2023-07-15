@@ -128,9 +128,9 @@ final case class SwtTerminal(
                   bestMatch = eligibleResults.maxByOption(_.score)
                   _ <- ZIO.foreachDiscard(bestMatch) { preview =>
                          for {
-                           _ <- hide
+                           _ <- hide.when(preview.runOption != RunOption.RemainOpen)
                            _ <- preview.onRunSandboxedLogged.forkDaemon
-                           _ <- reset
+                           _ <- reset.when(preview.runOption != RunOption.RemainOpen)
                          } yield ()
                        }
                 } yield ()
@@ -270,14 +270,15 @@ final case class SwtTerminal(
         for {
           _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
           _ <- preview.moreResults match {
-                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
+                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, _, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
                      _ <- preview.onRunSandboxedLogged.forkDaemon
-                     (results, restStream) <- ZIO.scoped {
-                                                rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
-                                                  .mapError(_.toThrowable)
-                                              }
+                     (results, restStream) <-
+                       Scope.global.use {
+                         rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
+                           .mapError(_.toThrowable)
+                       }
                      _ <- showMore(
                             results,
                             preview.moreResults(
