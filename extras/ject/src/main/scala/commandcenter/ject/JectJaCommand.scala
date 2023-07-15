@@ -38,7 +38,8 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
           .onRun(Tools.setClipboard(input))
           .renderedAnsi(renderWord(word.doc, word.score))
       },
-      pageSize = 10
+      initialPageSize = 10,
+      morePageSize = 30
     )
 
   def renderWord(word: WordDoc, score: Double): fansi.Str = {

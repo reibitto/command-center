@@ -1,12 +1,8 @@
 package commandcenter.command
 
-import cats.syntax.apply.*
-import com.monovore.decline
-import com.monovore.decline.Opts
 import com.typesafe.config.Config
-import commandcenter.command.CommonArgs.*
 import commandcenter.event.KeyboardShortcut
-import commandcenter.util.{AppleScript, OS, PowerShellScript}
+import commandcenter.util.{OS, PowerShellScript}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
@@ -17,6 +13,7 @@ import scala.io.Source
 final case class SpeakCommand(
   commandNames: List[String],
   override val shortcuts: Set[KeyboardShortcut] = Set.empty,
+  voice: String,
   cache: Cache[String, Nothing, String]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SpeakCommand
@@ -39,7 +36,7 @@ final case class SpeakCommand(
       _         <- ZIO.fail(CommandError.NotApplicable).when(speakText.isEmpty)
     } yield {
       val run = for {
-        _ <- speakFn("Microsoft Haruka Desktop", speakText) // TODO:: Choose voice properly
+        _ <- speakFn(voice, speakText)
       } yield ()
 
       PreviewResults.one(
@@ -66,9 +63,11 @@ object SpeakCommand extends CommandPlugin[SpeakCommand] {
                  )
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
       shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
+      voice        <- config.getZIO[Option[String]]("voice")
     } yield SpeakCommand(
       commandNames.getOrElse(List("speak", "say")),
       shortcuts.getOrElse(Set.empty),
+      voice.getOrElse(""),
       cache
     )
 

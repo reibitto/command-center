@@ -86,9 +86,9 @@ object Command {
                       .flatMap {
                         case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
                         case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
-                        case p @ PreviewResults.Paginated(rs, pageSize, totalRemaining) =>
+                        case p @ PreviewResults.Paginated(rs, pageSize, _, totalRemaining) =>
                           for {
-                            (results, restStream) <- ZIO.scoped {
+                            (results, restStream) <- Scope.global.use {
                                                        rs.peel(ZSink.take[PreviewResult[A]](pageSize))
                                                      }
                           } yield results match {

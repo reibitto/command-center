@@ -178,12 +178,12 @@ final case class CliTerminal[T <: Terminal](
     ZIO.foreach(results.previews.lift(cursorIndex)) { preview =>
       for {
         _ <- preview.moreResults match {
-               case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, pageSize, totalRemaining))
+               case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, _, pageSize, totalRemaining))
                    if totalRemaining.forall(_ > 0) =>
                  for {
                    // TODO: Log defects (need file logging for this)
                    _ <- preview.onRun.absorb.forkDaemon
-                   (results, restStream) <- ZIO.scoped {
+                   (results, restStream) <- Scope.global.use {
                                               rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
                                             }
                    _ <- showMore(

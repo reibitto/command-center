@@ -42,6 +42,7 @@ final case class SearchCratesCommand(commandNames: List[String]) extends Command
           .score(Scores.veryHigh(input.context))
           .renderedAnsi(result.renderColored)
       },
+      pageSize,
       pageSize
     )
 }

@@ -27,7 +27,7 @@ final case class ConfigLive(configRef: Ref[Option[ReloadableConfig]]) extends Co
 
   def load: RIO[Scope & Env, CCConfig] =
     (for {
-      (release, config) <- CCConfig.load.withEarlyRelease.provideSome[Env](ZLayer.succeed(Scope.global))
+      (release, config) <- Scope.global.use(CCConfig.load.withEarlyRelease)
       _                 <- configRef.set(Some(ReloadableConfig(config, release)))
     } yield config).withFinalizer { _ =>
       ZIO.whenCaseZIO(configRef.get) { case Some(reloadableConfig) =>
@@ -40,7 +40,7 @@ final case class ConfigLive(configRef: Ref[Option[ReloadableConfig]]) extends Co
       _ <- ZIO.whenCaseZIO(configRef.get) { case Some(reloadableConfig) =>
              reloadableConfig.release
            }
-      (release, config) <- CCConfig.load.withEarlyRelease.provideSome(ZLayer.succeed(Scope.global))
+      (release, config) <- Scope.global.use(CCConfig.load.withEarlyRelease)
       _                 <- configRef.set(Some(ReloadableConfig(config, release)))
     } yield config
   }

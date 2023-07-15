@@ -40,7 +40,8 @@ final case class KanjiCommand(
           .onRun(Tools.setClipboard(kanji.doc.kanji))
           .renderedAnsi(render(kanji.doc, kanji.score))
       },
-      pageSize = 20
+      initialPageSize = 10,
+      morePageSize = 30
     )
 
   // TODO: Consider creating a StrBuilder class to make this nicer
