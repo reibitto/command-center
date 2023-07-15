@@ -17,13 +17,13 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       // TODO: Consider adding more info than just the title. Like "File Explorer" and so on.
       windows <- WindowManager.topLevelWindows.mapBoth(
-                   CommandError.UnexpectedException,
+                   CommandError.UnexpectedError(this),
                    _.tail.filter(_.title.contains(input.rest))
                  )
     } yield PreviewResults.fromIterable(windows.map { w =>
       Preview.unit
         .onRun(WindowManager.giveWindowFocus(w.window))
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .renderedAnsi(fansi.Color.Cyan(w.title))
     })
 }

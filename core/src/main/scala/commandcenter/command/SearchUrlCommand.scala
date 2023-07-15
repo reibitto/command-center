@@ -30,7 +30,7 @@ final case class SearchUrlCommand(
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
       } yield PreviewResults.one(
         Preview.unit
-          .score(Scores.high * localeBoost)
+          .score(Scores.veryHigh * localeBoost)
           .onRun(ProcessUtil.openBrowser(url))
           .rendered(Renderer.renderDefault(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
       )

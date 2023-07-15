@@ -14,7 +14,7 @@ final case class TerminalCommand(commandNames: List[String]) extends Command[Uni
     for {
       input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
     } yield PreviewResults.one(
-      Preview.unit.rendered(Renderer.renderDefault("Terminal", input.rest)).score(Scores.high(input.context))
+      Preview.unit.rendered(Renderer.renderDefault("Terminal", input.rest)).score(Scores.veryHigh(input.context))
     )
 }
 

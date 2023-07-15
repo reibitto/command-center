@@ -16,7 +16,7 @@ final case class StrokeOrderCommand(commandNames: List[String]) extends Command[
       input <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
     } yield PreviewResults.one(
       Preview.unit
-        .score(Scores.high(searchInput.context))
+        .score(Scores.veryHigh(searchInput.context))
         .onRun(Tools.setClipboard(input.rest))
         .rendered(
           Rendered.Styled(

@@ -18,7 +18,7 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
     } yield PreviewResults.one(
-      Preview.unit.onRun(pCommand.exitCode.unit).score(Scores.high(input.context))
+      Preview.unit.onRun(pCommand.exitCode.unit).score(Scores.veryHigh(input.context))
     )
 
   private def pCommand: PCommand =

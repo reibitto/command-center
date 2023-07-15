@@ -110,7 +110,7 @@ object Command {
                             case chunk => chunk
                           }
                       }
-                      .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedException(t)))
+                      .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
                       .either
 
                   }
@@ -129,8 +129,11 @@ object Command {
         SearchResults(input, results, errors)
     }).tap { r =>
       ZIO.foreachDiscard(r.errors) {
-        case CommandError.UnexpectedException(t) =>
-          ZIO.logWarningCause(s"Command encountered an unexpected exception with input: $input", Cause.die(t))
+        case CommandError.UnexpectedError(t, source) =>
+          ZIO.logWarningCause(
+            s"Command `${source.commandType}` encountered an unexpected exception with input: $input",
+            Cause.die(t)
+          )
 
         case _ => ZIO.unit
       }
@@ -172,7 +175,7 @@ object Command {
                    case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
                    case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
                    case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
-                   case CommandType.StocksCommand             => StocksCommand.make(config)
+                   case CommandType.SpeakCommand              => SpeakCommand.make(config)
                    case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
                    case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
                    case CommandType.SystemCommand             => SystemCommand.make(config)

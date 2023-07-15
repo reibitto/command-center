@@ -37,7 +37,7 @@ final case class SuspendProcessCommand(commandNames: List[String], suspendShortc
       PreviewResults.one(
         Preview.unit
           .onRun(run.!)
-          .score(Scores.high(input.context))
+          .score(Scores.veryHigh(input.context))
           .rendered(Renderer.renderDefault(title, message))
       )
     }

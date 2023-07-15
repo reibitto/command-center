@@ -41,7 +41,7 @@ final case class TemperatureCommand() extends Command[Double] {
       temperatureFormatted = f"$temperature%.1f $unit"
     } yield PreviewResults.one(
       Preview(temperature)
-        .score(Scores.high(searchInput.context))
+        .score(Scores.veryHigh(searchInput.context))
         .rendered(Renderer.renderDefault(title, temperatureFormatted))
         .onRun(Tools.setClipboard(temperatureFormatted))
     )

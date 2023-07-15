@@ -20,7 +20,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input        <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-      stringOutput <- PCommand("lsappinfo", "visibleProcessList").string.mapError(CommandError.UnexpectedException)
+      stringOutput <- PCommand("lsappinfo", "visibleProcessList").string.mapError(CommandError.UnexpectedError(this))
       searchString = input.rest.toLowerCase
       processInfo = visibleProcessRegex
                       .findAllMatchIn(stringOutput)
@@ -45,7 +45,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
       Preview.unit
         .onRun(run)
         .rendered(Renderer.renderDefault(processName, "Copy PID to clipboard"))
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
     })
 }
 

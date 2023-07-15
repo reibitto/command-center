@@ -30,19 +30,19 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
                     .send(request)
                     .map(_.body)
                     .absolve
-                    .mapError(CommandError.UnexpectedException)
+                    .mapError(CommandError.UnexpectedError(this))
       artifacts <- ZIO
                      .fromEither(
                        response.hcursor.downField("response").downField("docs").as[List[MavenArtifact]]
                      )
-                     .mapError(CommandError.UnexpectedException)
+                     .mapError(CommandError.UnexpectedError(this))
       scoredArtifacts = bucket(artifacts, Some(input.rest)).take(20)
     } yield PreviewResults.fromIterable(scoredArtifacts.map { artifact =>
       val renderedCoordinates = artifact.render
 
       Preview(renderedCoordinates)
         .onRun(Tools.setClipboard(renderedCoordinates))
-        .score(Scores.high(input.context))
+        .score(Scores.veryHigh(input.context))
         .renderedAnsi(artifact.renderColored)
     })
 

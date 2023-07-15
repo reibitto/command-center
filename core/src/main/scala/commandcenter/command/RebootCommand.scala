@@ -18,12 +18,12 @@ final case class RebootCommand(commandNames: List[String]) extends Command[Unit]
       Vector(
         Preview.unit
           .onRun(RebootCommand.reboot)
-          .score(Scores.high(input.context))
+          .score(Scores.veryHigh(input.context))
           .rendered(Renderer.renderDefault(title, "Restart your computer"))
       ) ++ Vector(
         Preview.unit
           .onRun(RebootCommand.rebootIntoBios)
-          .score(Scores.high(input.context))
+          .score(Scores.veryHigh(input.context))
           .rendered(
             Renderer.renderDefault(s"$title (into BIOS setup)", "Restart your computer and enter BIOS upon startup")
           )

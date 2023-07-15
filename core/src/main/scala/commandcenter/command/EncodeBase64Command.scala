@@ -22,7 +22,7 @@ final case class EncodeBase64Command(commandNames: List[String]) extends Command
       (valueToEncode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
       encoded = Base64.getEncoder.encodeToString(valueToEncode.getBytes(charset))
     } yield PreviewResults.one(
-      Preview(encoded).onRun(Tools.setClipboard(encoded)).score(Scores.high(input.context))
+      Preview(encoded).onRun(Tools.setClipboard(encoded)).score(Scores.veryHigh(input.context))
     )
 }
 

@@ -28,7 +28,7 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
       preview <- ZIO
                    .fromEither(parsed)
                    .fold(
-                     h => Preview.help(h).score(Scores.high(input.context)),
+                     h => Preview.help(h).score(Scores.veryHigh(input.context)),
                      { case (fromRadixOpt, toRadixOpt, number) =>
                        val fromRadix = fromRadixOpt.getOrElse(10)
                        val toRadix = toRadixOpt.getOrElse(10)
@@ -39,11 +39,11 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
                          val message = fansi.Str(s"$formatted")
 
                          Preview.unit
-                           .score(Scores.high(input.context))
+                           .score(Scores.veryHigh(input.context))
                            .onRun(Tools.setClipboard(message.plainText))
                            .rendered(Renderer.renderDefault(title, message))
                        }.getOrElse {
-                         Preview.help(Help.fromCommand(radixCommand)).score(Scores.high(input.context))
+                         Preview.help(Help.fromCommand(radixCommand)).score(Scores.veryHigh(input.context))
                        }
                      }
                    )

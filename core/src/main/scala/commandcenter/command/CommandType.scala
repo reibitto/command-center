@@ -35,7 +35,7 @@ object CommandType extends Enum[CommandType] {
   case object SearchMavenCommand extends CommandType
   case object SearchUrlCommand extends CommandType
   case object SnippetsCommand extends CommandType
-  case object StocksCommand extends CommandType
+  case object SpeakCommand extends CommandType
   case object SuspendProcessCommand extends CommandType
   case object SwitchWindowCommand extends CommandType
   case object SystemCommand extends CommandType

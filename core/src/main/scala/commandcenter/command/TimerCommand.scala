@@ -16,7 +16,7 @@ import scala.io.Source
 final case class TimerCommand(commandNames: List[String], cache: Cache[String, Nothing, String]) extends Command[Unit] {
   // TODO: Add option to list active timers and also one for canceling them
 
-  val commandType: CommandType = CommandType.OpacityCommand
+  val commandType: CommandType = CommandType.TimerCommand
   val title: String = "Timer"
 
   val messageOpt = Opts.option[String]("message", "Message to display when timer is done", "m").orNone
@@ -51,7 +51,7 @@ final case class TimerCommand(commandNames: List[String], cache: Cache[String, N
       PreviewResults.one(
         Preview.unit
           .onRun(run)
-          .score(Scores.high(input.context))
+          .score(Scores.veryHigh(input.context))
           .rendered(Renderer.renderDefault(title, message))
       )
     }

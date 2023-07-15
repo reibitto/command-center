@@ -57,7 +57,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
       PreviewResults.one(
         Preview.unit
           .onRun(run)
-          .score(Scores.high(input.context))
+          .score(Scores.veryHigh(input.context))
           .rendered(Renderer.renderDefault("Lorem Ipsum", message))
       )
     }

@@ -30,7 +30,7 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
                      ZIO.fail(CommandError.NotApplicable)
                  }
       searchPattern = SearchPattern(input)
-      wordStream = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedException)
+      wordStream = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.paginated(
       wordStream.map { word =>
         Preview.unit

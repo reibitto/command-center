@@ -128,9 +128,9 @@ final case class SwtTerminal(
                   bestMatch = eligibleResults.maxByOption(_.score)
                   _ <- ZIO.foreachDiscard(bestMatch) { preview =>
                          for {
-                           _ <- hide
+                           _ <- hide.when(preview.runOption != RunOption.RemainOpen)
                            _ <- preview.onRunSandboxedLogged.forkDaemon
-                           _ <- reset
+                           _ <- reset.when(preview.runOption != RunOption.RemainOpen)
                          } yield ()
                        }
                 } yield ()

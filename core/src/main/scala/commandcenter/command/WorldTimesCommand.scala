@@ -85,7 +85,7 @@ final case class WorldTimesCommand(
       val time = dateTimeFrom.withZoneSameInstant(zone.zoneId)
 
       Preview.unit
-        .score(Scores.high(context))
+        .score(Scores.veryHigh(context))
         .rendered(
           Rendered.Ansi(
             fansi.Color.Cyan(s"${zone.displayName}") ++ fansi.Str(" ") ++ fansi.Str(dateTimeDetailedFormat.format(time))
@@ -102,7 +102,7 @@ final case class WorldTimesCommand(
 
     PreviewResults.one(
       Preview.unit
-        .score(Scores.high(context))
+        .score(Scores.veryHigh(context))
         .rendered(
           Rendered.Ansi(
             fansi.Color.Cyan(s"${dateTimeWithZoneFormat.format(dateTimeFrom)}") ++ fansi.Str(" is ") ++
@@ -119,7 +119,7 @@ final case class WorldTimesCommand(
       _ = times.map(time => dateTimeFormat.format(time.dateTime))
     } yield PreviewResults.fromIterable(times.map { time =>
       Preview.unit
-        .score(Scores.high(context))
+        .score(Scores.veryHigh(context))
         .rendered(
           Rendered.Ansi(
             fansi.Color.Cyan(time.displayName) ++ fansi.Str(" ") ++ fansi.Str(dateTimeFormat.format(time.dateTime))

@@ -15,12 +15,17 @@ object CommandError {
     override def toThrowable: Throwable = new Exception(s"Show message: $rendered")
   }
 
-  final case class UnexpectedException(throwable: Throwable) extends CommandError {
+  final case class UnexpectedError[A](throwable: Throwable, source: Command[A]) extends CommandError {
     def toThrowable: Throwable = throwable
   }
 
-  final case class InternalError(message: String) extends CommandError {
-    def toThrowable: Throwable = new Exception(message)
+  object UnexpectedError {
+
+    def apply[A](source: Command[A])(throwable: Throwable): UnexpectedError[A] =
+      UnexpectedError(throwable, source)
+
+    def fromMessage[A](source: Command[A])(message: String): UnexpectedError[A] =
+      UnexpectedError(new Exception(message), source)
   }
 
   final case class CliError(help: Help) extends CommandError {
@@ -30,4 +35,5 @@ object CommandError {
   case object NotApplicable extends CommandError {
     override def toThrowable: Throwable = new Exception("Not applicable")
   }
+
 }
