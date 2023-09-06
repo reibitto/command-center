@@ -49,6 +49,9 @@ object ProcessUtil {
                  }
         } yield pid
 
+      case OS.Windows =>
+        WindowManager.frontWindow.map(_.pid)
+
       case _ =>
         ZIO.fail(
           new UnsupportedOperationException(s"Getting the frontmost process's PID not supported yet for ${OS.os}")

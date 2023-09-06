@@ -8,6 +8,7 @@ import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.{Color, Str}
 import zio.*
 
 import java.net.URLEncoder
@@ -39,7 +40,7 @@ final case class SearchUrlCommand(
         Preview.unit
           .score(Scores.veryHigh * localeBoost)
           .onRun(openBrowser(input.rest))
-          .rendered(Renderer.renderDefault(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
+          .rendered(Renderer.renderDefault(title, Str("Search for ") ++ Color.Magenta(input.rest)))
       )
 
     def rawInputPreview: ZIO[Env, CommandError, PreviewResults[Unit]] =
@@ -52,7 +53,7 @@ final case class SearchUrlCommand(
               .score(Scores.high * 0.35)
               .onRun(openBrowser(searchInput.input))
               .rendered(
-                Renderer.renderDefault(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(searchInput.input))
+                Renderer.renderDefault(title, Str("Search for ") ++ Color.Magenta(searchInput.input))
               )
           )
         )

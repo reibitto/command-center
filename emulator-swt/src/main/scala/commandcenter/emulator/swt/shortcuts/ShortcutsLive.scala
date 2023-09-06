@@ -27,6 +27,7 @@ final case class ShortcutsLive(provider: Provider) extends Shortcuts {
                }
              )
            }
+      _ <- ZIO.logDebug(s"Registered global shortcut: $shortcut")
     } yield ()
 }
 

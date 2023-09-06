@@ -5,6 +5,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Str
 import zio.{IO, ZIO}
 
 final case class OpacityCommand(commandNames: List[String]) extends Command[Unit] {
@@ -22,7 +23,7 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
       parsed = opacityCommand.parse(input.args)
       message <- ZIO
                    .fromEither(parsed)
-                   .fold(HelpMessage.formatted, o => fansi.Str(s"Set opacity to $o"))
+                   .fold(HelpMessage.formatted, o => Str(s"Set opacity to $o"))
       currentOpacity <- input.context.terminal.opacity.mapError(CommandError.UnexpectedError(this))
     } yield {
       val run = for {

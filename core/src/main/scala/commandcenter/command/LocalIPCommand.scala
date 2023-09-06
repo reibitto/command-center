@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.{Color, Str}
 import zio.{IO, ZIO}
 import zio.ZIO.attemptBlocking
 
@@ -32,7 +33,7 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
         .onRun(Tools.setClipboard(localIp))
         .score(Scores.veryHigh(input.context))
         .rendered(
-          Renderer.renderDefault(title, fansi.Str(interfaceName) ++ fansi.Str(": ") ++ fansi.Color.Magenta(localIp))
+          Renderer.renderDefault(title, Str(interfaceName) ++ Str(": ") ++ Color.Magenta(localIp))
         )
     })
 }

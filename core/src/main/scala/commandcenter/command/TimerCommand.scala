@@ -8,6 +8,7 @@ import commandcenter.command.CommonArgs.*
 import commandcenter.util.{AppleScript, OS, PowerShellScript}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Str
 import zio.*
 import zio.cache.{Cache, Lookup}
 
@@ -39,7 +40,7 @@ final case class TimerCommand(commandNames: List[String], cache: Cache[String, N
       parsed = timerCommand.parse(input.args)
       message <- ZIO
                    .fromEither(parsed)
-                   .fold(HelpMessage.formatted, f => fansi.Str(s"Reminder after ${f._1.render}"))
+                   .fold(HelpMessage.formatted, f => Str(s"Reminder after ${f._1.render}"))
     } yield {
       val run = for {
         (delay, timerMessageOpt) <- ZIO.fromEither(parsed).mapError(RunError.CliError)

@@ -5,6 +5,7 @@ import commandcenter.command.SearchCratesCommand.CrateResults
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import commandcenter.Sttp
+import fansi.{Color, Str}
 import io.circe.Decoder
 import sttp.client3.*
 import sttp.client3.circe.*
@@ -79,12 +80,12 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
     def render: String =
       s"""$name = "$maxVersion""""
 
-    def renderColored: fansi.Str =
-      fansi.Str(
-        fansi.Color.Cyan(name),
-        fansi.Color.LightGray(" = "),
-        fansi.Color.Green(s""""$maxVersion""""),
-        fansi.Color.LightGray(s" # $descriptionSanitized")
+    def renderColored: Str =
+      Str(
+        Color.Cyan(name),
+        Color.LightGray(" = "),
+        Color.Green(s""""$maxVersion""""),
+        Color.LightGray(s" # $descriptionSanitized")
       )
   }
 

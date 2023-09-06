@@ -11,6 +11,7 @@ import commandcenter.util.OS
 import commandcenter.util.WindowManager.fromCString
 import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.Env
+import fansi.{Color, Str}
 import zio.{IO, System, Task, ZIO}
 import zio.process.Command as PCommand
 
@@ -75,20 +76,20 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
               case Opt.Help => ZIO.unit
             }
       message <- opt match {
-                   case Opt.Play          => ZIO.succeed(fansi.Str(playCommand.header))
-                   case Opt.Pause         => ZIO.succeed(fansi.Str(pauseCommand.header))
-                   case Opt.Stop          => ZIO.succeed(fansi.Str(stopCommand.header))
-                   case Opt.NextTrack     => ZIO.succeed(fansi.Str(nextTrackCommand.header))
-                   case Opt.PreviousTrack => ZIO.succeed(fansi.Str(previousTrackCommand.header))
-                   case Opt.Rewind        => ZIO.succeed(fansi.Str("Rewind current track to the beginning"))
-                   case Opt.DeleteTrack   => ZIO.succeed(fansi.Str(deleteTrackCommand.header))
-                   case Opt.Help          => ZIO.succeed(fansi.Str(foobarCommand.showHelp))
+                   case Opt.Play          => ZIO.succeed(Str(playCommand.header))
+                   case Opt.Pause         => ZIO.succeed(Str(pauseCommand.header))
+                   case Opt.Stop          => ZIO.succeed(Str(stopCommand.header))
+                   case Opt.NextTrack     => ZIO.succeed(Str(nextTrackCommand.header))
+                   case Opt.PreviousTrack => ZIO.succeed(Str(previousTrackCommand.header))
+                   case Opt.Rewind        => ZIO.succeed(Str("Rewind current track to the beginning"))
+                   case Opt.DeleteTrack   => ZIO.succeed(Str(deleteTrackCommand.header))
+                   case Opt.Help          => ZIO.succeed(Str(foobarCommand.showHelp))
                    case Opt.Show =>
                      for {
                        trackInfo <- trackInfoFromWindow.catchAll(_ => ZIO.none)
                      } yield trackInfo
-                       .map(t => fansi.Color.Magenta(t))
-                       .getOrElse(fansi.Str("Show window"))
+                       .map(t => Color.Magenta(t))
+                       .getOrElse(Str("Show window"))
 
                  }
     } yield PreviewResults.one(

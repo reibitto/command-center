@@ -3,6 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.{OS, WindowManager}
 import commandcenter.CCRuntime.Env
+import fansi.Color
 import zio.{IO, ZIO}
 
 final case class SwitchWindowCommand(commandNames: List[String]) extends Command[Unit] {
@@ -22,9 +23,9 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
                  )
     } yield PreviewResults.fromIterable(windows.map { w =>
       Preview.unit
-        .onRun(WindowManager.giveWindowFocus(w.window))
+        .onRun(WindowManager.giveWindowFocus(w.windowHandle))
         .score(Scores.veryHigh(input.context))
-        .renderedAnsi(fansi.Color.Cyan(w.title))
+        .renderedAnsi(Color.Cyan(w.title))
     })
 }
 

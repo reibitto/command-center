@@ -28,3 +28,4 @@ local.conf
 **/plugins/*.jar
 node_modules
 Scratch.scala
+Playground.scala

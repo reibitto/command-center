@@ -7,6 +7,7 @@ import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.{Color, Str}
 import zio.*
 import zio.cache.{Cache, Lookup}
 
@@ -70,28 +71,28 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
                    .foldZIO(
                      help => ZIO.succeed(HelpMessage.formatted(help)),
                      {
-                       case Some(Opt.Play)          => ZIO.succeed(fansi.Str(playCommand.header))
-                       case Some(Opt.Pause)         => ZIO.succeed(fansi.Str(pauseCommand.header))
-                       case Some(Opt.Stop)          => ZIO.succeed(fansi.Str(stopCommand.header))
-                       case Some(Opt.NextTrack)     => ZIO.succeed(fansi.Str(nextTrackCommand.header))
-                       case Some(Opt.PreviousTrack) => ZIO.succeed(fansi.Str(previousTrackCommand.header))
-                       case Some(Opt.Rewind)        => ZIO.succeed(fansi.Str("Rewind current track to the beginning"))
+                       case Some(Opt.Play)          => ZIO.succeed(Str(playCommand.header))
+                       case Some(Opt.Pause)         => ZIO.succeed(Str(pauseCommand.header))
+                       case Some(Opt.Stop)          => ZIO.succeed(Str(stopCommand.header))
+                       case Some(Opt.NextTrack)     => ZIO.succeed(Str(nextTrackCommand.header))
+                       case Some(Opt.PreviousTrack) => ZIO.succeed(Str(previousTrackCommand.header))
+                       case Some(Opt.Rewind)        => ZIO.succeed(Str("Rewind current track to the beginning"))
                        case Some(Opt.Seek(seconds)) if seconds >= 0 =>
-                         ZIO.succeed(fansi.Str(s"Skip forward by $seconds seconds"))
-                       case Some(Opt.Seek(seconds)) => ZIO.succeed(fansi.Str(s"Skip backward by $seconds seconds"))
-                       case Some(Opt.Rate(rating))  => ZIO.succeed(fansi.Str(s"Rate track $rating stars"))
-                       case Some(Opt.DeleteTrack)   => ZIO.succeed(fansi.Str(deleteTrackCommand.header))
-                       case Some(Opt.Help)          => ZIO.succeed(fansi.Str(itunesCommand.showHelp))
+                         ZIO.succeed(Str(s"Skip forward by $seconds seconds"))
+                       case Some(Opt.Seek(seconds)) => ZIO.succeed(Str(s"Skip backward by $seconds seconds"))
+                       case Some(Opt.Rate(rating))  => ZIO.succeed(Str(s"Rate track $rating stars"))
+                       case Some(Opt.DeleteTrack)   => ZIO.succeed(Str(deleteTrackCommand.header))
+                       case Some(Opt.Help)          => ZIO.succeed(Str(itunesCommand.showHelp))
                        case None                    =>
                          // TODO: Always show track details at top for every command. May want to also cache this?
                          (for {
                            details <- trackDetailsFn
                            detailsFormatted = details.trim.split("\t") match {
                                                 case Array(trackName, artist, album, rating) =>
-                                                  fansi.Color.Magenta(trackName) ++ " " ++ artist ++ " " ++
-                                                    fansi.Color.Cyan(album) ++ " " ++ fansi.Color.Yellow(rating)
+                                                  Color.Magenta(trackName) ++ " " ++ artist ++ " " ++
+                                                    Color.Cyan(album) ++ " " ++ Color.Yellow(rating)
 
-                                                case _ => fansi.Str("not playing")
+                                                case _ => Str("not playing")
                                               }
                          } yield detailsFormatted).mapError(CommandError.UnexpectedError(this))
                      }

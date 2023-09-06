@@ -32,4 +32,16 @@ object PreviewResults {
     morePageSize: Int,
     totalRemaining: Option[Long]
   ) extends PreviewResults[A]
+
+  object Paginated {
+
+    def fromIterable[A](
+      results: Iterable[PreviewResult[A]],
+      initialPageSize: Int,
+      morePageSize: Int,
+      totalRemaining: Option[Long] = None
+    ): Paginated[A] = {
+      PreviewResults.Paginated(ZStream.fromIterable(results), initialPageSize, morePageSize, totalRemaining)
+    }
+  }
 }

@@ -5,6 +5,7 @@ import commandcenter.command.HoogleCommand.HoogleResult
 import commandcenter.util.ProcessUtil
 import commandcenter.CCRuntime.Env
 import commandcenter.Sttp
+import fansi.Color
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
@@ -35,8 +36,8 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
         .onRun(ProcessUtil.openBrowser(result.url))
         .score(Scores.veryHigh(input.context))
         .renderedAnsi(
-          fansi.Color.Magenta(result.item) ++ " " ++ fansi.Color.Yellow(result.module.name) ++ " " ++ fansi.Color
-            .Cyan(result.`package`.name) ++ "\n" ++ result.docs
+          Color.Magenta(result.item) ++ " " ++ Color.Yellow(result.module.name) ++ " " ++
+            Color.Cyan(result.`package`.name) ++ "\n" ++ result.docs
         )
     })
 }

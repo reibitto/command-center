@@ -7,6 +7,7 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Str
 import zio.{IO, ZIO}
 
 import scala.util.Try
@@ -36,7 +37,7 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
                        Try {
                          val n = java.lang.Long.valueOf(number, fromRadix)
                          val formatted = java.lang.Long.toString(n, toRadix)
-                         val message = fansi.Str(s"$formatted")
+                         val message = Str(s"$formatted")
 
                          Preview.unit
                            .score(Scores.veryHigh(input.context))

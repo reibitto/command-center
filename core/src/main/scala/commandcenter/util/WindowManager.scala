@@ -1,11 +1,11 @@
 package commandcenter.util
 
-import com.sun.jna.platform.win32.{User32, WinUser}
+import com.sun.jna.platform.win32.{Kernel32, User32, WinNT, WinUser}
 import com.sun.jna.platform.win32.WinDef.{HDC, HWND, LPARAM, RECT}
 import com.sun.jna.platform.win32.WinUser.{MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT}
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.Pointer
-import zio.{Ref, Task, ZIO}
+import zio.{RIO, Ref, Scope, Task, ZIO}
 
 import java.util
 import scala.collection.mutable
@@ -239,6 +239,40 @@ object WindowManager {
     )
   }
 
+  def frontWindow: Task[FrontWindow] = ZIO.attempt {
+    val window = User32.INSTANCE.GetForegroundWindow()
+    val title = fromCString(512)(a => User32.INSTANCE.GetWindowText(window, a, a.length))
+
+    val processId = new IntByReference()
+    User32.INSTANCE.GetWindowThreadProcessId(window, processId).toLong
+
+    FrontWindow(title, processId.getValue, window)
+  }
+
+  def lastErrorCode: Task[Int] = ZIO.attempt {
+    Kernel32.INSTANCE.GetLastError()
+  }
+
+  def openProcess(pid: Long): RIO[Scope, WinNT.HANDLE] = ZIO.acquireRelease(
+    ZIO.attempt {
+      Kernel32.INSTANCE.OpenProcess(WinNT.PROCESS_SUSPEND_RESUME, false, pid.toInt)
+    }
+  ) { handle =>
+    ZIO.attempt {
+      Kernel32.INSTANCE.CloseHandle(handle)
+    }.tapErrorCause { t =>
+      ZIO.logWarningCause(s"Could not close handle: $handle", t)
+    }.ignore
+  }
+
+  def suspendProcess(process: WinNT.HANDLE): Task[Int] = ZIO.attempt {
+    NtApi.Lib.INSTANCE.NtSuspendProcess(process)
+  }
+
+  def resumeProcess(process: WinNT.HANDLE): Task[Int] = ZIO.attempt {
+    NtApi.Lib.INSTANCE.NtResumeProcess(process)
+  }
+
   def commandCenterWindow: Task[Option[HWND]] = ZIO.attempt {
     val currentProcess = ProcessHandle.current()
     var ccWindow: Option[HWND] = None
@@ -329,4 +363,6 @@ final case class WindowBounds(left: Double, top: Double, right: Double, bottom: 
 
 final case class CycleWindowState(index: Int, lastAction: Option[String])
 
-final case class TopLevelWindow(title: String, window: HWND)
+final case class TopLevelWindow(title: String, windowHandle: HWND)
+
+final case class FrontWindow(title: String, pid: Long, windowHandle: HWND)

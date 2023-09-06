@@ -5,6 +5,7 @@ import commandcenter.command.*
 import commandcenter.config.Decoders.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
+import fansi.{Color, Str}
 import ject.ja.docs.KanjiDoc
 import ject.ja.lucene.KanjiReader
 import zio.{Scope, ZIO}
@@ -45,15 +46,14 @@ final case class KanjiCommand(
     )
 
   // TODO: Consider creating a StrBuilder class to make this nicer
-  def render(k: KanjiDoc, score: Double): fansi.Str =
-    (if (k.isJouyouKanji) fansi.Str("　") else fansi.Color.Red("×")) ++
-      fansi.Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) ""
-                                     else "　") ++ k.kunYomi.map { ku =>
-        fansi.Color.Magenta(ku)
-      }.reduceOption(_ ++ "　" ++ _).getOrElse(fansi.Str("")) ++ "　" ++ k.onYomi.map { o =>
-        fansi.Color.Cyan(o)
-      }.reduceOption(_ ++ "　" ++ _).getOrElse(fansi.Str("")) ++ " " ++ k.meaning.mkString("; ") ++
-      (if (showScore) fansi.Color.DarkGray(" %1.2f".format(score)) else "")
+  def render(k: KanjiDoc, score: Double): Str =
+    (if (k.isJouyouKanji) Str("　") else Color.Red("×")) ++
+      Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) "" else "　") ++ k.kunYomi.map { ku =>
+        Color.Magenta(ku)
+      }.reduceOption(_ ++ "　" ++ _).getOrElse(Str("")) ++ "　" ++ k.onYomi.map { o =>
+        Color.Cyan(o)
+      }.reduceOption(_ ++ "　" ++ _).getOrElse(Str("")) ++ " " ++ k.meaning.mkString("; ") ++
+      (if (showScore) Color.DarkGray(" %1.2f".format(score)) else "")
 
 }
 

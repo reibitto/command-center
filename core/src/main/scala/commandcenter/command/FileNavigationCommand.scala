@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.command.CommandError.*
 import commandcenter.util.ProcessUtil
 import commandcenter.CCRuntime.Env
+import fansi.{Color, Str}
 import zio.*
 import zio.stream.ZStream
 
@@ -34,7 +35,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
 
       val exists = file.exists()
       val score = if (exists) 101 else 100
-      val titleColor = if (exists) fansi.Color.Blue else fansi.Color.Red
+      val titleColor = if (exists) Color.Blue else Color.Red
 
       val sameLevel = Option(file.getParentFile)
         .map(f => ZStream.fromJavaStream(Files.list(f.toPath)).catchAll(_ => ZStream.empty))
@@ -63,12 +64,12 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
           ZStream.succeed(
             Preview(file)
               .score(score)
-              .renderedAnsi(titleColor(file.getAbsolutePath) ++ fansi.Str(" Open file location"))
+              .renderedAnsi(titleColor(file.getAbsolutePath) ++ Str(" Open file location"))
               .onRun(ProcessUtil.browseToFile(file))
           ) ++ (sameLevel ++ children).map { f =>
             Preview(f)
               .score(score)
-              .renderedAnsi(fansi.Color.Blue(f.getAbsolutePath) ++ fansi.Str(" Open file location"))
+              .renderedAnsi(Color.Blue(f.getAbsolutePath) ++ Str(" Open file location"))
               .onRun(ProcessUtil.browseToFile(f))
           },
           initialPageSize = 10,
