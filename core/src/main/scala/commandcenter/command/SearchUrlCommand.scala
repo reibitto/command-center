@@ -3,6 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.codec.Codecs.localeDecoder
 import commandcenter.command.CommandError.*
+import commandcenter.config.Decoders.*
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
 import commandcenter.view.Renderer
@@ -11,27 +12,33 @@ import zio.*
 
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
 import java.util.Locale
 
 final case class SearchUrlCommand(
   title: String,
   urlTemplate: String,
-  override val commandNames: List[String] = List.empty,
-  override val locales: Set[Locale] = Set.empty,
-  override val shortcuts: Set[KeyboardShortcut] = Set.empty
+  override val commandNames: List[String],
+  override val locales: Set[Locale],
+  override val shortcuts: Set[KeyboardShortcut],
+  firefoxPath: Option[Path]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchUrlCommand
+
+  def openBrowser(query: String): Task[Unit] = {
+    val url = urlTemplate.replace("{query}", URLEncoder.encode(query, StandardCharsets.UTF_8))
+    ProcessUtil.openBrowser(url, firefoxPath)
+  }
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] = {
     def prefixPreview: ZIO[Env, CommandError, PreviewResults[Unit]] =
       for {
         input <- ZIO.fromOption(searchInput.asPrefixed.filter(_.rest.nonEmpty)).orElseFail(CommandError.NotApplicable)
-        url = urlTemplate.replace("{query}", URLEncoder.encode(input.rest, StandardCharsets.UTF_8))
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
       } yield PreviewResults.one(
         Preview.unit
           .score(Scores.veryHigh * localeBoost)
-          .onRun(ProcessUtil.openBrowser(url))
+          .onRun(openBrowser(input.rest))
           .rendered(Renderer.renderDefault(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(input.rest)))
       )
 
@@ -39,13 +46,11 @@ final case class SearchUrlCommand(
       if (searchInput.input.isEmpty || !(locales.isEmpty || locales.contains(searchInput.context.locale)))
         ZIO.fail(NotApplicable)
       else {
-        val url = urlTemplate.replace("{query}", URLEncoder.encode(searchInput.input, StandardCharsets.UTF_8))
-
         ZIO.succeed(
           PreviewResults.one(
             Preview.unit
               .score(Scores.high * 0.35)
-              .onRun(ProcessUtil.openBrowser(url))
+              .onRun(openBrowser(searchInput.input))
               .rendered(
                 Renderer.renderDefault(title, fansi.Str("Search for ") ++ fansi.Color.Magenta(searchInput.input))
               )
@@ -66,11 +71,13 @@ object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
       locales      <- config.getZIO[Option[Set[Locale]]]("locales")
       shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
+      firefoxPath  <- config.getZIO[Option[Path]]("firefoxPath")
     } yield SearchUrlCommand(
       title,
       urlTemplate,
       commandNames.getOrElse(Nil),
       locales.getOrElse(Set.empty),
-      shortcuts.getOrElse(Set.empty)
+      shortcuts.getOrElse(Set.empty),
+      firefoxPath
     )
 }

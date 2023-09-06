@@ -7,22 +7,35 @@ import zio.ZIO.attemptBlocking
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
+import scala.util.Try
 
 object ProcessUtil {
 
-  def openBrowser(url: String): Task[Unit] =
-    OS.os match {
-      case OS.MacOS =>
-        PCommand("open", url).exitCode.unit
+  def openBrowser(url: String, firefoxPath: Option[Path] = None): Task[Unit] = {
+    val scheme = Try(new URI(url)).toOption.map(_.getScheme)
 
-      case OS.Linux =>
-        PCommand("xdg-open", url).exitCode.unit
+    scheme match {
+      case Some("moz-extension") =>
+        ZIO.foreachDiscard(firefoxPath) { path =>
+          PCommand(path.toString, url).exitCode.unit
+        }
 
-      case OS.Windows | OS.Other(_) =>
-        attemptBlocking(
-          Desktop.getDesktop.browse(new URI(url))
-        )
+      case _ =>
+        OS.os match {
+          case OS.MacOS =>
+            PCommand("open", url).exitCode.unit
+
+          case OS.Linux =>
+            PCommand("xdg-open", url).exitCode.unit
+
+          case OS.Windows | OS.Other(_) =>
+            attemptBlocking(
+              Desktop.getDesktop.browse(new URI(url))
+            )
+        }
     }
+  }
 
   def frontProcessId: Task[Long] =
     OS.os match {
