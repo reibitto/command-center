@@ -11,10 +11,10 @@ import zio.cache.{Cache, Lookup}
 import scala.io.Source
 
 final case class SpeakCommand(
-  commandNames: List[String],
-  override val shortcuts: Set[KeyboardShortcut] = Set.empty,
-  voice: String,
-  cache: Cache[String, Nothing, String]
+    commandNames: List[String],
+    override val shortcuts: Set[KeyboardShortcut] = Set.empty,
+    voice: String,
+    cache: Cache[String, Nothing, String]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SpeakCommand
   val title: String = "Speak"

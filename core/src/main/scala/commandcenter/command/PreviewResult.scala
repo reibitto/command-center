@@ -25,7 +25,7 @@ sealed trait PreviewResult[+A] {
 
   def renderedAnsi(renderedAnsi: => fansi.Str): PreviewResult[A] = rendered(Rendered.Ansi(renderedAnsi))
 
-  def onRunSandboxedLogged: RIO[Env, Unit] = {
+  def onRunSandboxedLogged: RIO[Env, Unit] =
     onRun.tapErrorCause { c =>
       val commandName = this match {
         case _: PreviewResult.None    => ""
@@ -34,17 +34,16 @@ sealed trait PreviewResult[+A] {
 
       ZIO.logWarningCause(s"Failed to run $commandName", c)
     }.absorb
-  }
 }
 
 object PreviewResult {
 
   final case class None(
-    onRun: RIO[Env, Unit],
-    runOption: RunOption,
-    moreResults: MoreResults,
-    score: Double,
-    renderFn: () => Rendered
+      onRun: RIO[Env, Unit],
+      runOption: RunOption,
+      moreResults: MoreResults,
+      score: Double,
+      renderFn: () => Rendered
   ) extends PreviewResult[Nothing] {
     def runOption(runOption: RunOption): PreviewResult[Nothing] = copy(runOption = runOption)
 
@@ -60,13 +59,13 @@ object PreviewResult {
   }
 
   final case class Some[+A](
-    source: Command[A],
-    result: A,
-    onRun: RIO[Env, Unit],
-    runOption: RunOption,
-    moreResults: MoreResults,
-    score: Double,
-    renderFn: () => Rendered
+      source: Command[A],
+      result: A,
+      onRun: RIO[Env, Unit],
+      runOption: RunOption,
+      moreResults: MoreResults,
+      score: Double,
+      renderFn: () => Rendered
   ) extends PreviewResult[A] {
     def runOption(runOption: RunOption): PreviewResult[A] = copy(runOption = runOption)
 

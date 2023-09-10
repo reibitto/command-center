@@ -13,8 +13,8 @@ import zio.{RIO, Ref, Scope, Task, ZIO}
 import zio.process.Command as PCommand
 
 final case class SuspendProcessCommand(
-  commandNames: List[String],
-  suspendedPidRef: Ref[Option[Long]]
+    commandNames: List[String],
+    suspendedPidRef: Ref[Option[Long]]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
   val title: String = "Suspend/Resume Process"
@@ -90,7 +90,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
   object UnixLike {
 
-    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
       for {
         _ <- ZIO.foreach(pid) { pid =>
                for {
@@ -99,9 +99,8 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                } yield ()
              }
       } yield ()
-    }
 
-    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
         _ <- ZIO.foreach(pidOpt) { pid =>
@@ -111,9 +110,8 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                } yield ()
              }
       } yield ()
-    }
 
-    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
       for {
         suspendedPid <- suspendedPidRef.get
         _ <- if (suspendedPid.isEmpty)
@@ -121,12 +119,11 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
              else
                resumeProcess(pid, suspendedPidRef)
       } yield ()
-    }
   }
 
   object Windows {
 
-    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.frontWindow.map(_.map(_.pid)))
         _ <- ZIO.foreach(pidOpt) { pid =>
@@ -139,9 +136,8 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                } yield ()
              }
       } yield ()
-    }
 
-    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
         _ <- ZIO.foreach(pidOpt) { pid =>
@@ -154,9 +150,8 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                } yield ()
              }
       } yield ()
-    }
 
-    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
       for {
         suspendedPid <- suspendedPidRef.get
         _ <- if (suspendedPid.isEmpty)
@@ -164,7 +159,6 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
              else
                resumeProcess(pid, suspendedPidRef)
       } yield ()
-    }
   }
 
 }

@@ -69,11 +69,11 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
 object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
 
   final case class MavenArtifact(
-    groupId: String,
-    artifactId: String,
-    version: String,
-    timestamp: Instant,
-    versionCount: Int
+      groupId: String,
+      artifactId: String,
+      version: String,
+      timestamp: Instant,
+      versionCount: Int
   )
 
   object MavenArtifact {
@@ -90,10 +90,10 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
   }
 
   final case class BucketedMavenArtifact(
-    artifactBase: String,
-    date: LocalDate,
-    artifact: MavenArtifact,
-    isScala: Boolean
+      artifactBase: String,
+      date: LocalDate,
+      artifact: MavenArtifact,
+      isScala: Boolean
   ) {
 
     def render: String = {

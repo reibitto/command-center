@@ -17,11 +17,11 @@ import java.time.format.{DateTimeFormatter, FormatStyle}
 import scala.jdk.CollectionConverters.*
 
 final case class WorldTimesCommand(
-  commandNames: List[String],
-  dateTimeFormat: DateTimeFormatter,
-  dateTimeDetailedFormat: DateTimeFormatter,
-  dateTimeWithZoneFormat: DateTimeFormatter,
-  zones: List[TimeZone]
+    commandNames: List[String],
+    dateTimeFormat: DateTimeFormatter,
+    dateTimeDetailedFormat: DateTimeFormatter,
+    dateTimeWithZoneFormat: DateTimeFormatter,
+    zones: List[TimeZone]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.WorldTimesCommand
   val title: String = "World Times"
@@ -95,9 +95,9 @@ final case class WorldTimesCommand(
     })
 
   def timeToSpecificZone(
-    dateTimeFrom: ZonedDateTime,
-    zoneTo: ZoneId,
-    context: CommandContext
+      dateTimeFrom: ZonedDateTime,
+      zoneTo: ZoneId,
+      context: CommandContext
   ): PreviewResults[Unit] = {
     val time = dateTimeFrom.withZoneSameInstant(zoneTo)
 

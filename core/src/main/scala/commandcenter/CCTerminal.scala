@@ -19,9 +19,9 @@ trait CCTerminal {
   def reload: RIO[Env, Unit]
 
   def showMore[A](
-    moreResults: Chunk[PreviewResult[A]],
-    previewSource: PreviewResult[A],
-    pageSize: Int
+      moreResults: Chunk[PreviewResult[A]],
+      previewSource: PreviewResult[A],
+      pageSize: Int
   ): RIO[Env, Unit]
 }
 

@@ -48,7 +48,7 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
 
 object ToolsLive {
 
-  def make: TaskLayer[Tools] = {
+  def make: TaskLayer[Tools] =
     ZLayer {
       (for {
         pid <- ZIO.attempt(ProcessHandle.current.pid)
@@ -59,5 +59,4 @@ object ToolsLive {
                     }
       } yield new ToolsLive(pid, toolsPath))
     }
-  }
 }

@@ -17,12 +17,12 @@ import java.nio.file.Path
 import java.util.Locale
 
 final case class SearchUrlCommand(
-  title: String,
-  urlTemplate: String,
-  override val commandNames: List[String],
-  override val locales: Set[Locale],
-  override val shortcuts: Set[KeyboardShortcut],
-  firefoxPath: Option[Path]
+    title: String,
+    urlTemplate: String,
+    override val commandNames: List[String],
+    override val locales: Set[Locale],
+    override val shortcuts: Set[KeyboardShortcut],
+    firefoxPath: Option[Path]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchUrlCommand
 

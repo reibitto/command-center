@@ -7,7 +7,7 @@ import zio.Task
 object PowerShellScript {
 
   def loadFunction2[A, A2](
-    cache: Cache[String, Nothing, String]
+      cache: Cache[String, Nothing, String]
   )(resource: String): (A, A2) => Task[String] =
     (a, a2) =>
       for {

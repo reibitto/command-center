@@ -66,14 +66,14 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
   }
 
   final case class CrateResult(
-    id: String,
-    name: String,
-    description: String,
-    createdAt: OffsetDateTime,
-    updatedAt: OffsetDateTime,
-    downloads: Int,
-    recentDownloads: Int,
-    maxVersion: String
+      id: String,
+      name: String,
+      description: String,
+      createdAt: OffsetDateTime,
+      updatedAt: OffsetDateTime,
+      downloads: Int,
+      recentDownloads: Int,
+      maxVersion: String
   ) {
     def descriptionSanitized: String = description.replace("\n", "").trim
 

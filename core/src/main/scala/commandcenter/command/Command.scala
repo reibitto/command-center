@@ -65,10 +65,10 @@ trait Command[+A] {
 object Command {
 
   def search[A](
-    commands: Vector[Command[A]],
-    aliases: Map[String, List[String]],
-    input: String,
-    context: CommandContext
+      commands: Vector[Command[A]],
+      aliases: Map[String, List[String]],
+      input: String,
+      context: CommandContext
   ): URIO[Env, SearchResults[A]] = {
     val (commandPart, rest) = input.split("[ ]+", 2) match {
       case Array(prefix, rest) => (prefix, s" $rest")

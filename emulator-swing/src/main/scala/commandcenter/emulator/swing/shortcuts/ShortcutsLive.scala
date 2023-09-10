@@ -19,11 +19,10 @@ final case class ShortcutsLive(provider: Provider) extends Shortcuts {
              provider.register(
                KeyboardShortcutUtil.toKeyStroke(shortcut),
                new HotKeyListener {
-                 def onHotKey(hotKey: HotKey): Unit = {
+                 def onHotKey(hotKey: HotKey): Unit =
                    Unsafe.unsafe { implicit u =>
                      runtime.unsafe.fork(handler(shortcut))
                    }
-                 }
                }
              )
            }
@@ -32,7 +31,7 @@ final case class ShortcutsLive(provider: Provider) extends Shortcuts {
 
 object ShortcutsLive {
 
-  def layer: ZLayer[Scope, Throwable, Shortcuts] = {
+  def layer: ZLayer[Scope, Throwable, Shortcuts] =
     ZLayer {
       for {
         shortcuts <- ZIO.acquireRelease(ZIO.attempt {
@@ -49,5 +48,4 @@ object ShortcutsLive {
                      })
       } yield shortcuts
     }
-  }
 }

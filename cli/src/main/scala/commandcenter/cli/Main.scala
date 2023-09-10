@@ -48,7 +48,7 @@ object Main extends ZIOApp {
                   } yield ()).exitCode
     } yield exitCode
 
-  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] = {
+  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] =
     for {
       args <- ZIOAppArgs.getArgs
       exitCode <- CliArgs.rootCommand
@@ -69,6 +69,5 @@ object Main extends ZIOApp {
                     )
                     .exitCode
     } yield exitCode
-  }
 
 }

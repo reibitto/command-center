@@ -11,7 +11,7 @@ trait Shortcuts {
 object Shortcuts {
 
   def addGlobalShortcut(
-    shortcut: KeyboardShortcut
+      shortcut: KeyboardShortcut
   )(handler: KeyboardShortcut => URIO[Env, Unit]): RIO[Env, Unit] =
     ZIO.serviceWithZIO[Shortcuts](_.addGlobalShortcut(shortcut)(handler))
 

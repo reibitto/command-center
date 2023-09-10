@@ -17,12 +17,12 @@ import java.awt.Font
 import java.io.File
 
 final case class CCConfig(
-  commands: Vector[Command[Any]],
-  aliases: Map[String, List[String]],
-  general: GeneralConfig,
-  display: DisplayConfig,
-  keyboard: KeyboardConfig,
-  globalActions: Vector[GlobalAction]
+    commands: Vector[Command[Any]],
+    aliases: Map[String, List[String]],
+    general: GeneralConfig,
+    display: DisplayConfig,
+    keyboard: KeyboardConfig,
+    globalActions: Vector[GlobalAction]
 )
 
 object CCConfig {

@@ -107,7 +107,7 @@ object WindowManager {
   }
 
   def cycleWindowSize(cycleWindowStateRef: Ref[Option[CycleWindowState]])(step: Int, name: String)(
-    boundsList: Vector[WindowBounds]
+      boundsList: Vector[WindowBounds]
   ): Task[Unit] =
     for {
       cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))
@@ -239,7 +239,7 @@ object WindowManager {
     )
   }
 
-  def frontWindow: Task[Option[FrontWindow]] = {
+  def frontWindow: Task[Option[FrontWindow]] =
     for {
       windowHandleOpt <- ZIO.attempt(Option(User32.INSTANCE.GetForegroundWindow()))
       window <- ZIO.foreach(windowHandleOpt) { windowHandle =>
@@ -252,7 +252,6 @@ object WindowManager {
                   }
                 }
     } yield window
-  }
 
   def lastErrorCode: Task[Option[Int]] = ZIO.attempt {
     val errorCode = Kernel32.INSTANCE.GetLastError()

@@ -29,11 +29,10 @@ class ZTextField(implicit runtime: Runtime[Env]) extends JTextField {
     getDocument.addDocumentListener(
       new DocumentListener {
 
-        def onChange(e: DocumentEvent): Unit = {
+        def onChange(e: DocumentEvent): Unit =
           Unsafe.unsafe { implicit u =>
             runtime.unsafe.fork(handler(e))
           }
-        }
 
         override def insertUpdate(e: DocumentEvent): Unit = onChange(e)
         override def removeUpdate(e: DocumentEvent): Unit = onChange(e)

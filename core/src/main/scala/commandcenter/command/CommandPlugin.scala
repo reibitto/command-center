@@ -13,8 +13,8 @@ trait CommandPlugin[A <: Command[?]] extends ConfigParserExtensions {
 object CommandPlugin {
 
   def loadAll(
-    config: Config,
-    path: String
+      config: Config,
+      path: String
   ): ZIO[Scope & Env, CommandPluginError.UnexpectedException, List[Command[?]]] = {
     import scala.jdk.CollectionConverters.*
 

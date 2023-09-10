@@ -45,11 +45,11 @@ final case class HoogleCommand(commandNames: List[String]) extends Command[Unit]
 object HoogleCommand extends CommandPlugin[HoogleCommand] {
 
   final case class HoogleResult(
-    url: String,
-    item: String,
-    docs: String,
-    module: HoogleReference,
-    `package`: HoogleReference
+      url: String,
+      item: String,
+      docs: String,
+      module: HoogleReference,
+      `package`: HoogleReference
   )
 
   object HoogleResult {

@@ -107,12 +107,12 @@ object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
   }
 
   final case class Parameters(
-    decimalSeparator: Char,
-    groupingSeparator: Char,
-    parameterSeparator: Char,
-    groupingSize: Int,
-    groupingUsed: Boolean,
-    maximumFractionDigits: Int
+      decimalSeparator: Char,
+      groupingSeparator: Char,
+      parameterSeparator: Char,
+      groupingSize: Int,
+      groupingUsed: Boolean,
+      maximumFractionDigits: Int
   ) {
 
     def decimalFormat: DecimalFormat =
