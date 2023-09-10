@@ -239,18 +239,24 @@ object WindowManager {
     )
   }
 
-  def frontWindow: Task[FrontWindow] = ZIO.attempt {
-    val window = User32.INSTANCE.GetForegroundWindow()
-    val title = fromCString(512)(a => User32.INSTANCE.GetWindowText(window, a, a.length))
+  def frontWindow: Task[Option[FrontWindow]] = {
+    for {
+      windowHandleOpt <- ZIO.attempt(Option(User32.INSTANCE.GetForegroundWindow()))
+      window <- ZIO.foreach(windowHandleOpt) { windowHandle =>
+                  ZIO.attempt {
+                    val title = fromCString(512)(a => User32.INSTANCE.GetWindowText(windowHandle, a, a.length))
+                    val processId = new IntByReference()
+                    User32.INSTANCE.GetWindowThreadProcessId(windowHandle, processId).toLong
 
-    val processId = new IntByReference()
-    User32.INSTANCE.GetWindowThreadProcessId(window, processId).toLong
-
-    FrontWindow(title, processId.getValue, window)
+                    FrontWindow(title, processId.getValue, windowHandle)
+                  }
+                }
+    } yield window
   }
 
-  def lastErrorCode: Task[Int] = ZIO.attempt {
-    Kernel32.INSTANCE.GetLastError()
+  def lastErrorCode: Task[Option[Int]] = ZIO.attempt {
+    val errorCode = Kernel32.INSTANCE.GetLastError()
+    Option.when(errorCode != 0)(errorCode)
   }
 
   def openProcess(pid: Long): RIO[Scope, WinNT.HANDLE] = ZIO.acquireRelease(

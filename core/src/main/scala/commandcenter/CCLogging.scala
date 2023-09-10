@@ -11,15 +11,15 @@ object CCLogging {
       level.highlight |-|
       fiberId.color(LogColor.WHITE) |-|
       line.highlight |-|
-      newLine |-|
-      cause.highlight
+      newLine +
+      cause.highlight.filter(LogFilter.causeNonEmpty)
 
   def addLoggerFor(terminalType: TerminalType): ZLayer[Any, Nothing, Unit] =
     terminalType match {
       case TerminalType.Cli => ZLayer.empty.unit // TODO: File logging
 
       case TerminalType.Swing | TerminalType.Swt =>
-        val defaultLogLevel = LogLevel.Debug
+        val defaultLogLevel = LogLevel.Info
 
         ZLayer.scopedEnvironment(
           for {

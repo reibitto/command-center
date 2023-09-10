@@ -5,7 +5,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.util.{OS, ProcessUtil, WindowManager}
+import commandcenter.util.{OS, WindowManager}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
@@ -14,8 +14,7 @@ import zio.process.Command as PCommand
 
 final case class SuspendProcessCommand(
   commandNames: List[String],
-  suspendShortcut: Option[KeyboardShortcut],
-  isSuspendedRefs: Ref[Map[Long, Boolean]]
+  suspendedPidRef: Ref[Option[Long]]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
   val title: String = "Suspend/Resume Process"
@@ -36,11 +35,11 @@ final case class SuspendProcessCommand(
                _ <- ZIO.logDebug(s"Toggling suspend for process `$pid`...")
                _ <- OS.os match {
                       case OS.MacOS | OS.Linux =>
-                        SuspendProcessCommand.UnixLike.toggleSuspendFrontProcess(Some(pid))
+                        SuspendProcessCommand.UnixLike.toggleSuspendProcess(Some(pid), suspendedPidRef)
 
                       case OS.Windows =>
                         ZIO.scoped {
-                          SuspendProcessCommand.Windows.toggleSuspendFrontProcess(Some(pid), isSuspendedRefs)
+                          SuspendProcessCommand.Windows.toggleSuspendProcess(Some(pid), suspendedPidRef)
                         }
 
                       case OS.Other(_) =>
@@ -62,71 +61,108 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
   def make(config: Config): ZIO[Env, CommandPluginError, SuspendProcessCommand] =
     for {
-      commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
-      suspendShortcut <- config.getZIO[Option[KeyboardShortcut]]("suspendShortcut")
-      isSuspendedRefs <- Ref.make(Map.empty[Long, Boolean])
+      commandNames     <- config.getZIO[Option[List[String]]]("commandNames")
+      suspendShortcuts <- config.getZIO[Option[List[KeyboardShortcut]]]("suspendShortcuts")
+      suspendedPidRef  <- Ref.make(Option.empty[Long])
       _ <- ZIO
-             .foreach(suspendShortcut) { suspendShortcut =>
+             .foreach(suspendShortcuts.getOrElse(List.empty)) { suspendShortcut =>
                Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
                  (for {
-                   _ <- ZIO.logDebug("Toggling suspend for frontmost process...")
                    _ <- OS.os match {
                           case OS.MacOS | OS.Linux =>
-                            SuspendProcessCommand.UnixLike.toggleSuspendFrontProcess(None)
+                            SuspendProcessCommand.UnixLike.toggleSuspendProcess(None, suspendedPidRef)
 
                           case OS.Windows =>
                             ZIO.scoped {
-                              SuspendProcessCommand.Windows.toggleSuspendFrontProcess(None, isSuspendedRefs)
+                              SuspendProcessCommand.Windows.toggleSuspendProcess(None, suspendedPidRef)
                             }
 
                           case OS.Other(_) =>
                             ZIO.unit
                         }
-                 } yield ()).ignore
+                 } yield ()).tapErrorCause { t =>
+                   ZIO.logWarningCause("Error running SuspendShortcut command", t)
+                 }.ignore
                )
              }
              .mapError(CommandPluginError.UnexpectedException)
-    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend", "pause")), suspendShortcut, isSuspendedRefs)
+    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend", "pause")), suspendedPidRef)
 
   object UnixLike {
 
-    def isProcessSuspended(processId: Long): Task[Boolean] = {
-      val stateParam = if (OS.os == OS.MacOS) "state=" else "s="
-
-      PCommand("ps", "-o", stateParam, "-p", processId.toString).string.map(_.trim == "T")
-    }
-
-    def setProcessState(suspend: Boolean, pid: Long): Task[Unit] = {
-      val targetState = if (suspend) "-STOP" else "-CONT"
-      PCommand("kill", targetState, pid.toString).exitCode.unit
-    }
-
-    def toggleSuspendFrontProcess(pid: Option[Long]): Task[Long] =
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
       for {
-        pid         <- ZIO.fromOption(pid).orElse(ProcessUtil.frontProcessId)
-        isSuspended <- isProcessSuspended(pid)
-        _           <- setProcessState(!isSuspended, pid)
-      } yield pid
+        _ <- ZIO.foreach(pid) { pid =>
+               for {
+                 _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
+                 _ <- suspendedPidRef.set(Some(pid))
+               } yield ()
+             }
+      } yield ()
+    }
+
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+      for {
+        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
+        _ <- ZIO.foreach(pidOpt) { pid =>
+               for {
+                 _ <- PCommand("kill", "-CONT", pid.toString).exitCode.unit
+                 _ <- suspendedPidRef.set(None)
+               } yield ()
+             }
+      } yield ()
+    }
+
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+      for {
+        suspendedPid <- suspendedPidRef.get
+        _ <- if (suspendedPid.isEmpty)
+               suspendProcess(pid, suspendedPidRef)
+             else
+               resumeProcess(pid, suspendedPidRef)
+      } yield ()
+    }
   }
 
   object Windows {
 
-    def toggleSuspendFrontProcess(pid: Option[Long], isSuspendedRefs: Ref[Map[Long, Boolean]]): RIO[Scope, Unit] = {
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
       for {
-        pid          <- ZIO.fromOption(pid).orElse(WindowManager.frontWindow.map(_.pid))
-        windowHandle <- WindowManager.openProcess(pid)
-        isSuspended  <- isSuspendedRefs.get.map(_.getOrElse(pid, false))
-        _ <- if (isSuspended)
-               WindowManager
-                 .resumeProcess(windowHandle)
-                 .tapErrorCause(t => ZIO.logWarningCause("Could not resume process", t))
-             else
-               WindowManager
-                 .suspendProcess(windowHandle)
-                 .tapErrorCause(t => ZIO.logWarningCause("Could not resume process", t))
-        _ <- isSuspendedRefs.getAndUpdate { m =>
-               m + (pid -> !isSuspended)
+        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.frontWindow.map(_.map(_.pid)))
+        _ <- ZIO.foreach(pidOpt) { pid =>
+               for {
+                 windowHandle <- WindowManager.openProcess(pid)
+                 _ <- WindowManager
+                        .suspendProcess(windowHandle)
+                        .tapErrorCause(t => ZIO.logWarningCause("Could not suspend process", t))
+                 _ <- suspendedPidRef.set(Some(pid))
+               } yield ()
              }
+      } yield ()
+    }
+
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+      for {
+        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
+        _ <- ZIO.foreach(pidOpt) { pid =>
+               for {
+                 windowHandle <- WindowManager.openProcess(pid)
+                 _ <- WindowManager
+                        .resumeProcess(windowHandle)
+                        .tapErrorCause(t => ZIO.logWarningCause("Could not resume process", t))
+                 _ <- suspendedPidRef.set(None)
+               } yield ()
+             }
+      } yield ()
+    }
+
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+      for {
+        suspendedPid <- suspendedPidRef.get
+        _ <- if (suspendedPid.isEmpty)
+               suspendProcess(pid, suspendedPidRef)
+             else
+               resumeProcess(pid, suspendedPidRef)
       } yield ()
     }
   }

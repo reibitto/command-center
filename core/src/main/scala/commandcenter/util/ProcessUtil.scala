@@ -37,7 +37,7 @@ object ProcessUtil {
     }
   }
 
-  def frontProcessId: Task[Long] =
+  def frontProcessId: Task[Option[Long]] =
     OS.os match {
       case OS.MacOS =>
         for {
@@ -47,10 +47,10 @@ object ProcessUtil {
                    case Array(_, pid) => ZIO.succeed(pid.trim.toLong)
                    case _             => ZIO.fail(new Exception(s"pid could not be extracted from: $pidString"))
                  }
-        } yield pid
+        } yield Some(pid)
 
       case OS.Windows =>
-        WindowManager.frontWindow.map(_.pid)
+        WindowManager.frontWindow.map(_.map(_.pid))
 
       case _ =>
         ZIO.fail(
