@@ -7,6 +7,7 @@ import commandcenter.util.{JavaVM, OS}
 import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
+import fansi.Color
 import zio.*
 import zio.stream.{ZSink, ZStream}
 
@@ -95,7 +96,7 @@ object Command {
                             case beforeLast :+ last if results.length >= pageSize =>
                               beforeLast :+ last :+
                                 PreviewResult
-                                  .nothing(Rendered.Ansi(fansi.Color.Yellow("More...")))
+                                  .nothing(Rendered.Ansi(Color.Yellow("More...")))
                                   .runOption(RunOption.RemainOpen)
                                   .score(last.score)
                                   .moreResults(

@@ -9,6 +9,7 @@ import commandcenter.command.CalculatorCommand.{FunctionsList, Parameters, Param
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Str
 import io.circe.Decoder
 import zio.{IO, ZIO}
 
@@ -87,7 +88,7 @@ object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
     )
   }
 
-  def helpMessageByType(helpType: HelpType): fansi.Str =
+  def helpMessageByType(helpType: HelpType): Str =
     helpType match {
       case FunctionsList  => CalculatorUtil.helpMessageFunctionsList
       case ParametersList => CalculatorUtil.helpMessageParametersList

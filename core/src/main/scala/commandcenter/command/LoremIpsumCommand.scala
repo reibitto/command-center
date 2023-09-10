@@ -9,6 +9,7 @@ import commandcenter.command.LoremIpsumCommand.ChunkType
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Str
 import zio.*
 
 import scala.io.Source
@@ -40,7 +41,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
                    .fold(
                      HelpMessage.formatted,
                      { case (i, chunkType) =>
-                       fansi.Str(s"Will generate $i ${chunkType.toString}s to the clipboard")
+                       Str(s"Will generate $i ${chunkType.toString}s to the clipboard")
                      }
                    )
     } yield {

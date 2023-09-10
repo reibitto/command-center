@@ -5,18 +5,19 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.util.{OS, ProcessUtil}
+import commandcenter.util.{OS, WindowManager}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{Task, ZIO}
+import fansi.{Color, Str}
+import zio.{RIO, Ref, Scope, Task, ZIO}
 import zio.process.Command as PCommand
 
-final case class SuspendProcessCommand(commandNames: List[String], suspendShortcut: Option[KeyboardShortcut])
-    extends Command[Unit] {
+final case class SuspendProcessCommand(
+  commandNames: List[String],
+  suspendedPidRef: Ref[Option[Long]]
+) extends Command[Unit] {
   val commandType: CommandType = CommandType.SuspendProcessCommand
   val title: String = "Suspend/Resume Process"
-
-  override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Linux)
 
   val command = decline.Command("suspend", title)(Opts.argument[Long]("pid"))
 
@@ -26,17 +27,30 @@ final case class SuspendProcessCommand(commandNames: List[String], suspendShortc
       parsedCommand = command.parse(input.args)
       message <- ZIO
                    .fromEither(parsedCommand)
-                   .fold(HelpMessage.formatted, p => fansi.Str("PID: ") ++ fansi.Color.Magenta(p.toString))
+                   .fold(HelpMessage.formatted, p => Str("PID: ") ++ Color.Magenta(p.toString))
     } yield {
       val run = for {
-        pid         <- ZIO.fromEither(parsedCommand).mapError(RunError.CliError)
-        isSuspended <- SuspendProcessCommand.isProcessSuspended(pid)
-        _           <- SuspendProcessCommand.setProcessState(!isSuspended, pid)
+        pid <- ZIO.fromEither(parsedCommand).mapError(RunError.CliError)
+        _ <- for {
+               _ <- ZIO.logDebug(s"Toggling suspend for process `$pid`...")
+               _ <- OS.os match {
+                      case OS.MacOS | OS.Linux =>
+                        SuspendProcessCommand.UnixLike.toggleSuspendProcess(Some(pid), suspendedPidRef)
+
+                      case OS.Windows =>
+                        ZIO.scoped {
+                          SuspendProcessCommand.Windows.toggleSuspendProcess(Some(pid), suspendedPidRef)
+                        }
+
+                      case OS.Other(_) =>
+                        ZIO.unit
+                    }
+             } yield ()
       } yield ()
 
       PreviewResults.one(
         Preview.unit
-          .onRun(run.!)
+          .onRun(run)
           .score(Scores.veryHigh(input.context))
           .rendered(Renderer.renderDefault(title, message))
       )
@@ -47,36 +61,110 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
   def make(config: Config): ZIO[Env, CommandPluginError, SuspendProcessCommand] =
     for {
-      commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
-      suspendShortcut <- config.getZIO[Option[KeyboardShortcut]]("suspendShortcut")
+      commandNames     <- config.getZIO[Option[List[String]]]("commandNames")
+      suspendShortcuts <- config.getZIO[Option[List[KeyboardShortcut]]]("suspendShortcuts")
+      suspendedPidRef  <- Ref.make(Option.empty[Long])
       _ <- ZIO
-             .foreach(suspendShortcut) { suspendShortcut =>
+             .foreach(suspendShortcuts.getOrElse(List.empty)) { suspendShortcut =>
                Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
                  (for {
-                   _   <- ZIO.logDebug("Toggling suspend for frontmost process...")
-                   pid <- SuspendProcessCommand.toggleSuspendFrontProcess
-                   _   <- ZIO.logDebug(s"Toggled suspend for process $pid")
-                 } yield ()).ignore
+                   _ <- OS.os match {
+                          case OS.MacOS | OS.Linux =>
+                            SuspendProcessCommand.UnixLike.toggleSuspendProcess(None, suspendedPidRef)
+
+                          case OS.Windows =>
+                            ZIO.scoped {
+                              SuspendProcessCommand.Windows.toggleSuspendProcess(None, suspendedPidRef)
+                            }
+
+                          case OS.Other(_) =>
+                            ZIO.unit
+                        }
+                 } yield ()).tapErrorCause { t =>
+                   ZIO.logWarningCause("Error running SuspendShortcut command", t)
+                 }.ignore
                )
              }
              .mapError(CommandPluginError.UnexpectedException)
-    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend")), suspendShortcut)
+    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend", "pause")), suspendedPidRef)
 
-  def isProcessSuspended(processId: Long): Task[Boolean] = {
-    val stateParam = if (OS.os == OS.MacOS) "state=" else "s="
+  object UnixLike {
 
-    PCommand("ps", "-o", stateParam, "-p", processId.toString).string.map(_.trim == "T")
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+      for {
+        _ <- ZIO.foreach(pid) { pid =>
+               for {
+                 _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
+                 _ <- suspendedPidRef.set(Some(pid))
+               } yield ()
+             }
+      } yield ()
+    }
+
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+      for {
+        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
+        _ <- ZIO.foreach(pidOpt) { pid =>
+               for {
+                 _ <- PCommand("kill", "-CONT", pid.toString).exitCode.unit
+                 _ <- suspendedPidRef.set(None)
+               } yield ()
+             }
+      } yield ()
+    }
+
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] = {
+      for {
+        suspendedPid <- suspendedPidRef.get
+        _ <- if (suspendedPid.isEmpty)
+               suspendProcess(pid, suspendedPidRef)
+             else
+               resumeProcess(pid, suspendedPidRef)
+      } yield ()
+    }
   }
 
-  def setProcessState(suspend: Boolean, pid: Long): Task[Unit] = {
-    val targetState = if (suspend) "-STOP" else "-CONT"
-    PCommand("kill", targetState, pid.toString).exitCode.unit
+  object Windows {
+
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+      for {
+        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.frontWindow.map(_.map(_.pid)))
+        _ <- ZIO.foreach(pidOpt) { pid =>
+               for {
+                 windowHandle <- WindowManager.openProcess(pid)
+                 _ <- WindowManager
+                        .suspendProcess(windowHandle)
+                        .tapErrorCause(t => ZIO.logWarningCause("Could not suspend process", t))
+                 _ <- suspendedPidRef.set(Some(pid))
+               } yield ()
+             }
+      } yield ()
+    }
+
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+      for {
+        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
+        _ <- ZIO.foreach(pidOpt) { pid =>
+               for {
+                 windowHandle <- WindowManager.openProcess(pid)
+                 _ <- WindowManager
+                        .resumeProcess(windowHandle)
+                        .tapErrorCause(t => ZIO.logWarningCause("Could not resume process", t))
+                 _ <- suspendedPidRef.set(None)
+               } yield ()
+             }
+      } yield ()
+    }
+
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] = {
+      for {
+        suspendedPid <- suspendedPidRef.get
+        _ <- if (suspendedPid.isEmpty)
+               suspendProcess(pid, suspendedPidRef)
+             else
+               resumeProcess(pid, suspendedPidRef)
+      } yield ()
+    }
   }
 
-  def toggleSuspendFrontProcess: Task[Long] =
-    for {
-      pid         <- ProcessUtil.frontProcessId
-      isSuspended <- isProcessSuspended(pid)
-      _           <- setProcessState(!isSuspended, pid)
-    } yield pid
 }

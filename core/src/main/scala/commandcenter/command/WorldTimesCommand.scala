@@ -7,6 +7,7 @@ import commandcenter.util.TimeZones
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
+import fansi.{Color, Str}
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
 import zio.{IO, UIO, ZIO}
@@ -88,7 +89,7 @@ final case class WorldTimesCommand(
         .score(Scores.veryHigh(context))
         .rendered(
           Rendered.Ansi(
-            fansi.Color.Cyan(s"${zone.displayName}") ++ fansi.Str(" ") ++ fansi.Str(dateTimeDetailedFormat.format(time))
+            Color.Cyan(s"${zone.displayName}") ++ Str(" ") ++ Str(dateTimeDetailedFormat.format(time))
           )
         )
     })
@@ -105,8 +106,8 @@ final case class WorldTimesCommand(
         .score(Scores.veryHigh(context))
         .rendered(
           Rendered.Ansi(
-            fansi.Color.Cyan(s"${dateTimeWithZoneFormat.format(dateTimeFrom)}") ++ fansi.Str(" is ") ++
-              fansi.Color.Green(dateTimeWithZoneFormat.format(time))
+            Color.Cyan(s"${dateTimeWithZoneFormat.format(dateTimeFrom)}") ++ Str(" is ") ++
+              Color.Green(dateTimeWithZoneFormat.format(time))
           )
         )
     )
@@ -122,7 +123,7 @@ final case class WorldTimesCommand(
         .score(Scores.veryHigh(context))
         .rendered(
           Rendered.Ansi(
-            fansi.Color.Cyan(time.displayName) ++ fansi.Str(" ") ++ fansi.Str(dateTimeFormat.format(time.dateTime))
+            Color.Cyan(time.displayName) ++ Str(" ") ++ Str(dateTimeFormat.format(time.dateTime))
           )
         )
         .onRun(Tools.setClipboard(isoFormat.format(time.dateTime)))

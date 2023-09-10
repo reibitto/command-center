@@ -12,6 +12,7 @@ import commandcenter.locale.Language
 import commandcenter.util.{Debouncer, TextUtils}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
+import fansi.{Bold, Color, Str}
 import zio.*
 import zio.stream.ZSink
 import zio.ZIO.attemptBlocking
@@ -162,10 +163,10 @@ final case class CliTerminal[T <: Terminal](
                }
              }
            }
-      placeholder = if (buffer.isEmpty) fansi.Color.Black(" Search").overlay(fansi.Bold.On) else fansi.Str("")
-      _ <- putAnsiStr(0, 0, fansi.Color.Cyan("> ") ++ placeholder)
+      placeholder = if (buffer.isEmpty) Color.Black(" Search").overlay(Bold.On) else Str("")
+      _ <- putAnsiStr(0, 0, Color.Cyan("> ") ++ placeholder)
       bufferDisplay = buffer.toString.takeRight(columns - prompt.length)
-      _          <- putAnsiStr(prompt.length, 0, fansi.Color.White(bufferDisplay))
+      _          <- putAnsiStr(prompt.length, 0, Color.White(bufferDisplay))
       textCursor <- textCursorRef.get
       _ <- ZIO.attempt(
              screen
@@ -269,19 +270,19 @@ final case class CliTerminal[T <: Terminal](
   def swapBuffer: Task[Unit] =
     ZIO.attempt(screen.refresh(RefreshType.DELTA))
 
-  def putAnsiStr(str: fansi.Str): UIO[Unit] =
+  def putAnsiStr(str: Str): UIO[Unit] =
     for {
       cursor <- textCursorRef.get
       _      <- ZIO.succeed(graphics.putCSIStyledString(cursor.actual.column, cursor.actual.row, str.render))
     } yield ()
 
-  def putAnsiStr(column: Int, row: Int, str: fansi.Str): UIO[Unit] =
+  def putAnsiStr(column: Int, row: Int, str: Str): UIO[Unit] =
     ZIO.succeed(graphics.putCSIStyledString(column, row, str.render))
 
   def putAnsiStrRaw(ansiString: String, cursor: Cursor): UIO[Unit] =
     ZIO.succeed(graphics.putCSIStyledString(cursor.column, cursor.row, ansiString))
 
-  def printAnsiStr(string: fansi.Str, cursor: Cursor): UIO[Cursor] = {
+  def printAnsiStr(string: Str, cursor: Cursor): UIO[Cursor] = {
     val lines = string.render.linesIterator.toVector
     for {
       _ <- ZIO.foreachDiscard(lines.zipWithIndex) { case (s, i) =>

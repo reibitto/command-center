@@ -6,6 +6,7 @@ import commandcenter.scorers.LengthScorer
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Color
 import io.circe.Decoder
 import zio.{IO, ZIO}
 
@@ -34,7 +35,7 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
         Preview(snippet.value)
           .onRun(Tools.setClipboard(snippet.value))
           .score(score)
-          .rendered(Renderer.renderDefault(title, fansi.Color.Magenta(snippet.keyword) ++ " " ++ snippet.value))
+          .rendered(Renderer.renderDefault(title, Color.Magenta(snippet.keyword) ++ " " ++ snippet.value))
     })
 }
 

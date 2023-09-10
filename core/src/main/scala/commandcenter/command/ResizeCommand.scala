@@ -6,6 +6,7 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Str
 import zio.{IO, ZIO}
 
 final case class ResizeCommand(commandNames: List[String]) extends Command[Unit] {
@@ -26,7 +27,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
                    .fold(
                      HelpMessage.formatted,
                      { case (w, h) =>
-                       fansi.Str(s"Set window size to width: $w, maxHeight: $h)")
+                       Str(s"Set window size to width: $w, maxHeight: $h)")
                      }
                    )
     } yield {
@@ -37,7 +38,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
 
       PreviewResults.one(
         Preview.unit
-          .onRun(run.!)
+          .onRun(run)
           .score(Scores.veryHigh(input.context))
           .rendered(Renderer.renderDefault(title, message))
       )

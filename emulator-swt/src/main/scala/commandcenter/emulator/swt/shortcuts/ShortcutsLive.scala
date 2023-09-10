@@ -27,6 +27,7 @@ final case class ShortcutsLive(provider: Provider) extends Shortcuts {
                }
              )
            }
+      _ <- ZIO.logDebug(s"Registered global shortcut: $shortcut")
     } yield ()
 }
 
@@ -40,7 +41,7 @@ object ShortcutsLive {
                        // Otherwise the hot key provider won't be fully started up yet.
                        Try(Toolkit.getDefaultToolkit)
 
-                       new ShortcutsLive(Provider.getCurrentProvider(true))
+                       new ShortcutsLive(Provider.getCurrentProvider(false))
                      })({ shortcuts =>
                        ZIO.succeed {
                          shortcuts.provider.reset()

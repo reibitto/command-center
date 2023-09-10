@@ -6,6 +6,7 @@ import commandcenter.tools.Tools
 import commandcenter.util.Orderings
 import commandcenter.CCRuntime.Env
 import commandcenter.Sttp
+import fansi.{Color, Str}
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
@@ -101,15 +102,15 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
       s""""${artifact.groupId}" $groupSeparator "$artifactBase" % "${artifact.version}""""
     }
 
-    def renderColored: fansi.Str = {
+    def renderColored: Str = {
       val groupSeparator = if (isScala) " %% " else " % "
 
-      fansi.Str(
-        fansi.Color.Green(artifact.groupId),
-        fansi.Color.LightGray(groupSeparator),
-        fansi.Color.Green(artifactBase),
-        fansi.Color.LightGray(" % "),
-        fansi.Color.Cyan(artifact.version)
+      Str(
+        Color.Green(artifact.groupId),
+        Color.LightGray(groupSeparator),
+        Color.Green(artifactBase),
+        Color.LightGray(" % "),
+        Color.Cyan(artifact.version)
       )
     }
   }

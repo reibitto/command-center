@@ -1,52 +1,52 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
+import commandcenter.command.ProcessIdCommand.ProcessInfo
 import commandcenter.tools.Tools
-import commandcenter.util.OS
-import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Color
 import zio.{IO, ZIO}
-import zio.process.Command as PCommand
 
-import scala.util.matching.Regex
+import java.time.Instant
+import scala.jdk.CollectionConverters.*
+import scala.jdk.OptionConverters.*
 
 final case class ProcessIdCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ProcessIdCommand
   val title: String = "Process ID"
-  val visibleProcessRegex: Regex = "(ASN:.+?)-\"(.+?)\"".r
-
-  override val supportedOS: Set[OS] = Set(OS.MacOS)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input        <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
-      stringOutput <- PCommand("lsappinfo", "visibleProcessList").string.mapError(CommandError.UnexpectedError(this))
-      searchString = input.rest.toLowerCase
-      processInfo = visibleProcessRegex
-                      .findAllMatchIn(stringOutput)
-                      .map { m =>
-                        val asn = m.group(1)
-                        val processName = m.group(2).replace("_", " ")
-                        (asn, processName)
-                      }
-                      .toList
-                      .filter { case (_, processName) =>
-                        processName.toLowerCase.contains(searchString)
-                      }
-    } yield PreviewResults.fromIterable(processInfo.map { case (asn, processName) =>
-      val run = for {
-        pidOutput <- PCommand("lsappinfo", "info", "-only", "pid", asn).string.map(_.trim)
-        pid <- ZIO
-                 .fromOption(pidOutput.split('=').lift(1).map(_.trim))
-                 .orElseFail(RunError.InternalError("Parsing PID failed"))
-        _ <- Tools.setClipboard(pid)
-      } yield ()
+      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      processes = ProcessHandle
+                    .allProcesses()
+                    .iterator()
+                    .asScala
+                    .toSeq
+                    .flatMap { p =>
+                      (p.info.command.toScala, p.info.startInstant.toScala) match {
+                        case (Some(command), Some(startTime)) =>
+                          Some(ProcessInfo(p.pid(), command, startTime))
 
-      Preview.unit
-        .onRun(run)
-        .rendered(Renderer.renderDefault(processName, "Copy PID to clipboard"))
-        .score(Scores.veryHigh(input.context))
-    })
+                        case _ =>
+                          None
+                      }
+                    }
+                    .sortBy(_.startTime)(Ordering[Instant].reverse)
+    } yield PreviewResults.Paginated.fromIterable(
+      processes.map { process =>
+        val run = Tools.setClipboard(process.pid.toString)
+
+        Preview.unit
+          .onRun(run)
+          .score(Scores.veryHigh(input.context))
+          .renderedAnsi(
+            Color.Cyan(process.command) ++ "\n" ++ "Copy PID to clipboard: " ++ Color.Magenta(process.pid.toString)
+          )
+      },
+      initialPageSize = 15,
+      morePageSize = 30
+    )
 }
 
 object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {
@@ -56,5 +56,5 @@ object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ProcessIdCommand(commandNames.getOrElse(List("pid", "process")))
 
-  final case class ProcessInfo(pid: Long, name: String)
+  final case class ProcessInfo(pid: Long, command: String, startTime: Instant)
 }

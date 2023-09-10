@@ -6,6 +6,7 @@ import commandcenter.config.Decoders.*
 import commandcenter.locale.JapaneseText
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
+import fansi.{Back, Color, Str}
 import ject.ja.docs.WordDoc
 import ject.ja.lucene.WordReader
 import ject.SearchPattern
@@ -42,31 +43,31 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
       morePageSize = 30
     )
 
-  def renderWord(word: WordDoc, score: Double): fansi.Str = {
+  def renderWord(word: WordDoc, score: Double): Str = {
     val kanjiTerms = (word.kanjiTerms.headOption.map { k =>
-      fansi.Color.Green(k)
+      Color.Green(k)
     }.toList ++ word.kanjiTerms.drop(1).map { k =>
-      fansi.Color.LightGreen(k)
-    }).reduceOption(_ ++ " " ++ _).getOrElse(fansi.Str(""))
+      Color.LightGreen(k)
+    }).reduceOption(_ ++ " " ++ _).getOrElse(Str(""))
 
     val readingTerms = (word.readingTerms.headOption.map { k =>
-      fansi.Color.Blue(k)
+      Color.Blue(k)
     }.toList ++ word.readingTerms.drop(1).map { k =>
-      fansi.Color.LightBlue(k)
-    }).reduceOption(_ ++ " " ++ _).getOrElse(fansi.Str(""))
+      Color.LightBlue(k)
+    }).reduceOption(_ ++ " " ++ _).getOrElse(Str(""))
 
     val definitions = word.definitions.zipWithIndex.map { case (d, i) =>
-      fansi.Color.LightGray((i + 1).toString) ++ " " ++ d
-    }.reduceOption(_ ++ "\n" ++ _).getOrElse(fansi.Str(""))
+      Color.LightGray((i + 1).toString) ++ " " ++ d
+    }.reduceOption(_ ++ "\n" ++ _).getOrElse(Str(""))
 
     val partsOfSpeech = word.partsOfSpeech.map { pos =>
-      fansi.Back.DarkGray(pos)
-    }.reduceOption(_ ++ " " ++ _).getOrElse(fansi.Str(""))
+      Back.DarkGray(pos)
+    }.reduceOption(_ ++ " " ++ _).getOrElse(Str(""))
 
     // TODO: Consider creating a StrBuilder class to make this nicer
-    (if (kanjiTerms.length == 0) fansi.Str("") else kanjiTerms ++ " ") ++
-      (if (readingTerms.length == 0) fansi.Str("") else readingTerms ++ " ") ++
-      partsOfSpeech ++ (if (showScore) fansi.Color.DarkGray(" %1.2f".format(score)) else "") ++ "\n" ++
+    (if (kanjiTerms.length == 0) Str("") else kanjiTerms ++ " ") ++
+      (if (readingTerms.length == 0) Str("") else readingTerms ++ " ") ++
+      partsOfSpeech ++ (if (showScore) Color.DarkGray(" %1.2f".format(score)) else "") ++ "\n" ++
       definitions
   }
 
