@@ -73,7 +73,7 @@ final case class SwtTerminal(
                   cursorIndex     <- commandCursorRef.get
                   resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
                   _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                         invoke(terminal.shell.dispose())
+                         ZIO.attempt(java.lang.System.exit(0)).forkDaemon
                        }
                 } yield ()
               }

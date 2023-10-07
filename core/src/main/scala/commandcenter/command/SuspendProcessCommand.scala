@@ -92,7 +92,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
     def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
       for {
-        _ <- ZIO.foreach(pid) { pid =>
+        _ <- ZIO.foreachDiscard(pid) { pid =>
                for {
                  _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
                  _ <- suspendedPidRef.set(Some(pid))
@@ -103,7 +103,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
-        _ <- ZIO.foreach(pidOpt) { pid =>
+        _ <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  _ <- PCommand("kill", "-CONT", pid.toString).exitCode.unit
                  _ <- suspendedPidRef.set(None)
@@ -126,7 +126,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.frontWindow.map(_.map(_.pid)))
-        _ <- ZIO.foreach(pidOpt) { pid =>
+        _ <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  windowHandle <- WindowManager.openProcess(pid)
                  _ <- WindowManager
@@ -140,7 +140,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
-        _ <- ZIO.foreach(pidOpt) { pid =>
+        _ <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  windowHandle <- WindowManager.openProcess(pid)
                  _ <- WindowManager

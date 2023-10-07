@@ -2,13 +2,12 @@ package commandcenter.locale
 
 import zio.test.*
 import zio.test.Assertion.*
-import zio.test.ZIOSpecDefault
 
 import java.util.Locale
 
 object LanguageSpec extends ZIOSpecDefault {
 
-  def spec =
+  def spec: Spec[TestEnvironment, Any] =
     suite("LanguageSpec")(
       test("detect plain English text") {
         assert(Language.detect("Some english text."))(equalTo(Locale.ENGLISH))

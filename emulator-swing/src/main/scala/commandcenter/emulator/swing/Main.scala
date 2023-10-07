@@ -32,6 +32,13 @@ object Main extends ZIOApp {
                _ <- ZIO.logDebug("Opening emulated terminal...")
                _ <- terminal.open
                _ <- terminal.activate
+               _ <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
+                      for {
+                        _ <- ZIO.sleep(delay)
+                        _ <- terminal.open
+                        _ <- terminal.activate
+                      } yield ()
+                    }
              } yield ()).ignore
            )
       _ <- ZIO.logInfo(

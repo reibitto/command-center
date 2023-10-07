@@ -15,6 +15,7 @@ import zio.ZIO.attemptBlocking
 
 import java.awt.Font
 import java.io.File
+import scala.concurrent.duration.Duration as ScalaDuration
 
 final case class CCConfig(
     commands: Vector[Command[Any]],
@@ -72,15 +73,23 @@ object CCConfig {
     } yield file
 }
 
-final case class GeneralConfig(debounceDelay: Duration)
+final case class GeneralConfig(
+    debounceDelay: Duration,
+    /** If defined the window will be opened again after the specified delay has
+      * elapsed. This is used as a hack to get around apps/games that do weird
+      * things like steal focus or force "always on top".
+      */
+    reopenDelay: Option[Duration]
+)
 
 object GeneralConfig {
 
   implicit val decoder: Decoder[GeneralConfig] =
     Decoder.instance { c =>
       for {
-        debounceDelay <- c.get[scala.concurrent.duration.Duration]("debounceDelay")
-      } yield GeneralConfig(debounceDelay.toNanos.nanos)
+        debounceDelay <- c.get[ScalaDuration]("debounceDelay")
+        reopenDelay   <- c.get[Option[ScalaDuration]]("reopenDelay")
+      } yield GeneralConfig(Duration.fromScala(debounceDelay), reopenDelay.map(Duration.fromScala))
     }
 }
 

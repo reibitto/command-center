@@ -10,7 +10,7 @@ final case class ConfigFake() extends Conf {
     CCConfig(
       commands = Vector.empty,
       aliases = Map.empty,
-      general = GeneralConfig(150.millis),
+      general = GeneralConfig(150.millis, None),
       display = DisplayConfig(width = 0, maxHeight = 0, opacity = 1.0f, fonts = Nil),
       keyboard = KeyboardConfig(KeyboardShortcut.empty, None),
       globalActions = Vector.empty

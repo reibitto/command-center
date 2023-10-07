@@ -1,5 +1,6 @@
 package commandcenter.command
 
+import commandcenter.CCRuntime.Env
 import commandcenter.CommandBaseSpec
 import zio.test.*
 
@@ -8,7 +9,7 @@ import java.time.Instant
 object EpochMillisCommandSpec extends CommandBaseSpec {
   val command: EpochMillisCommand = EpochMillisCommand(List("epochmillis"))
 
-  def spec =
+  def spec: Spec[TestEnvironment & Env, Any] =
     suite("EpochMillisCommandSpec")(
       test("get current time") {
         val time = Instant.now()

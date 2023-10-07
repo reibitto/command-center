@@ -20,7 +20,7 @@ object SearchSpec extends CommandBaseSpec {
       ZIO.dieMessage("This command is intentionally broken!")
   }
 
-  def spec =
+  def spec: Spec[TestEnvironment & Env, Any] =
     suite("SearchSpec")(
       test("defect in one command should not fail entire search") {
         val commands = Vector(defectCommand, EpochMillisCommand(List("epochmillis")))
