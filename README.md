@@ -1,6 +1,6 @@
 # Command Center
 
-![Scala CI](https://github.com/reibitto/command-center/workflows/Scala%20CI/badge.svg)
+![Scala CI](https://github.com/reibitto/command-center/actions/workflows/scala.yml/badge.svg)
 
 *A CLI-based launcher and general productivity tool.*
 
