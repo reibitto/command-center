@@ -15,6 +15,10 @@ lazy val root = project
     name := "command-center",
     addCommandAlias("fmt", "all root/scalafmtSbt root/scalafmtAll"),
     addCommandAlias("fmtCheck", "all root/scalafmtSbtCheck root/scalafmtCheckAll"),
+    addCommandAlias(
+      "cleanup",
+      "scalafixEnable; scalafix RemoveUnused; Test/scalafix RemoveUnused; fmt"
+    ),
     logo :=
       s"""
          |,---.                           .   ,---.         .

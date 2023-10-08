@@ -41,7 +41,7 @@ object Build {
       "-Ywarn-unused:locals", // Warn if a local definition is unused.
       "-Ywarn-unused:privates", // Warn if a private member is unused.
       "-Ywarn-unused:implicits" // Warn if an implicit parameter is unused.
-    ).filter(_ => shouldWarnForUnusedCode)
+    ).filter(_ => !lenientDevEnabled)
 
   def defaultSettings(projectName: String) =
     Seq(
@@ -85,6 +85,10 @@ object Build {
     flagValue
   }
 
-  lazy val shouldWarnForUnusedCode: Boolean = compilerFlag("scalac.unused.enabled", false)
+  /** Uses more lenient rules for local development so that warnings for unused
+    * imports and so on doesn't get in your way when code is still a work in
+    * progress. CI has all the strict rules enabled.
+    */
+  lazy val lenientDevEnabled: Boolean = compilerFlag("scalac.lenientDev.enabled", true)
 
 }

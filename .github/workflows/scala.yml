@@ -19,4 +19,4 @@ jobs:
           java-version: 11
 
       - name: Run tests
-        run: sbt -Dscalac.unused.enabled=true fmtCheck test
+        run: sbt -Dscalac.lenientDev.enabled=false fmtCheck test
