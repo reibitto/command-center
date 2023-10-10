@@ -62,31 +62,38 @@ final case class SwtTerminal(
     })
 
     terminal.inputBox.addKeyListener(new KeyAdapter {
-      override def keyPressed(e: KeyEvent): Unit =
+      override def keyReleased(e: KeyEvent): Unit =
         e.keyCode match {
           case SWT.CR =>
             Unsafe.unsafe { implicit u =>
               runtime.unsafe.fork {
-                for {
-                  _               <- searchDebouncer.triggerNowAwait
-                  previousResults <- searchResultsRef.get
-                  cursorIndex     <- commandCursorRef.get
-                  resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
-                  _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                         ZIO.attempt(java.lang.System.exit(0)).forkDaemon
-                       }
-                } yield ()
+                runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease))
               }
             }
 
           case SWT.ESC =>
             Unsafe.unsafe { implicit u =>
               runtime.unsafe.fork {
-                for {
-                  _ <- hide
-                  _ <- deactivate.ignore
-                  _ <- reset
-                } yield ()
+                resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease))
+              }
+            }
+
+          case _ => ()
+        }
+
+      override def keyPressed(e: KeyEvent): Unit =
+        e.keyCode match {
+          case SWT.CR =>
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
+              }
+            }
+
+          case SWT.ESC =>
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
               }
             }
 
@@ -139,6 +146,24 @@ final case class SwtTerminal(
         }
     })
   }
+
+  private def runSelected: ZIO[Env, Nothing, Unit] =
+    for {
+      _               <- searchDebouncer.triggerNowAwait
+      previousResults <- searchResultsRef.get
+      cursorIndex     <- commandCursorRef.get
+      resultOpt       <- runIndex(previousResults, cursorIndex).catchAll(_ => ZIO.none)
+      _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
+             ZIO.succeed(java.lang.System.exit(0)).forkDaemon
+           }
+    } yield ()
+
+  private def resetAndHide: ZIO[Tools, Nothing, Unit] =
+    for {
+      _ <- hide
+      _ <- deactivate.ignore
+      _ <- reset
+    } yield ()
 
   private def renderSelectionCursor(cursorDelta: Int): UIO[Unit] =
     for {
@@ -258,7 +283,7 @@ final case class SwtTerminal(
     } yield ()
   }
 
-  def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
+  def runIndex(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
     results.previews.lift(cursorIndex) match {
       case None =>
         for {

@@ -79,7 +79,8 @@ final case class GeneralConfig(
       * elapsed. This is used as a hack to get around apps/games that do weird
       * things like steal focus or force "always on top".
       */
-    reopenDelay: Option[Duration]
+    reopenDelay: Option[Duration],
+    hideOnKeyRelease: Boolean
 )
 
 object GeneralConfig {
@@ -87,9 +88,14 @@ object GeneralConfig {
   implicit val decoder: Decoder[GeneralConfig] =
     Decoder.instance { c =>
       for {
-        debounceDelay <- c.get[ScalaDuration]("debounceDelay")
-        reopenDelay   <- c.get[Option[ScalaDuration]]("reopenDelay")
-      } yield GeneralConfig(Duration.fromScala(debounceDelay), reopenDelay.map(Duration.fromScala))
+        debounceDelay    <- c.get[ScalaDuration]("debounceDelay")
+        reopenDelay      <- c.get[Option[ScalaDuration]]("reopenDelay")
+        hideOnKeyRelease <- c.get[Option[Boolean]]("hideOnKeyRelease")
+      } yield GeneralConfig(
+        Duration.fromScala(debounceDelay),
+        reopenDelay.map(Duration.fromScala),
+        hideOnKeyRelease.getOrElse(false)
+      )
     }
 }
 

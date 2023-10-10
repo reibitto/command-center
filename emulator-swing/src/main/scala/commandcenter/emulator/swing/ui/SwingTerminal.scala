@@ -241,7 +241,7 @@ final case class SwingTerminal(
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
-  def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
+  def runIndex(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
     results.previews.lift(cursorIndex) match {
       case None =>
         for {
@@ -302,27 +302,44 @@ final case class SwingTerminal(
       _ <- render(searchResults)
     } yield ()
 
+  private def runSelected: ZIO[Env, Nothing, Unit] =
+    for {
+      _               <- searchDebouncer.triggerNowAwait
+      previousResults <- searchResultsRef.get
+      cursorIndex     <- commandCursorRef.get
+      resultOpt       <- runIndex(previousResults, cursorIndex).catchAll(_ => ZIO.none)
+      _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
+             ZIO.succeed(java.lang.System.exit(0)).forkDaemon
+           }
+    } yield ()
+
+  private def resetAndHide: ZIO[Tools, Nothing, Unit] =
+    for {
+      _ <- hide
+      _ <- deactivate.ignore
+      _ <- reset
+    } yield ()
+
   inputTextField.addZKeyListener(new ZKeyAdapter {
+
+    override def keyReleased(e: KeyEvent): URIO[Env, Unit] =
+      e.getKeyCode match {
+        case KeyEvent.VK_ENTER =>
+          runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease)).unit
+
+        case KeyEvent.VK_ESCAPE =>
+          resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease)).unit
+
+        case _ => ZIO.unit
+      }
 
     override def keyPressed(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
         case KeyEvent.VK_ENTER =>
-          for {
-            _               <- searchDebouncer.triggerNowAwait
-            previousResults <- searchResultsRef.get
-            cursorIndex     <- commandCursorRef.get
-            resultOpt       <- runSelected(previousResults, cursorIndex).catchAll(_ => ZIO.none)
-            _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-                   closePromise.succeed(())
-                 }
-          } yield ()
+          runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)).unit
 
         case KeyEvent.VK_ESCAPE =>
-          for {
-            _ <- hide
-            _ <- deactivate.ignore
-            _ <- reset
-          } yield ()
+          resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease)).unit
 
         case KeyEvent.VK_DOWN =>
           e.consume() // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
