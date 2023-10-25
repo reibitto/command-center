@@ -13,10 +13,10 @@ import zio.{Scope, ZIO}
 import java.nio.file.Path
 
 final case class KanjiCommand(
-  commandNames: List[String],
-  luceneIndex: KanjiReader,
-  quickPrefixes: List[String],
-  showScore: Boolean
+    commandNames: List[String],
+    luceneIndex: KanjiReader,
+    quickPrefixes: List[String],
+    showScore: Boolean
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
   val title: String = "Kanji"
