@@ -14,10 +14,10 @@ object CommandType extends Enum[CommandType] {
   case object EpochUnixCommand extends CommandType
   case object ExitCommand extends CommandType
   case object ExternalIPCommand extends CommandType
-  case object Foobar2000Command extends CommandType
   case object FileNavigationCommand extends CommandType
   case object FindFileCommand extends CommandType
   case object FindInFileCommand extends CommandType
+  case object Foobar2000Command extends CommandType
   case object HashCommand extends CommandType
   case object HoogleCommand extends CommandType
   case object ITunesCommand extends CommandType
@@ -31,6 +31,7 @@ object CommandType extends Enum[CommandType] {
   case object RebootCommand extends CommandType
   case object ReloadCommand extends CommandType
   case object ResizeCommand extends CommandType
+  case object ScreensaverCommand extends CommandType
   case object SearchCratesCommand extends CommandType
   case object SearchMavenCommand extends CommandType
   case object SearchUrlCommand extends CommandType
