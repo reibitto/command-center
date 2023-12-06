@@ -172,7 +172,6 @@ object Command {
                    case CommandType.RebootCommand             => RebootCommand.make(config)
                    case CommandType.ReloadCommand             => ReloadCommand.make(config)
                    case CommandType.ResizeCommand             => ResizeCommand.make(config)
-                   case CommandType.ScreensaverCommand        => ScreensaverCommand.make(config)
                    case CommandType.SearchCratesCommand       => SearchCratesCommand.make(config)
                    case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
                    case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)

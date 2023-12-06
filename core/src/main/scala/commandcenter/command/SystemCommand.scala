@@ -21,6 +21,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
   val screensaverCommand =
     decline.Command("screensaver", "Activate the screensaver")(Opts(SystemSubcommand.Screensaver))
+
   val helpCommand = decline.Command("help", "Display usage help")(Opts(SystemSubcommand.Help))
 
   val opts: Opts[SystemSubcommand] =
