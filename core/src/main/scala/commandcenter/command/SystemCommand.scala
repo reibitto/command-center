@@ -1,18 +1,24 @@
 package commandcenter.command
 
 import com.monovore.decline
-import com.monovore.decline.{Help, Opts}
-import com.sun.jna.platform.win32.{User32, WinUser}
-import com.sun.jna.platform.win32.WinDef.{LPARAM, WPARAM}
+import com.monovore.decline.Help
+import com.monovore.decline.Opts
+import com.sun.jna.platform.win32.User32
+import com.sun.jna.platform.win32.WinDef.LPARAM
+import com.sun.jna.platform.win32.WinDef.WPARAM
+import com.sun.jna.platform.win32.WinUser
 import com.typesafe.config.Config
-import commandcenter.command.native.win.PowrProf
+import commandcenter.CCRuntime.Env
 import commandcenter.command.SystemCommand.SystemSubcommand
+import commandcenter.command.native.win.PowrProf
+import commandcenter.config.Decoders.*
 import commandcenter.util.OS
 import commandcenter.view.Renderer
-import commandcenter.CCRuntime.Env
-import zio.{IO, ZIO}
+import zio.*
 
-final case class SystemCommand(commandNames: List[String]) extends Command[Unit] {
+import scala.concurrent.duration.Duration as ScalaDuration
+
+final case class SystemCommand(commandNames: List[String], screensaverDelay: Option[Duration]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SystemCommand
   val title: String = "System Command"
 
@@ -82,7 +88,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
                                  new LPARAM(0)
                                )
                                ()
-                             }
+                             }.delay(screensaverDelay.getOrElse(0.seconds))
                            )
 
                          case SystemSubcommand.Help =>
@@ -103,8 +109,9 @@ object SystemCommand extends CommandPlugin[SystemCommand] {
 
   def make(config: Config): IO[CommandPluginError, SystemCommand] =
     for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield SystemCommand(commandNames.getOrElse(List("system")))
+      commandNames     <- config.getZIO[Option[List[String]]]("commandNames")
+      screensaverDelay <- config.getZIO[Option[ScalaDuration]]("screensaverDelay")
+    } yield SystemCommand(commandNames.getOrElse(List("system")), screensaverDelay.map(Duration.fromScala))
 
   sealed trait SystemSubcommand
 
