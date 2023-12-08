@@ -8,12 +8,12 @@ import com.sun.jna.platform.win32.WinDef.LPARAM
 import com.sun.jna.platform.win32.WinDef.WPARAM
 import com.sun.jna.platform.win32.WinUser
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.command.native.win.PowrProf
+import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.config.Decoders.*
 import commandcenter.util.OS
 import commandcenter.view.Renderer
+import commandcenter.CCRuntime.Env
 import zio.*
 
 import scala.concurrent.duration.Duration as ScalaDuration
