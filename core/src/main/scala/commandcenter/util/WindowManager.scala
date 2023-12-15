@@ -1,11 +1,21 @@
 package commandcenter.util
 
-import com.sun.jna.platform.win32.{Kernel32, User32, WinNT, WinUser}
-import com.sun.jna.platform.win32.WinDef.{HDC, HWND, LPARAM, RECT}
-import com.sun.jna.platform.win32.WinUser.{MONITORENUMPROC, MONITORINFO, MONITORINFOEX, WINDOWPLACEMENT}
-import com.sun.jna.ptr.IntByReference
 import com.sun.jna.Pointer
-import zio.{RIO, Ref, Scope, Task, ZIO}
+import com.sun.jna.platform.win32.Kernel32
+import com.sun.jna.platform.win32.User32
+import com.sun.jna.platform.win32.WinDef.HDC
+import com.sun.jna.platform.win32.WinDef.HWND
+import com.sun.jna.platform.win32.WinDef.LPARAM
+import com.sun.jna.platform.win32.WinDef.RECT
+import com.sun.jna.platform.win32.WinNT
+import com.sun.jna.platform.win32.WinUser
+import com.sun.jna.platform.win32.WinUser.MONITORENUMPROC
+import com.sun.jna.platform.win32.WinUser.MONITORINFO
+import com.sun.jna.platform.win32.WinUser.MONITORINFOEX
+import com.sun.jna.platform.win32.WinUser.WINDOWPLACEMENT
+import com.sun.jna.ptr.IntByReference
+import zio.{Chunk, RIO, Ref, Scope, Task, ZIO}
+import zio.stream.ZStream
 
 import java.util
 import scala.collection.mutable
@@ -354,8 +364,15 @@ object WindowManager {
     }
 
     User32.INSTANCE.SetForegroundWindow(window)
-
   }
+
+  def switchFocusToPreviousActiveWindow: Task[Unit] =
+    for {
+      windows <- topLevelWindows
+      _ <- ZIO.foreachDiscard(windows.lift(1)) { w =>
+             giveWindowFocus(w.windowHandle)
+           }
+    } yield ()
 
   def fromCString(bufferSize: Int)(fn: Array[Char] => Int): String = {
     val buffer = Array.ofDim[Char](bufferSize)

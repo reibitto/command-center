@@ -1,19 +1,24 @@
 package commandcenter.emulator.swt.ui
 
 import commandcenter.*
+import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{Debouncer, OS}
+import commandcenter.util.Debouncer
+import commandcenter.util.OS
+import commandcenter.util.WindowManager
 import commandcenter.view.Rendered
-import commandcenter.CCRuntime.Env
-import org.eclipse.swt.custom.StyleRange
-import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
-import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
+import org.eclipse.swt.custom.StyleRange
+import org.eclipse.swt.events.KeyAdapter
+import org.eclipse.swt.events.KeyEvent
+import org.eclipse.swt.events.ModifyEvent
+import org.eclipse.swt.events.ModifyListener
+import org.eclipse.swt.widgets.Display
 import zio.*
 import zio.stream.ZSink
 
@@ -48,11 +53,16 @@ final case class SwtTerminal(
         Unsafe.unsafe { implicit u =>
           runtime.unsafe.fork {
             for {
-              config <- Conf.config
+              config        <- Conf.config
+              searchResults <- searchResultsRef.get
+              // This is an optimization but it also helps with certain IMEs where they resend all the changes when
+              // exiting out of composition mode (committing the changes).
+              sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
               _ <- searchDebouncer(
                      Command
                        .search(config.commands, config.aliases, searchTerm, context)
                        .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                       .unless(sameAsLast)
                        .unit
                    ).flatMap(_.join)
             } yield ()
@@ -158,7 +168,7 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  private def resetAndHide: ZIO[Tools, Nothing, Unit] =
+  private def resetAndHide: ZIO[Env, Nothing, Unit] =
     for {
       _ <- hide
       _ <- deactivate.ignore
@@ -387,7 +397,14 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  def hide: UIO[Unit] = invoke(terminal.shell.setVisible(false))
+  def hide: URIO[Conf, Unit] =
+    for {
+      keepOpen <- Conf.get(_.general.keepOpen)
+      _ <- if (keepOpen)
+             WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
+           else
+             invoke(terminal.shell.setVisible(false))
+    } yield ()
 
   def activate: UIO[Unit] =
     invoke(terminal.shell.forceActive())

@@ -13,7 +13,7 @@ object V {
 
   val graal = "20.2.0"
 
-  val ject = "0.3.1"
+  val ject = "0.3.1+3-719f37fb+20231208-2116-SNAPSHOT"
 
   val jkeymaster = "1.3"
 

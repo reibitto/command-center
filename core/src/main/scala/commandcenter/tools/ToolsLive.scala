@@ -1,12 +1,16 @@
 package commandcenter.tools
 
 import commandcenter.util.AppleScript
-import zio.{Task, TaskLayer, ZIO, ZLayer}
+import zio.*
 import zio.process.Command as PCommand
 
 import java.awt.datatransfer.StringSelection
 import java.awt.Toolkit
+import java.io.BufferedInputStream
 import java.io.File
+import java.io.InputStream
+import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.LineEvent
 import scala.util.Try
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
@@ -44,19 +48,44 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
     }
 
   def beep: Task[Unit] = ZIO.attempt(Toolkit.getDefaultToolkit.beep())
+
+  def playSound(inputStream: InputStream): Task[Unit] =
+    ZIO.scoped {
+      for {
+        audioInputStream <- ZIO.attemptBlocking(AudioSystem.getAudioInputStream(new BufferedInputStream(inputStream)))
+        _                <- ZIO.addFinalizer(ZIO.succeed(audioInputStream.close()))
+        clip             <- ZIO.attemptBlocking(AudioSystem.getClip)
+        _                <- ZIO.addFinalizer(ZIO.succeed(clip.close()))
+        donePromise      <- Promise.make[Nothing, Unit]
+        _ <- ZIO
+               .async[Any, Throwable, Boolean] { cb =>
+                 clip.addLineListener { e =>
+                   if (e.getType == LineEvent.Type.STOP) {
+                     cb(donePromise.succeed(()))
+                   }
+                 }
+               }
+               .fork
+        _ <- ZIO.attemptBlocking {
+               clip.open(audioInputStream)
+               clip.start()
+             }
+        _ <- donePromise.await
+      } yield ()
+    }
 }
 
 object ToolsLive {
 
   def make: TaskLayer[Tools] =
     ZLayer {
-      (for {
+      for {
         pid <- ZIO.attempt(ProcessHandle.current.pid)
         toolsPath = sys.env.get("COMMAND_CENTER_TOOLS_PATH").map(new File(_)).orElse {
-                      Try(System.getProperty("user.home")).toOption
+                      Try(java.lang.System.getProperty("user.home")).toOption
                         .map(home => new File(home, ".command-center/cc-tools"))
                         .filter(_.exists())
                     }
-      } yield new ToolsLive(pid, toolsPath))
+      } yield new ToolsLive(pid, toolsPath)
     }
 }

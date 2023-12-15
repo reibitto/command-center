@@ -11,7 +11,6 @@ import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
 import io.circe.Decoder
 import zio.*
-import zio.ZIO.attemptBlocking
 
 import java.awt.Font
 import java.io.File
@@ -28,16 +27,19 @@ final case class CCConfig(
 
 object CCConfig {
 
+  def defaultConfigFile: UIO[File] =
+    envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
+
   def load: ZIO[Scope & Env, Throwable, CCConfig] =
     for {
-      file   <- envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
+      file   <- defaultConfigFile
       _      <- ZIO.logDebug(s"Loading config file at ${file.getAbsolutePath}")
       config <- load(file)
     } yield config
 
   def load(file: File): ZIO[Scope & Env, Throwable, CCConfig] =
     for {
-      config   <- attemptBlocking(ConfigFactory.parseFile(file))
+      config   <- ZIO.attemptBlocking(ConfigFactory.parseFile(file))
       ccConfig <- loadFrom(config)
     } yield ccConfig
 
@@ -80,7 +82,8 @@ final case class GeneralConfig(
       * things like steal focus or force "always on top".
       */
     reopenDelay: Option[Duration],
-    hideOnKeyRelease: Boolean
+    hideOnKeyRelease: Boolean,
+    keepOpen: Boolean
 )
 
 object GeneralConfig {
@@ -91,10 +94,12 @@ object GeneralConfig {
         debounceDelay    <- c.get[ScalaDuration]("debounceDelay")
         reopenDelay      <- c.get[Option[ScalaDuration]]("reopenDelay")
         hideOnKeyRelease <- c.get[Option[Boolean]]("hideOnKeyRelease")
+        keepOpen <- c.get[Option[Boolean]]("keepOpen")
       } yield GeneralConfig(
         Duration.fromScala(debounceDelay),
         reopenDelay.map(Duration.fromScala),
-        hideOnKeyRelease.getOrElse(false)
+        hideOnKeyRelease.getOrElse(false),
+        keepOpen.getOrElse(false)
       )
     }
 }

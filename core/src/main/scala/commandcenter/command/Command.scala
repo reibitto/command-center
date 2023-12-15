@@ -2,14 +2,17 @@ package commandcenter.command
 
 import com.monovore.decline.Help
 import com.typesafe.config.Config
-import commandcenter.event.KeyboardShortcut
-import commandcenter.util.{JavaVM, OS}
-import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
+import commandcenter.event.KeyboardShortcut
+import commandcenter.util.JavaVM
+import commandcenter.util.OS
+import commandcenter.view.Rendered
+import commandcenter.view.Renderer
 import fansi.Color
 import zio.*
-import zio.stream.{ZSink, ZStream}
+import zio.stream.ZSink
+import zio.stream.ZStream
 
 import java.util.Locale
 
@@ -147,6 +150,7 @@ object Command {
       typeName <- ZIO.attempt(config.getString("type")).mapError(CommandPluginError.UnexpectedException)
       command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
                    case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
+                   case CommandType.ConfigCommand             => ConfigCommand.make(config)
                    case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
                    case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
                    case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)

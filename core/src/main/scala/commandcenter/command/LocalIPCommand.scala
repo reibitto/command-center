@@ -6,7 +6,6 @@ import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
 import zio.{IO, ZIO}
-import zio.ZIO.attemptBlocking
 
 import java.net.{Inet4Address, NetworkInterface}
 import scala.jdk.CollectionConverters.*
@@ -18,7 +17,7 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      localIps <- attemptBlocking {
+      localIps <- ZIO.attemptBlocking {
                     val interfaces = NetworkInterface.getNetworkInterfaces.asScala.toList
                     interfaces
                       .filter(interface => !interface.isLoopback && !interface.isVirtual && interface.isUp)

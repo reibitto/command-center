@@ -2,7 +2,6 @@ package commandcenter.util
 
 import zio.{Task, ZIO}
 import zio.process.Command as PCommand
-import zio.ZIO.attemptBlocking
 
 import java.awt.Desktop
 import java.io.File
@@ -30,7 +29,7 @@ object ProcessUtil {
             PCommand("xdg-open", url).exitCode.unit
 
           case OS.Windows | OS.Other(_) =>
-            attemptBlocking(
+            ZIO.attemptBlocking(
               Desktop.getDesktop.browse(new URI(url))
             )
         }
@@ -75,7 +74,7 @@ object ProcessUtil {
         PCommand("explorer.exe", arg).successfulExitCode.unit
 
       // TODO: To properly support Linux, we probably need to detect the Linux flavor
-      case OS.Linux | OS.Other(_) => attemptBlocking(Desktop.getDesktop.browseFileDirectory(file))
+      case OS.Linux | OS.Other(_) => ZIO.attemptBlocking(Desktop.getDesktop.browseFileDirectory(file))
     }
 
 }

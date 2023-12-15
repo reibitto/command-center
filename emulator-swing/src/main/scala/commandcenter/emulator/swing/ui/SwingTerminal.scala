@@ -1,15 +1,18 @@
 package commandcenter.emulator.swing.ui
 
 import commandcenter.*
+import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{Debouncer, OS}
-import commandcenter.view.{Rendered, Style}
-import commandcenter.CCRuntime.Env
+import commandcenter.util.Debouncer
+import commandcenter.util.OS
+import commandcenter.util.WindowManager
+import commandcenter.view.Rendered
+import commandcenter.view.Style
 import zio.*
 import zio.stream.ZSink
 
@@ -17,7 +20,10 @@ import java.awt.*
 import java.awt.event.KeyEvent
 import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
-import javax.swing.text.{DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext}
+import javax.swing.text.DefaultStyledDocument
+import javax.swing.text.SimpleAttributeSet
+import javax.swing.text.StyleConstants
+import javax.swing.text.StyleContext
 
 final case class SwingTerminal(
     commandCursorRef: Ref[Int],
@@ -113,11 +119,16 @@ final case class SwingTerminal(
     val context = CommandContext(Language.detect(searchTerm), SwingTerminal.this, 1.0)
 
     for {
-      config <- Conf.config
+      config        <- Conf.config
+      searchResults <- searchResultsRef.get
+      // This is an optimization but it also helps with certain IMEs where they resend all the changes when
+      // exiting out of composition mode (committing the changes).
+      sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
       _ <- searchDebouncer(
              Command
                .search(config.commands, config.aliases, searchTerm, context)
                .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+               .unless(sameAsLast)
                .unit
            ).flatMap(_.join)
     } yield ()
@@ -313,7 +324,7 @@ final case class SwingTerminal(
            }
     } yield ()
 
-  private def resetAndHide: ZIO[Tools, Nothing, Unit] =
+  private def resetAndHide: ZIO[Env, Nothing, Unit] =
     for {
       _ <- hide
       _ <- deactivate.ignore
@@ -410,9 +421,14 @@ final case class SwingTerminal(
 
     }
 
-  def hide: UIO[Unit] = ZIO.succeed {
-    frame.setVisible(false)
-  }
+  def hide: URIO[Conf, Unit] =
+    for {
+      keepOpen <- Conf.get(_.general.keepOpen)
+      _ <- if (keepOpen)
+             WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
+           else
+             ZIO.succeed(frame.setVisible(false))
+    } yield ()
 
   def activate: RIO[Tools, Unit] =
     OS.os match {

@@ -5,12 +5,22 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
-import commandcenter.util.{OS, WindowManager}
+import commandcenter.tools.Tools
+import commandcenter.util.OS
+import commandcenter.util.WindowManager
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import fansi.{Color, Str}
-import zio.{RIO, Ref, Scope, Task, ZIO}
+import fansi.Color
+import fansi.Str
 import zio.process.Command as PCommand
+import zio.Cause
+import zio.RIO
+import zio.Ref
+import zio.Scope
+import zio.Task
+import zio.ZIO
+
+import java.nio.file.Files
 
 final case class SuspendProcessCommand(
     commandNames: List[String],
@@ -90,28 +100,39 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
   object UnixLike {
 
-    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
       for {
-        _ <- ZIO.foreachDiscard(pid) { pid =>
-               for {
-                 _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
-                 _ <- suspendedPidRef.set(Some(pid))
-               } yield ()
-             }
+        tryingToSuspendSelf <- ZIO.succeed(pid.contains(ProcessHandle.current.pid))
+        _ <- ZIO
+               .foreachDiscard(pid) { pid =>
+                 for {
+                   _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
+                   _ <- Tools
+                          .playSound(getClass.getResourceAsStream("/audio/button-switch-on.wav"))
+                          .ignore
+                          .forkDaemon
+                   _ <- suspendedPidRef.set(Some(pid))
+                 } yield ()
+               }
+               .when(!tryingToSuspendSelf)
       } yield ()
 
-    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
         _ <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  _ <- PCommand("kill", "-CONT", pid.toString).exitCode.unit
+                 _ <- Tools
+                        .playSound(getClass.getResourceAsStream("/audio/button-switch-off.wav"))
+                        .ignore
+                        .forkDaemon
                  _ <- suspendedPidRef.set(None)
                } yield ()
              }
       } yield ()
 
-    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): Task[Unit] =
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
       for {
         suspendedPid <- suspendedPidRef.get
         _ <- if (suspendedPid.isEmpty)
@@ -123,21 +144,28 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
   object Windows {
 
-    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
+    def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.frontWindow.map(_.map(_.pid)))
-        _ <- ZIO.foreachDiscard(pidOpt) { pid =>
-               for {
-                 windowHandle <- WindowManager.openProcess(pid)
-                 _ <- WindowManager
-                        .suspendProcess(windowHandle)
-                        .tapErrorCause(t => ZIO.logWarningCause("Could not suspend process", t))
-                 _ <- suspendedPidRef.set(Some(pid))
-               } yield ()
-             }
+        tryingToSuspendSelf = pidOpt.contains(ProcessHandle.current.pid)
+        _ <- ZIO
+               .foreachDiscard(pidOpt) { pid =>
+                 for {
+                   windowHandle <- WindowManager.openProcess(pid)
+                   _ <- WindowManager
+                          .suspendProcess(windowHandle)
+                          .tapErrorCause(t => ZIO.logWarningCause("Could not suspend process", t))
+                   _ <- Tools
+                          .playSound(getClass.getResourceAsStream("/audio/button-switch-on.wav"))
+                          .ignore
+                          .forkDaemon
+                   _ <- suspendedPidRef.set(Some(pid))
+                 } yield ()
+               }
+               .when(!tryingToSuspendSelf)
       } yield ()
 
-    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
+    def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
         _ <- ZIO.foreachDiscard(pidOpt) { pid =>
@@ -146,12 +174,16 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                  _ <- WindowManager
                         .resumeProcess(windowHandle)
                         .tapErrorCause(t => ZIO.logWarningCause("Could not resume process", t))
+                 _ <- Tools
+                        .playSound(getClass.getResourceAsStream("/audio/button-switch-off.wav"))
+                        .ignore
+                        .forkDaemon
                  _ <- suspendedPidRef.set(None)
                } yield ()
              }
       } yield ()
 
-    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope, Unit] =
+    def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
         suspendedPid <- suspendedPidRef.get
         _ <- if (suspendedPid.isEmpty)

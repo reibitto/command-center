@@ -15,7 +15,6 @@ import commandcenter.CCRuntime.Env
 import fansi.{Bold, Color, Str}
 import zio.*
 import zio.stream.ZSink
-import zio.ZIO.attemptBlocking
 
 import java.awt.Dimension
 
@@ -260,7 +259,7 @@ final case class CliTerminal[T <: Terminal](
     } yield eventResult).catchAll(t => ZIO.succeed(EventResult.UnexpectedError(t)))
 
   def readInput: Task[KeyStroke] =
-    attemptBlocking {
+    ZIO.attemptBlocking {
       terminal.readInput()
     }
 
