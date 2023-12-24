@@ -26,10 +26,11 @@ import java.awt.Dimension
 import scala.collection.mutable
 
 final case class SwtTerminal(
+    terminal: RawSwtTerminal,
+    searchDebouncer: Debouncer[Env, Nothing, Unit],
     commandCursorRef: Ref[Int],
     searchResultsRef: Ref[SearchResults[Any]],
-    searchDebouncer: Debouncer[Env, Nothing, Unit],
-    terminal: RawSwtTerminal
+    consecutiveOpenCountRef: Ref[Int]
 )(implicit runtime: Runtime[Env])
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swt
@@ -70,6 +71,8 @@ final case class SwtTerminal(
         }
       }
     })
+
+    var toggle = false
 
     terminal.inputBox.addKeyListener(new KeyAdapter {
       override def keyReleased(e: KeyEvent): Unit =
@@ -387,7 +390,29 @@ final case class SwtTerminal(
       terminal.outputBox.setText("")
     }
 
-  def open: UIO[Unit] =
+  def openActivated: URIO[Env, Unit] =
+    for {
+      consecutiveOpenCount <- consecutiveOpenCountRef.updateAndGet(_ + 1)
+      config               <- Conf.config
+      _                    <- open
+      _                    <- activate
+      _ <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
+             for {
+               _ <- ZIO.sleep(delay)
+               _ <- open
+               _ <- activate
+             } yield ()
+           }
+      _ <- ZIO.foreachDiscard(config.display.alternateOpacity) { alternateOpacity =>
+             if (consecutiveOpenCount % 2 == 0) {
+               setOpacity(alternateOpacity).ignore
+             } else {
+               setOpacity(config.display.opacity).ignore
+             }
+           }
+    } yield ()
+
+  def open: URIO[Env, Unit] =
     for {
       _ <- invoke {
              val bounds = terminal.shell.getDisplay.getPrimaryMonitor.getClientArea
@@ -404,6 +429,7 @@ final case class SwtTerminal(
              WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
            else
              invoke(terminal.shell.setVisible(false))
+      _ <- consecutiveOpenCountRef.set(0)
     } yield ()
 
   def activate: UIO[Unit] =
@@ -441,11 +467,18 @@ object SwtTerminal {
 
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
-      debounceDelay    <- Conf.get(_.general.debounceDelay)
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
-      commandCursorRef <- Ref.make(0)
-      searchResultsRef <- Ref.make(SearchResults.empty[Any])
-      swtTerminal = new SwtTerminal(commandCursorRef, searchResultsRef, searchDebouncer, terminal)(runtime)
+      debounceDelay           <- Conf.get(_.general.debounceDelay)
+      searchDebouncer         <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      commandCursorRef        <- Ref.make(0)
+      searchResultsRef        <- Ref.make(SearchResults.empty[Any])
+      consecutiveOpenCountRef <- Ref.make(0)
+      swtTerminal = new SwtTerminal(
+                      terminal,
+                      searchDebouncer,
+                      commandCursorRef,
+                      searchResultsRef,
+                      consecutiveOpenCountRef
+                    )(runtime)
       _ <- swtTerminal.init
     } yield swtTerminal
 }

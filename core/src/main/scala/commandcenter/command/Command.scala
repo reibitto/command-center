@@ -84,7 +84,7 @@ object Command {
     (for {
       chunks <- ZStream
                   .fromIterable(commands)
-                  .mapZIOPar(8) { command =>
+                  .mapZIOParUnordered(8) { command =>
                     command
                       .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
                       .flatMap {
@@ -116,7 +116,6 @@ object Command {
                       }
                       .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
                       .either
-
                   }
                   .runCollect
     } yield chunks.flatMap {
@@ -169,6 +168,7 @@ object Command {
                    case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
                    case CommandType.LockCommand               => LockCommand.make(config)
                    case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
+                   case CommandType.MuteCommand               => MuteCommand.make(config)
                    case CommandType.OpacityCommand            => OpacityCommand.make(config)
                    case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
                    case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)

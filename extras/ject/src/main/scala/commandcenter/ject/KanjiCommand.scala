@@ -47,12 +47,12 @@ final case class KanjiCommand(
 
   // TODO: Consider creating a StrBuilder class to make this nicer
   def render(k: KanjiDoc, score: Double): Str =
-    (if (k.isJouyouKanji) Str("　") else Color.Red("×")) ++
-      Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) "" else "　") ++ k.kunYomi.map { ku =>
+    (if (k.isJouyouKanji) Str(" ") else Color.Red("×")) ++
+      Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) "" else " ") ++ k.kunYomi.map { ku =>
         Color.Magenta(ku)
-      }.reduceOption(_ ++ "　" ++ _).getOrElse(Str("")) ++ "　" ++ k.onYomi.map { o =>
+      }.reduceOption(_ ++ " " ++ _).getOrElse(Str("")) ++ " " ++ k.onYomi.map { o =>
         Color.Cyan(o)
-      }.reduceOption(_ ++ "　" ++ _).getOrElse(Str("")) ++ " " ++ k.meaning.mkString("; ") ++
+      }.reduceOption(_ ++ " " ++ _).getOrElse(Str("")) ++ " " ++ k.meaning.mkString("; ") ++
       (if (showScore) Color.DarkGray(" %1.2f".format(score)) else "")
 
 }

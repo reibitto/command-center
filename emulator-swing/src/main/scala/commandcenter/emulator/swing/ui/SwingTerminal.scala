@@ -18,6 +18,7 @@ import zio.stream.ZSink
 
 import java.awt.*
 import java.awt.event.KeyEvent
+import java.util.Locale
 import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.DefaultStyledDocument
@@ -480,9 +481,11 @@ final case class SwingTerminal(
     (for {
       fonts <- Conf.get(_.display.fonts)
       installedFontNames <-
-        ZIO.attempt(GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.toSet)
-    } yield fonts.find(f => installedFontNames.contains(f.getName)).getOrElse(fallbackFont))
-      .orElse(ZIO.succeed(fallbackFont))
+        ZIO.attempt(
+          GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.map(_.toLowerCase).toSet
+        )
+      font = fonts.find(f => installedFontNames.contains(f.getName.toLowerCase)).getOrElse(fallbackFont)
+    } yield font).orElse(ZIO.succeed(fallbackFont))
   }
 
   def getPreferredFrameWidth: URIO[Conf, Int] =

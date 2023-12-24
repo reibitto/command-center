@@ -94,7 +94,7 @@ object GeneralConfig {
         debounceDelay    <- c.get[ScalaDuration]("debounceDelay")
         reopenDelay      <- c.get[Option[ScalaDuration]]("reopenDelay")
         hideOnKeyRelease <- c.get[Option[Boolean]]("hideOnKeyRelease")
-        keepOpen <- c.get[Option[Boolean]]("keepOpen")
+        keepOpen         <- c.get[Option[Boolean]]("keepOpen")
       } yield GeneralConfig(
         Duration.fromScala(debounceDelay),
         reopenDelay.map(Duration.fromScala),
@@ -104,12 +104,12 @@ object GeneralConfig {
     }
 }
 
-final case class DisplayConfig(width: Int, maxHeight: Int, opacity: Float, fonts: List[Font])
+final case class DisplayConfig(width: Int, maxHeight: Int, opacity: Float, alternateOpacity: Option[Float], fonts: List[Font])
 
 object DisplayConfig {
 
   implicit val decoder: Decoder[DisplayConfig] =
-    Decoder.forProduct4("width", "maxHeight", "opacity", "fonts")(DisplayConfig.apply)
+    Decoder.forProduct5("width", "maxHeight", "opacity", "alternateOpacity", "fonts")(DisplayConfig.apply)
 }
 
 final case class KeyboardConfig(openShortcut: KeyboardShortcut, suspendShortcut: Option[String])

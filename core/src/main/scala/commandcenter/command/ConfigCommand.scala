@@ -1,9 +1,9 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
+import commandcenter.view.Renderer
 import commandcenter.CCConfig
 import commandcenter.CCRuntime.Env
-import commandcenter.view.Renderer
 import zio.{IO, ZIO}
 
 import java.awt.Desktop
@@ -16,7 +16,7 @@ final case class ConfigCommand(commandNames: List[String]) extends Command[Unit]
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-      file <- CCConfig.defaultConfigFile
+      file  <- CCConfig.defaultConfigFile
     } yield {
       val run = ZIO.attempt(Desktop.getDesktop.open(file))
 

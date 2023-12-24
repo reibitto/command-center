@@ -1,11 +1,11 @@
 package commandcenter.emulator.swt
 
 import commandcenter.*
+import commandcenter.CCRuntime.Env
 import commandcenter.emulator.swt.shortcuts.ShortcutsLive
 import commandcenter.emulator.swt.ui.{RawSwtTerminal, SwtTerminal}
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.ToolsLive
-import commandcenter.CCRuntime.Env
 import zio.*
 
 object Main {
@@ -35,15 +35,7 @@ object Main {
           _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
                  (for {
                    _ <- ZIO.logDebug("Opening emulated terminal...")
-                   _ <- terminal.open
-                   _ <- terminal.activate
-                   _ <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
-                          for {
-                            _ <- ZIO.sleep(delay)
-                            _ <- terminal.open
-                            _ <- terminal.activate
-                          } yield ()
-                        }
+                   _ <- terminal.openActivated
                  } yield ()).ignore
                )
           _ <- ZIO.logInfo(
