@@ -19,6 +19,7 @@ final case class ShortcutsLive(provider: Provider) extends Shortcuts {
              provider.register(
                KeyboardShortcutUtil.toKeyStroke(shortcut),
                new HotKeyListener {
+
                  def onHotKey(hotKey: HotKey): Unit =
                    Unsafe.unsafe { implicit u =>
                      runtime.unsafe.fork(handler(shortcut))
