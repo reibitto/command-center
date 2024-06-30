@@ -144,7 +144,7 @@ object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
           .some
       }
       .unsome
-      .mapError(CommandPluginError.UnexpectedException)
+      .mapError(CommandPluginError.UnexpectedException.apply)
       .someOrFail(
         CommandPluginError.PluginNotApplicable(CommandType.Foobar2000Command, "Path to foobar2000 executable not found")
       )

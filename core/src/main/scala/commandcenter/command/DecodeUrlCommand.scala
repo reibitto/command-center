@@ -19,7 +19,7 @@ final case class DecodeUrlCommand(commandNames: List[String]) extends Command[St
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command("", s"URL decodes the given string")(all).parse(input.args)
-      (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
       decoded                  <- ZIO.attempt(URLDecoder.decode(valueToDecode, charset)).mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.one(
       Preview(decoded).onRun(Tools.setClipboard(decoded)).score(Scores.veryHigh(input.context))

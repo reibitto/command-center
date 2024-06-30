@@ -47,6 +47,7 @@ final case class SwtTerminal(
 
   Display.getDefault.asyncExec { () =>
     terminal.inputBox.addModifyListener(new ModifyListener {
+
       override def modifyText(e: ModifyEvent): Unit = {
         val searchTerm = terminal.inputBox.getText
         val context = CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0)
@@ -75,6 +76,7 @@ final case class SwtTerminal(
     var toggle = false
 
     terminal.inputBox.addKeyListener(new KeyAdapter {
+
       override def keyReleased(e: KeyEvent): Unit =
         e.keyCode match {
           case SWT.CR =>

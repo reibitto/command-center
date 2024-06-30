@@ -190,6 +190,7 @@ object WindowManager {
       null,
       null,
       new MONITORENUMPROC() {
+
         override def apply(hMonitor: WinUser.HMONITOR, hdcMonitor: HDC, lprcMonitor: RECT, dwData: LPARAM): Int = {
           val monitorInfo = new MONITORINFOEX()
           User32.INSTANCE.GetMonitorInfo(hMonitor, monitorInfo)

@@ -22,7 +22,7 @@ object CommandPlugin {
       commandConfigs <-
         ZIO
           .attempt(config.getConfigList(path).asScala.toList)
-          .mapError(CommandPluginError.UnexpectedException)
+          .mapError(CommandPluginError.UnexpectedException.apply)
       commands <- ZIO.foreach(commandConfigs) { c =>
                     Command
                       .parse(c)
@@ -72,8 +72,8 @@ object CommandPlugin {
                       .instance
                       .asInstanceOf[CommandPlugin[Command[?]]]
                   )
-                  .mapError(CommandPluginError.UnexpectedException)
-      command <- plugin.make(c).mapError(CommandPluginError.UnexpectedException)
+                  .mapError(CommandPluginError.UnexpectedException.apply)
+      command <- plugin.make(c).mapError(CommandPluginError.UnexpectedException.apply)
     } yield command
   }
 }
