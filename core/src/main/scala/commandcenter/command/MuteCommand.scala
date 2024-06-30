@@ -5,8 +5,8 @@ import com.sun.jna.platform.win32.WinDef.{DWORD, LPARAM, WORD, WPARAM}
 import com.sun.jna.platform.win32.WinUser
 import com.sun.jna.platform.win32.WinUser.KEYBDINPUT
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.util.OS
+import commandcenter.CCRuntime.Env
 import zio.*
 
 final case class MuteCommand(commandNames: List[String]) extends Command[Unit] {

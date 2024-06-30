@@ -109,7 +109,6 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                    _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
                    _ <- Tools
                           .playSound(getClass.getResourceAsStream("/audio/button-switch-on.wav"))
-                          .ignore
                           .forkDaemon
                    _ <- suspendedPidRef.set(Some(pid))
                  } yield ()
@@ -125,7 +124,6 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                  _ <- PCommand("kill", "-CONT", pid.toString).exitCode.unit
                  _ <- Tools
                         .playSound(getClass.getResourceAsStream("/audio/button-switch-off.wav"))
-                        .ignore
                         .forkDaemon
                  _ <- suspendedPidRef.set(None)
                } yield ()
@@ -157,7 +155,6 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                           .tapErrorCause(t => ZIO.logWarningCause("Could not suspend process", t))
                    _ <- Tools
                           .playSound(getClass.getResourceAsStream("/audio/button-switch-on.wav"))
-                          .ignore
                           .forkDaemon
                    _ <- suspendedPidRef.set(Some(pid))
                  } yield ()
@@ -176,7 +173,6 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                         .tapErrorCause(t => ZIO.logWarningCause("Could not resume process", t))
                  _ <- Tools
                         .playSound(getClass.getResourceAsStream("/audio/button-switch-off.wav"))
-                        .ignore
                         .forkDaemon
                  _ <- suspendedPidRef.set(None)
                } yield ()

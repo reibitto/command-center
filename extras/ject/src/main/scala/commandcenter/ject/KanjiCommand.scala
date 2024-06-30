@@ -41,7 +41,7 @@ final case class KanjiCommand(
           .onRun(Tools.setClipboard(kanji.doc.kanji))
           .renderedAnsi(render(kanji.doc, kanji.score))
       },
-      initialPageSize = 10,
+      initialPageSize = 30,
       morePageSize = 30
     )
 

@@ -1,7 +1,6 @@
 package commandcenter.emulator.swt.ui
 
 import commandcenter.*
-import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
@@ -12,13 +11,14 @@ import commandcenter.util.Debouncer
 import commandcenter.util.OS
 import commandcenter.util.WindowManager
 import commandcenter.view.Rendered
-import org.eclipse.swt.SWT
+import commandcenter.CCRuntime.Env
 import org.eclipse.swt.custom.StyleRange
 import org.eclipse.swt.events.KeyAdapter
 import org.eclipse.swt.events.KeyEvent
 import org.eclipse.swt.events.ModifyEvent
 import org.eclipse.swt.events.ModifyListener
 import org.eclipse.swt.widgets.Display
+import org.eclipse.swt.SWT
 import zio.*
 import zio.stream.ZSink
 

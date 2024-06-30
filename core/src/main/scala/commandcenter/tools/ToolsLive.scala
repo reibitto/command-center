@@ -10,6 +10,7 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.io.InputStream
 import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.FloatControl
 import javax.sound.sampled.LineEvent
 import scala.util.Try
 
@@ -68,6 +69,10 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
                .fork
         _ <- ZIO.attemptBlocking {
                clip.open(audioInputStream)
+
+               val control = clip.getControl(FloatControl.Type.MASTER_GAIN).asInstanceOf[FloatControl]
+               control.setValue(-15) // unit is decibels
+
                clip.start()
              }
         _ <- donePromise.await

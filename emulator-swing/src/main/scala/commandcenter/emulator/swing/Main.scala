@@ -20,6 +20,7 @@ object Main extends ZIOApp {
     ToolsLive.make,
     SttpLive.make,
     Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swing),
+    Runtime.setUnhandledErrorLogLevel(LogLevel.Warning),
     Scope.default
   )
 

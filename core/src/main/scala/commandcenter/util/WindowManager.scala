@@ -1,6 +1,5 @@
 package commandcenter.util
 
-import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.Kernel32
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef.HDC
@@ -14,6 +13,7 @@ import com.sun.jna.platform.win32.WinUser.MONITORINFO
 import com.sun.jna.platform.win32.WinUser.MONITORINFOEX
 import com.sun.jna.platform.win32.WinUser.WINDOWPLACEMENT
 import com.sun.jna.ptr.IntByReference
+import com.sun.jna.Pointer
 import zio.{Chunk, RIO, Ref, Scope, Task, ZIO}
 import zio.stream.ZStream
 

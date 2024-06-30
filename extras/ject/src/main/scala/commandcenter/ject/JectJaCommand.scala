@@ -6,14 +6,11 @@ import commandcenter.command.*
 import commandcenter.config.Decoders.*
 import commandcenter.locale.JapaneseText
 import commandcenter.tools.Tools
-import fansi.Back
-import fansi.Color
-import fansi.Str
+import fansi.{Back, Color, Str}
 import ject.SearchPattern
 import ject.ja.docs.WordDoc
 import ject.ja.lucene.WordReader
-import zio.Scope
-import zio.ZIO
+import zio.{Scope, ZIO}
 
 import java.nio.file.Path
 

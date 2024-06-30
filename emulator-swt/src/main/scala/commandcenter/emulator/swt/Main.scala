@@ -1,11 +1,11 @@
 package commandcenter.emulator.swt
 
 import commandcenter.*
-import commandcenter.CCRuntime.Env
 import commandcenter.emulator.swt.shortcuts.ShortcutsLive
 import commandcenter.emulator.swt.ui.{RawSwtTerminal, SwtTerminal}
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.ToolsLive
+import commandcenter.CCRuntime.Env
 import zio.*
 
 object Main {
@@ -20,6 +20,7 @@ object Main {
           ToolsLive.make,
           SttpLive.make,
           Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swt),
+          Runtime.setUnhandledErrorLogLevel(LogLevel.Warning),
           Scope.default
         )
       )

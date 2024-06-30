@@ -2,13 +2,13 @@ package commandcenter.command
 
 import com.monovore.decline.Help
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
-import commandcenter.CommandContext
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.JavaVM
 import commandcenter.util.OS
 import commandcenter.view.Rendered
 import commandcenter.view.Renderer
+import commandcenter.CCRuntime.Env
+import commandcenter.CommandContext
 import fansi.Color
 import zio.*
 import zio.stream.ZSink

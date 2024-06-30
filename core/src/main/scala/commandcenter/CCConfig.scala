@@ -104,7 +104,13 @@ object GeneralConfig {
     }
 }
 
-final case class DisplayConfig(width: Int, maxHeight: Int, opacity: Float, alternateOpacity: Option[Float], fonts: List[Font])
+final case class DisplayConfig(
+    width: Int,
+    maxHeight: Int,
+    opacity: Float,
+    alternateOpacity: Option[Float],
+    fonts: List[Font]
+)
 
 object DisplayConfig {
 

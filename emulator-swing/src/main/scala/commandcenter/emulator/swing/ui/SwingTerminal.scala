@@ -1,7 +1,6 @@
 package commandcenter.emulator.swing.ui
 
 import commandcenter.*
-import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
@@ -13,12 +12,12 @@ import commandcenter.util.OS
 import commandcenter.util.WindowManager
 import commandcenter.view.Rendered
 import commandcenter.view.Style
+import commandcenter.CCRuntime.Env
 import zio.*
 import zio.stream.ZSink
 
 import java.awt.*
 import java.awt.event.KeyEvent
-import java.util.Locale
 import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.DefaultStyledDocument
