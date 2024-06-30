@@ -7,7 +7,7 @@ object V {
 
   val enumeratum = "1.7.3"
 
-  val fansi = "0.4.0"
+  val fansi = "0.5.0"
 
   val fastparse = "3.0.2"
 
