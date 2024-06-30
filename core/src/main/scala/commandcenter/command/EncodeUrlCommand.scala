@@ -20,7 +20,7 @@ final case class EncodeUrlCommand(commandNames: List[String]) extends Command[St
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command("", s"URL encodes the given string")(all).parse(input.args)
-      (valueToEncode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      (valueToEncode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
       encoded = URLEncoder.encode(valueToEncode, charset)
     } yield PreviewResults.one(
       Preview(encoded).onRun(Tools.setClipboard(encoded)).score(Scores.veryHigh(input.context))

@@ -80,7 +80,7 @@ object JectJaCommand extends CommandPlugin[JectJaCommand] {
     for {
       commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
       dictionaryPath <- config.getZIO[Path]("dictionaryPath")
-      luceneIndex    <- WordReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException)
+      luceneIndex    <- WordReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException.apply)
       showScore      <- config.getZIO[Option[Boolean]]("showScore")
     } yield JectJaCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
 }

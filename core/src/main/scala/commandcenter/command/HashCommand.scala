@@ -21,7 +21,7 @@ final case class HashCommand(algorithm: String) extends Command[String] {
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command(algorithm, s"Hashes the argument with $algorithm")(all).parse(input.args)
-      (valueToHash, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      (valueToHash, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
       hashResult <- ZIO
                       .fromEither(HashUtil.hash(algorithm)(valueToHash, charset))
                       .mapError(CommandError.UnexpectedError(this))
@@ -37,5 +37,5 @@ object HashCommand extends CommandPlugin[HashCommand] {
   implicit val decoder: Decoder[HashCommand] = Decoder.forProduct1("algorithm")(HashCommand.apply)
 
   def make(config: Config): IO[CommandPluginError, HashCommand] =
-    ZIO.fromEither(config.as[HashCommand]).mapError(CommandPluginError.UnexpectedException)
+    ZIO.fromEither(config.as[HashCommand]).mapError(CommandPluginError.UnexpectedException.apply)
 }
