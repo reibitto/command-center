@@ -30,7 +30,7 @@ final case class SuspendProcessCommand(
                    .fold(HelpMessage.formatted, p => Str("PID: ") ++ Color.Magenta(p.toString))
     } yield {
       val run = for {
-        pid <- ZIO.fromEither(parsedCommand).mapError(RunError.CliError)
+        pid <- ZIO.fromEither(parsedCommand).mapError(RunError.CliError.apply)
         _ <- for {
                _ <- ZIO.logDebug(s"Toggling suspend for process `$pid`...")
                _ <- OS.os match {
@@ -85,7 +85,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                  }.ignore
                )
              }
-             .mapError(CommandPluginError.UnexpectedException)
+             .mapError(CommandPluginError.UnexpectedException.apply)
     } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend", "pause")), suspendedPidRef)
 
   object UnixLike {

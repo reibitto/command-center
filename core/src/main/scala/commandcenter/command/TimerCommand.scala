@@ -43,7 +43,7 @@ final case class TimerCommand(commandNames: List[String], cache: Cache[String, N
                    .fold(HelpMessage.formatted, f => Str(s"Reminder after ${f._1.render}"))
     } yield {
       val run = for {
-        (delay, timerMessageOpt) <- ZIO.fromEither(parsed).mapError(RunError.CliError)
+        (delay, timerMessageOpt) <- ZIO.fromEither(parsed).mapError(RunError.CliError.apply)
         timerDoneMessage = timerMessageOpt.getOrElse(s"Timer completed after ${delay.render}")
         // Note: Can't use JOptionPane here for message dialogs until Graal native-image supports Swing
         _ <- notifyFn(timerDoneMessage, "Command Center Timer Event").delay(delay)

@@ -21,7 +21,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
   val rating =
-    Opts.argument[Int]("rating").validate("Rating must be between 0-5")((0 to 5).contains(_)).map(Opt.Rate)
+    Opts.argument[Int]("rating").validate("Rating must be between 0-5")((0 to 5).contains(_)).map(Opt.Rate.apply)
 
   val playCommand = decline.Command("play", "Start the current track")(Opts(Opt.Play))
   val pauseCommand = decline.Command("pause", "Pause the current track")(Opts(Opt.Pause))
@@ -33,7 +33,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
   // TODO: Make this word with negative numbers too
   val seekCommand = decline
     .Command("seek", "Seek forward/back by specified amount in seconds")(Opts.argument[Int]("seconds"))
-    .map(Opt.Seek)
+    .map(Opt.Seek.apply)
   val rateCommand = decline.Command("rate", "Rate the current track")(rating)
   val deleteTrackCommand = decline.Command("delete", "Delete the current track")(Opts(Opt.DeleteTrack))
   val helpCommand = decline.Command("help", "Display command usage")(Opts(Opt.Help))
@@ -99,7 +99,8 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
                    )
     } yield {
       val run = for {
-        opt <- ZIO.fromEither(parsed).mapError(RunError.CliError).someOrFail(RunError.InternalError("No subcommand"))
+        opt <-
+          ZIO.fromEither(parsed).mapError(RunError.CliError.apply).someOrFail(RunError.InternalError("No subcommand"))
         _ <- opt match {
                case Opt.Play          => playFn
                case Opt.Pause         => pauseFn

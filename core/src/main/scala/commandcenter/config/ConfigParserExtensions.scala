@@ -59,7 +59,7 @@ trait ConfigParserExtensions {
     }
 
     def getZIO[A: Decoder](path: String): IO[CommandPluginError, A] =
-      ZIO.fromEither(get(path)).mapError(CommandPluginError.UnexpectedException)
+      ZIO.fromEither(get(path)).mapError(CommandPluginError.UnexpectedException.apply)
 
   }
 }

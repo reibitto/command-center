@@ -64,7 +64,7 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
 object CalculatorCommand extends CommandPlugin[CalculatorCommand] {
 
   def make(config: Config): IO[CommandPluginError, CalculatorCommand] =
-    ZIO.fromEither(config.as[CalculatorCommand]).mapError(CommandPluginError.UnexpectedException)
+    ZIO.fromEither(config.as[CalculatorCommand]).mapError(CommandPluginError.UnexpectedException.apply)
 
   implicit val decoder: Decoder[CalculatorCommand] = Decoder.instance { c =>
     val decimalFormat = new DecimalFormat()

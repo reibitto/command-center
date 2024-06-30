@@ -32,7 +32,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
                    )
     } yield {
       val run = for {
-        (w, h) <- ZIO.fromEither(parsed).mapError(RunError.CliError)
+        (w, h) <- ZIO.fromEither(parsed).mapError(RunError.CliError.apply)
         _      <- input.context.terminal.setSize(w, h)
       } yield ()
 

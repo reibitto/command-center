@@ -64,7 +64,7 @@ object KanjiCommand extends CommandPlugin[KanjiCommand] {
     for {
       commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
       dictionaryPath <- config.getZIO[Path]("dictionaryPath")
-      luceneIndex    <- KanjiReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException)
+      luceneIndex    <- KanjiReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException.apply)
       showScore      <- config.getZIO[Option[Boolean]]("showScore")
       quickPrefixes  <- config.getZIO[Option[List[String]]]("quickPrefixes")
     } yield KanjiCommand(

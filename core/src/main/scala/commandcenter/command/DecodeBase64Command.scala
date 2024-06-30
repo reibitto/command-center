@@ -19,7 +19,7 @@ final case class DecodeBase64Command(commandNames: List[String]) extends Command
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command("", s"Base64 decodes the given string")(all).parse(input.args)
-      (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError)
+      (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
       decoded = new String(Base64.getDecoder.decode(valueToDecode.getBytes(charset)), charset)
     } yield PreviewResults.one(
       Preview(decoded).onRun(Tools.setClipboard(decoded)).score(Scores.veryHigh(input.context))
