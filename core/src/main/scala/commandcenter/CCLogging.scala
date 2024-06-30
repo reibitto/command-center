@@ -2,6 +2,7 @@ package commandcenter
 
 import zio.*
 import zio.logging.*
+import zio.logging.LogFilter.LogLevelByNameConfig
 import zio.logging.LogFormat.*
 
 object CCLogging {
@@ -31,7 +32,7 @@ object CCLogging {
                             .debug(s"Could not find log level: `$logLevelString`. Defaulting to $defaultLogLevel")
                             .as(defaultLogLevel)
                         }
-            env <- consoleLogger(ConsoleLoggerConfig(coloredFormat, LogFilter.logLevel(logLevel))).build
+            env <- consoleLogger(ConsoleLoggerConfig(coloredFormat, LogLevelByNameConfig(logLevel))).build
           } yield env
         )
 
