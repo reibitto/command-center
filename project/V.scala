@@ -9,7 +9,7 @@ object V {
 
   val fansi = "0.5.0"
 
-  val fastparse = "3.1.0"
+  val fastparse = "3.1.1"
 
   val graal = "20.2.0"
 
