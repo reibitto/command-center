@@ -1,6 +1,7 @@
-import sbt._
-import sbt.Keys._
-import sbtwelcome._
+import sbt.*
+import sbt.Keys.*
+import sbt.Package.ManifestAttributes
+import sbtwelcome.*
 
 lazy val root = project
   .in(file("."))
@@ -98,9 +99,12 @@ lazy val cli = module("cli")
     assembly / mainClass := Some("commandcenter.cli.Main"),
     assembly / assemblyJarName := "cc.jar",
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", _ @_*) => MergeStrategy.discard
-      case _                           => MergeStrategy.first
+      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.deduplicate
+      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
+      case _                                       => MergeStrategy.first
     },
+    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
     graalVMNativeImageGraalVersion := Build.imageGraal,
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
@@ -156,9 +160,11 @@ lazy val emulatorSwt = module("emulator-swt")
     assembly / assemblyJarName := "cc-swt.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.deduplicate
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
     },
+    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
     libraryDependencies ++= swtDependencies
   )
 
@@ -173,9 +179,11 @@ lazy val emulatorSwing = module("emulator-swing")
     assembly / assemblyJarName := "cc-swing.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.deduplicate
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
-    }
+    },
+    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true")
   )
 
 lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
