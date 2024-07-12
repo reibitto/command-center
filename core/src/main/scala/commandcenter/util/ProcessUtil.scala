@@ -1,6 +1,6 @@
 package commandcenter.util
 
-import zio.{Task, ZIO}
+import zio.*
 import zio.process.Command as PCommand
 
 import java.awt.Desktop

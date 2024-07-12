@@ -8,7 +8,7 @@ import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
 import ject.ja.docs.KanjiDoc
 import ject.ja.lucene.KanjiReader
-import zio.{Scope, ZIO}
+import zio.*
 
 import java.nio.file.Path
 

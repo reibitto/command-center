@@ -1,9 +1,7 @@
 package commandcenter.command
 
 import com.sun.jna.platform.win32.User32
-import com.sun.jna.platform.win32.WinDef.{DWORD, LPARAM, WORD, WPARAM}
-import com.sun.jna.platform.win32.WinUser
-import com.sun.jna.platform.win32.WinUser.KEYBDINPUT
+import com.sun.jna.platform.win32.WinDef.{LPARAM, WPARAM}
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env

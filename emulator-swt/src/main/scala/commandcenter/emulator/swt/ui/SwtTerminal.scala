@@ -7,16 +7,11 @@ import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.Debouncer
-import commandcenter.util.OS
-import commandcenter.util.WindowManager
+import commandcenter.util.{Debouncer, OS, WindowManager}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import org.eclipse.swt.custom.StyleRange
-import org.eclipse.swt.events.KeyAdapter
-import org.eclipse.swt.events.KeyEvent
-import org.eclipse.swt.events.ModifyEvent
-import org.eclipse.swt.events.ModifyListener
+import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
 import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
 import zio.*
@@ -72,8 +67,6 @@ final case class SwtTerminal(
         }
       }
     })
-
-    var toggle = false
 
     terminal.inputBox.addKeyListener(new KeyAdapter {
 

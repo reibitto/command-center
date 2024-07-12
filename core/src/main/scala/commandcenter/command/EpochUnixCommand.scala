@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.{Clock, IO, ZIO}
+import zio.*
 
 import java.time.{Instant, ZoneId}
 import java.time.format.{DateTimeFormatter, FormatStyle}

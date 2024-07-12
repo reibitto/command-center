@@ -4,10 +4,9 @@ import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCConfig
 import commandcenter.CCRuntime.Env
-import zio.{IO, ZIO}
+import zio.*
 
 import java.awt.Desktop
-import java.io.File
 
 final case class ConfigCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ConfigCommand

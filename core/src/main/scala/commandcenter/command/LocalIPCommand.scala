@@ -5,7 +5,7 @@ import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
-import zio.{IO, ZIO}
+import zio.*
 
 import java.net.{Inet4Address, NetworkInterface}
 import scala.jdk.CollectionConverters.*

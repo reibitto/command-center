@@ -5,7 +5,7 @@ import commandcenter.command.CommandError.*
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{UIO, ZIO}
+import zio.*
 
 import scala.util.matching.Regex
 

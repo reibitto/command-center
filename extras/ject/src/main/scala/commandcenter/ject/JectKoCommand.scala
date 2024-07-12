@@ -11,8 +11,7 @@ import fansi.Str
 import ject.SearchPattern
 import ject.ko.docs.WordDoc
 import ject.ko.lucene.WordReader
-import zio.Scope
-import zio.ZIO
+import zio.*
 
 import java.nio.file.Path
 

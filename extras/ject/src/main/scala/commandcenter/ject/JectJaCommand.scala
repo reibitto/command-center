@@ -10,7 +10,7 @@ import fansi.{Back, Color, Str}
 import ject.SearchPattern
 import ject.ja.docs.WordDoc
 import ject.ja.lucene.WordReader
-import zio.{Scope, ZIO}
+import zio.*
 
 import java.nio.file.Path
 

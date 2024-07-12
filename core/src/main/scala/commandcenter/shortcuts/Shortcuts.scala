@@ -2,7 +2,7 @@ package commandcenter.shortcuts
 
 import commandcenter.event.KeyboardShortcut
 import commandcenter.CCRuntime.Env
-import zio.{RIO, Task, ULayer, URIO, ZIO, ZLayer}
+import zio.*
 
 trait Shortcuts {
   def addGlobalShortcut(shortcut: KeyboardShortcut)(handler: KeyboardShortcut => URIO[Env, Unit]): RIO[Env, Unit]

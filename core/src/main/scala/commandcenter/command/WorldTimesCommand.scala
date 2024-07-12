@@ -10,7 +10,7 @@ import commandcenter.CommandContext
 import fansi.{Color, Str}
 import io.circe.Decoder
 import org.ocpsoft.prettytime.nlp.PrettyTimeParser
-import zio.{IO, UIO, ZIO}
+import zio.*
 
 import java.time.{ZoneId, ZonedDateTime}
 import java.time.format.{DateTimeFormatter, FormatStyle}

@@ -3,7 +3,7 @@ package commandcenter.command
 import commandcenter.event.KeyboardShortcut
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
-import zio.{RIO, ZIO}
+import zio.*
 
 sealed trait PreviewResult[+A] {
   def onRun: RIO[Env, Unit]

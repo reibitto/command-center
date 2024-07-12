@@ -8,14 +8,10 @@ import commandcenter.event.KeyboardShortcut
 import commandcenter.util.ProcessUtil
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import fansi.Color
-import fansi.Str
+import fansi.{Color, Str}
 import sttp.model.internal.Rfc3986
-import sttp.model.Uri
 import zio.*
 
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.Locale
 

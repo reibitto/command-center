@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.config.ConfigParserExtensions
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{RIO, Scope, ZIO}
+import zio.*
 
 trait CommandPlugin[A <: Command[?]] extends ConfigParserExtensions {
   def make(config: Config): RIO[Scope & Env, A]

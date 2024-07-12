@@ -1,7 +1,7 @@
 package commandcenter.emulator.swing.ui
 
 import commandcenter.CCRuntime.Env
-import zio.{URIO, ZIO}
+import zio.*
 
 import java.awt.event.KeyEvent
 

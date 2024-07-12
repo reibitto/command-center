@@ -6,21 +6,12 @@ import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.Tools
-import commandcenter.util.OS
-import commandcenter.util.WindowManager
+import commandcenter.util.{OS, WindowManager}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import fansi.Color
-import fansi.Str
+import fansi.{Color, Str}
+import zio.*
 import zio.process.Command as PCommand
-import zio.Cause
-import zio.RIO
-import zio.Ref
-import zio.Scope
-import zio.Task
-import zio.ZIO
-
-import java.nio.file.Files
 
 final case class SuspendProcessCommand(
     commandNames: List[String],

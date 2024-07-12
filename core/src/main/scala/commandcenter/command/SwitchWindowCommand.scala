@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.util.{OS, WindowManager}
 import commandcenter.CCRuntime.Env
 import fansi.Color
-import zio.{IO, ZIO}
+import zio.*
 
 final case class SwitchWindowCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SwitchWindowCommand

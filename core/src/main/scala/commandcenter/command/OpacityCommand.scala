@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.Str
-import zio.{IO, ZIO}
+import zio.*
 
 final case class OpacityCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.OpacityCommand

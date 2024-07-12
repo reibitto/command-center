@@ -5,7 +5,7 @@ import commandcenter.command.*
 import commandcenter.tools.Tools
 import commandcenter.view.{Rendered, Style, StyledText}
 import commandcenter.CCRuntime.Env
-import zio.{IO, ZIO}
+import zio.*
 
 final case class StrokeOrderCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.External(getClass.getCanonicalName)

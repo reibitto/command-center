@@ -6,7 +6,7 @@ import com.typesafe.config.Config
 import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import zio.{IO, ZIO}
+import zio.*
 
 import java.net.URLEncoder
 
