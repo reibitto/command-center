@@ -5,7 +5,7 @@ import commandcenter.command.ProcessIdCommand.ProcessInfo
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import fansi.Color
-import zio.{IO, ZIO}
+import zio.*
 
 import java.time.Instant
 import scala.jdk.CollectionConverters.*

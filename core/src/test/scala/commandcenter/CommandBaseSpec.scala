@@ -24,6 +24,7 @@ object CommandBaseSpec {
     Shortcuts.unsupported,
     ToolsLive.make,
     SttpLive.make,
-    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Test)
+    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Test),
+    Runtime.setUnhandledErrorLogLevel(LogLevel.Warning)
   )
 }

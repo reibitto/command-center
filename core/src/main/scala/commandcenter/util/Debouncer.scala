@@ -1,6 +1,6 @@
 package commandcenter.util
 
-import zio.{Duration, Fiber, IO, Promise, Ref, UIO, URIO, ZIO}
+import zio.*
 
 final case class DebounceState[E, A](
     running: Fiber[E, A],
@@ -14,6 +14,16 @@ final case class Debouncer[R, E, A](
     stateRef: Ref.Synchronized[Option[DebounceState[E, A]]]
 ) {
   def apply(zio: ZIO[R, E, A]): URIO[R, Fiber[E, A]] = debounceFn(zio)
+
+  /** Interrupt the in-progress search immediately (if it exists) */
+  def interruptSearch: UIO[Unit] =
+    stateRef.getAndUpdateZIO { stateOpt =>
+      ZIO
+        .foreachDiscard(stateOpt) { state =>
+          state.running.interrupt
+        }
+        .as(stateOpt)
+    }.unit
 
   def triggerNow: IO[E, Option[Promise[Nothing, Unit]]] =
     stateRef.modifyZIO {

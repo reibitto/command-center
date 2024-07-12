@@ -10,8 +10,13 @@ final case class ConfigFake() extends Conf {
     CCConfig(
       commands = Vector.empty,
       aliases = Map.empty,
-      general = GeneralConfig(debounceDelay = 150.millis, reopenDelay = None, hideOnKeyRelease = false),
-      display = DisplayConfig(width = 0, maxHeight = 0, opacity = 1.0f, fonts = Nil),
+      general = GeneralConfig(
+        debounceDelay = 150.millis,
+        reopenDelay = None,
+        hideOnKeyRelease = false,
+        keepOpen = false
+      ),
+      display = DisplayConfig(width = 0, maxHeight = 0, opacity = 1.0f, fonts = Nil, alternateOpacity = None),
       keyboard = KeyboardConfig(KeyboardShortcut.empty, None),
       globalActions = Vector.empty
     )

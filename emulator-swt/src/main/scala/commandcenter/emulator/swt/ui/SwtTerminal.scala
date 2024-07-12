@@ -7,7 +7,7 @@ import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{Debouncer, OS}
+import commandcenter.util.{Debouncer, OS, WindowManager}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import org.eclipse.swt.custom.StyleRange
@@ -21,10 +21,11 @@ import java.awt.Dimension
 import scala.collection.mutable
 
 final case class SwtTerminal(
+    terminal: RawSwtTerminal,
+    searchDebouncer: Debouncer[Env, Nothing, Unit],
     commandCursorRef: Ref[Int],
     searchResultsRef: Ref[SearchResults[Any]],
-    searchDebouncer: Debouncer[Env, Nothing, Unit],
-    terminal: RawSwtTerminal
+    consecutiveOpenCountRef: Ref[Int]
 )(implicit runtime: Runtime[Env])
     extends GuiTerminal {
   val terminalType: TerminalType = TerminalType.Swt
@@ -49,11 +50,16 @@ final case class SwtTerminal(
         Unsafe.unsafe { implicit u =>
           runtime.unsafe.fork {
             for {
-              config <- Conf.config
+              config        <- Conf.config
+              searchResults <- searchResultsRef.get
+              // This is an optimization but it also helps with certain IMEs where they resend all the changes when
+              // exiting out of composition mode (committing the changes).
+              sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
               _ <- searchDebouncer(
                      Command
                        .search(config.commands, config.aliases, searchTerm, context)
                        .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                       .unless(sameAsLast)
                        .unit
                    ).flatMap(_.join)
             } yield ()
@@ -160,7 +166,7 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  private def resetAndHide: ZIO[Tools, Nothing, Unit] =
+  private def resetAndHide: ZIO[Env, Nothing, Unit] =
     for {
       _ <- hide
       _ <- deactivate.ignore
@@ -379,7 +385,29 @@ final case class SwtTerminal(
       terminal.outputBox.setText("")
     }
 
-  def open: UIO[Unit] =
+  def openActivated: URIO[Env, Unit] =
+    for {
+      consecutiveOpenCount <- consecutiveOpenCountRef.updateAndGet(_ + 1)
+      config               <- Conf.config
+      _                    <- open
+      _                    <- activate
+      _ <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
+             for {
+               _ <- ZIO.sleep(delay)
+               _ <- open
+               _ <- activate
+             } yield ()
+           }
+      _ <- ZIO.foreachDiscard(config.display.alternateOpacity) { alternateOpacity =>
+             if (consecutiveOpenCount % 2 == 0) {
+               setOpacity(alternateOpacity).ignore
+             } else {
+               setOpacity(config.display.opacity).ignore
+             }
+           }
+    } yield ()
+
+  def open: URIO[Env, Unit] =
     for {
       _ <- invoke {
              val bounds = terminal.shell.getDisplay.getPrimaryMonitor.getClientArea
@@ -389,7 +417,15 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  def hide: UIO[Unit] = invoke(terminal.shell.setVisible(false))
+  def hide: URIO[Conf, Unit] =
+    for {
+      keepOpen <- Conf.get(_.general.keepOpen)
+      _ <- if (keepOpen)
+             WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
+           else
+             invoke(terminal.shell.setVisible(false))
+      _ <- consecutiveOpenCountRef.set(0)
+    } yield ()
 
   def activate: UIO[Unit] =
     invoke(terminal.shell.forceActive())
@@ -426,11 +462,18 @@ object SwtTerminal {
 
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
-      debounceDelay    <- Conf.get(_.general.debounceDelay)
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
-      commandCursorRef <- Ref.make(0)
-      searchResultsRef <- Ref.make(SearchResults.empty[Any])
-      swtTerminal = new SwtTerminal(commandCursorRef, searchResultsRef, searchDebouncer, terminal)(runtime)
+      debounceDelay           <- Conf.get(_.general.debounceDelay)
+      searchDebouncer         <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      commandCursorRef        <- Ref.make(0)
+      searchResultsRef        <- Ref.make(SearchResults.empty[Any])
+      consecutiveOpenCountRef <- Ref.make(0)
+      swtTerminal = new SwtTerminal(
+                      terminal,
+                      searchDebouncer,
+                      commandCursorRef,
+                      searchResultsRef,
+                      consecutiveOpenCountRef
+                    )(runtime)
       _ <- swtTerminal.init
     } yield swtTerminal
 }

@@ -1,6 +1,8 @@
 package commandcenter.tools
 
-import zio.{RIO, Task, URIO, ZIO}
+import zio.*
+
+import java.io.InputStream
 
 trait Tools {
   def processId: Long
@@ -8,6 +10,7 @@ trait Tools {
   def hide: Task[Unit]
   def setClipboard(text: String): Task[Unit]
   def beep: Task[Unit]
+  def playSound(inputStream: InputStream): Task[Unit]
 }
 
 object Tools {
@@ -26,4 +29,7 @@ object Tools {
 
   def beep: RIO[Tools, Unit] =
     ZIO.serviceWithZIO[Tools](_.beep)
+
+  def playSound(inputStream: InputStream): RIO[Tools, Unit] =
+    ZIO.serviceWithZIO[Tools](_.playSound(inputStream))
 }

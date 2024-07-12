@@ -9,10 +9,9 @@ import commandcenter.util.ProcessUtil
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
+import sttp.model.internal.Rfc3986
 import zio.*
 
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.Locale
 
@@ -26,8 +25,11 @@ final case class SearchUrlCommand(
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SearchUrlCommand
 
+  val encodeQuery: String => String =
+    Rfc3986.encode(Rfc3986.Query -- Set('&', '='), spaceAsPlus = false, encodePlus = true)
+
   def openBrowser(query: String): Task[Unit] = {
-    val url = urlTemplate.replace("{query}", URLEncoder.encode(query, StandardCharsets.UTF_8))
+    val url = urlTemplate.replace("{query}", encodeQuery(query))
     ProcessUtil.openBrowser(url, firefoxPath)
   }
 

@@ -1,16 +1,16 @@
 package commandcenter.ject
 
 import com.typesafe.config.Config
+import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.config.Decoders.*
 import commandcenter.locale.JapaneseText
 import commandcenter.tools.Tools
-import commandcenter.CCRuntime.Env
 import fansi.{Back, Color, Str}
+import ject.SearchPattern
 import ject.ja.docs.WordDoc
 import ject.ja.lucene.WordReader
-import ject.SearchPattern
-import zio.{Scope, ZIO}
+import zio.*
 
 import java.nio.file.Path
 
@@ -56,9 +56,14 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
       Color.LightBlue(k)
     }).reduceOption(_ ++ " " ++ _).getOrElse(Str(""))
 
-    val definitions = word.definitions.zipWithIndex.map { case (d, i) =>
-      Color.LightGray((i + 1).toString) ++ " " ++ d
-    }.reduceOption(_ ++ "\n" ++ _).getOrElse(Str(""))
+    val definitions = word.definitions match {
+      case Seq(d) => Str(d)
+
+      case definitions =>
+        definitions.zipWithIndex.map { case (d, i) =>
+          Color.LightGray((i + 1).toString) ++ " " ++ d
+        }.reduceOption(_ ++ "\n" ++ _).getOrElse(Str(""))
+    }
 
     val partsOfSpeech = word.partsOfSpeech.map { pos =>
       Back.DarkGray(pos)

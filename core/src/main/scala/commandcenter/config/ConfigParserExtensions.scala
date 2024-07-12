@@ -4,13 +4,13 @@ import com.typesafe.config.*
 import commandcenter.command.CommandPluginError
 import io.circe.{Decoder, Json}
 import io.circe.config.parser
-import zio.{IO, ZIO}
+import zio.*
 
 import scala.jdk.CollectionConverters.*
 
 trait ConfigParserExtensions {
 
-  implicit class ConfigExtension(val config: Config) {
+  implicit class ConfigExtension(val config: com.typesafe.config.Config) {
 
     def convertValueUnsafe(value: ConfigValue): Json =
       value match {

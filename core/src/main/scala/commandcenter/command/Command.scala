@@ -3,13 +3,16 @@ package commandcenter.command
 import com.monovore.decline.Help
 import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
-import commandcenter.util.{JavaVM, OS}
-import commandcenter.view.{Rendered, Renderer}
+import commandcenter.util.JavaVM
+import commandcenter.util.OS
+import commandcenter.view.Rendered
+import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import fansi.Color
 import zio.*
-import zio.stream.{ZSink, ZStream}
+import zio.stream.ZSink
+import zio.stream.ZStream
 
 import java.util.Locale
 
@@ -81,7 +84,7 @@ object Command {
     (for {
       chunks <- ZStream
                   .fromIterable(commands)
-                  .mapZIOPar(8) { command =>
+                  .mapZIOParUnordered(8) { command =>
                     command
                       .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
                       .flatMap {
@@ -113,7 +116,6 @@ object Command {
                       }
                       .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
                       .either
-
                   }
                   .runCollect
     } yield chunks.flatMap {
@@ -147,6 +149,7 @@ object Command {
       typeName <- ZIO.attempt(config.getString("type")).mapError(CommandPluginError.UnexpectedException.apply)
       command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
                    case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
+                   case CommandType.ConfigCommand             => ConfigCommand.make(config)
                    case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
                    case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
                    case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
@@ -165,6 +168,7 @@ object Command {
                    case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
                    case CommandType.LockCommand               => LockCommand.make(config)
                    case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
+                   case CommandType.MuteCommand               => MuteCommand.make(config)
                    case CommandType.OpacityCommand            => OpacityCommand.make(config)
                    case CommandType.OpenBrowserCommand        => OpenBrowserCommand.make(config)
                    case CommandType.ProcessIdCommand          => ProcessIdCommand.make(config)

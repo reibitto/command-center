@@ -8,7 +8,7 @@ import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
 import ject.ja.docs.KanjiDoc
 import ject.ja.lucene.KanjiReader
-import zio.{Scope, ZIO}
+import zio.*
 
 import java.nio.file.Path
 
@@ -41,18 +41,18 @@ final case class KanjiCommand(
           .onRun(Tools.setClipboard(kanji.doc.kanji))
           .renderedAnsi(render(kanji.doc, kanji.score))
       },
-      initialPageSize = 10,
+      initialPageSize = 30,
       morePageSize = 30
     )
 
   // TODO: Consider creating a StrBuilder class to make this nicer
   def render(k: KanjiDoc, score: Double): Str =
-    (if (k.isJouyouKanji) Str("　") else Color.Red("×")) ++
-      Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) "" else "　") ++ k.kunYomi.map { ku =>
+    (if (k.isJouyouKanji) Str(" ") else Color.Red("×")) ++
+      Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) "" else " ") ++ k.kunYomi.map { ku =>
         Color.Magenta(ku)
-      }.reduceOption(_ ++ "　" ++ _).getOrElse(Str("")) ++ "　" ++ k.onYomi.map { o =>
+      }.reduceOption(_ ++ " " ++ _).getOrElse(Str("")) ++ " " ++ k.onYomi.map { o =>
         Color.Cyan(o)
-      }.reduceOption(_ ++ "　" ++ _).getOrElse(Str("")) ++ " " ++ k.meaning.mkString("; ") ++
+      }.reduceOption(_ ++ " " ++ _).getOrElse(Str("")) ++ " " ++ k.meaning.mkString("; ") ++
       (if (showScore) Color.DarkGray(" %1.2f".format(score)) else "")
 
 }

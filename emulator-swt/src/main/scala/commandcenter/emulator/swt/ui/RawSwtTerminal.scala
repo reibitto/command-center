@@ -107,10 +107,10 @@ class RawSwtTerminal(val initialConfig: CCConfig) {
 
   def getPreferredFont(fonts: List[java.awt.Font]): Font = {
     val installedFontNames =
-      (display.getFontList(null, false).toSet ++ display.getFontList(null, true).toSet).map(_.getName)
+      (display.getFontList(null, false).toSet ++ display.getFontList(null, true).toSet).map(_.getName.toLowerCase)
 
     fonts
-      .find(f => installedFontNames.contains(f.getName))
+      .find(f => installedFontNames.contains(f.getName.toLowerCase))
       .map(f => new Font(display, f.getName, f.getSize, SWT.NORMAL))
       .getOrElse {
         new Font(display, "Monospaced", 14, SWT.NORMAL)

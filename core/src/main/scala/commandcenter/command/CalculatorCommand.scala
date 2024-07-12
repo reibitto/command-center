@@ -11,7 +11,7 @@ import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.Str
 import io.circe.Decoder
-import zio.{IO, ZIO}
+import zio.*
 
 import java.text.{DecimalFormat, DecimalFormatSymbols}
 import java.util.Locale

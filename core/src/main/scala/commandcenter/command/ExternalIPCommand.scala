@@ -4,7 +4,7 @@ import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{IO, ZIO}
+import zio.*
 import zio.process.Command as PCommand
 
 final case class ExternalIPCommand(commandNames: List[String]) extends Command[String] {

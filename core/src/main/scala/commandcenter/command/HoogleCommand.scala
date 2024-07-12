@@ -9,7 +9,7 @@ import fansi.Color
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
-import zio.{IO, ZIO}
+import zio.*
 
 final case class HoogleCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.HoogleCommand

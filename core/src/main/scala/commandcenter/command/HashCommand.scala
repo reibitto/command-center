@@ -9,7 +9,7 @@ import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import io.circe.Decoder
-import zio.{IO, ZIO}
+import zio.*
 
 final case class HashCommand(algorithm: String) extends Command[String] {
   val commandType: CommandType = CommandType.HashCommand

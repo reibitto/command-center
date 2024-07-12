@@ -20,6 +20,7 @@ object Main {
           ToolsLive.make,
           SttpLive.make,
           Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swt),
+          Runtime.setUnhandledErrorLogLevel(LogLevel.Warning),
           Scope.default
         )
       )
@@ -35,15 +36,7 @@ object Main {
           _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
                  (for {
                    _ <- ZIO.logDebug("Opening emulated terminal...")
-                   _ <- terminal.open
-                   _ <- terminal.activate
-                   _ <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
-                          for {
-                            _ <- ZIO.sleep(delay)
-                            _ <- terminal.open
-                            _ <- terminal.activate
-                          } yield ()
-                        }
+                   _ <- terminal.openActivated
                  } yield ()).ignore
                )
           _ <- ZIO.logInfo(

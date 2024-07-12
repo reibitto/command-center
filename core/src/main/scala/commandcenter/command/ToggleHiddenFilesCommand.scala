@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
-import zio.{IO, ZIO}
+import zio.*
 import zio.process.{Command as PCommand, CommandError as PCommandError}
 
 final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Command[Unit] {

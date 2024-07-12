@@ -3,7 +3,7 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
-import zio.{IO, ZIO}
+import zio.*
 
 // TODO: Work in progress
 final case class TerminalCommand(commandNames: List[String]) extends Command[Unit] {

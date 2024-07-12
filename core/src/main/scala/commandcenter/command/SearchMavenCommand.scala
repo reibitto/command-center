@@ -10,7 +10,7 @@ import fansi.{Color, Str}
 import io.circe.{Decoder, Json}
 import sttp.client3.*
 import sttp.client3.circe.*
-import zio.{IO, ZIO}
+import zio.*
 
 import java.time.{Instant, LocalDate, ZoneId}
 import scala.util.matching.Regex

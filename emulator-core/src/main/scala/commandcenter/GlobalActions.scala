@@ -3,7 +3,7 @@ package commandcenter
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.util.{CycleWindowState, WindowBounds, WindowManager}
 import commandcenter.CCRuntime.Env
-import zio.{RIO, Ref, ZIO}
+import zio.*
 
 object GlobalActions {
 

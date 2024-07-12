@@ -9,7 +9,7 @@ import fansi.{Color, Str}
 import io.circe.Decoder
 import sttp.client3.*
 import sttp.client3.circe.*
-import zio.{Chunk, IO, ZIO}
+import zio.*
 import zio.stream.ZStream
 
 import java.time.OffsetDateTime

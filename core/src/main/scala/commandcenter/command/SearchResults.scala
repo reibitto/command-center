@@ -1,7 +1,7 @@
 package commandcenter.command
 
 import commandcenter.view.Rendered
-import zio.Chunk
+import zio.*
 
 final case class SearchResults[A](
     searchTerm: String,

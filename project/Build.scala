@@ -51,6 +51,7 @@ object Build {
       scalacOptions := ScalacOptions,
       javaOptions += "-Dfile.encoding=UTF-8",
       ThisBuild / scalaVersion := ScalaVersion,
+      outputStrategy := Some(StdoutOutput), // Remove prefixes like `[info]`
       unmanagedBase := baseDirectory.value / "plugins",
       libraryDependencies ++= Plugins.BaseCompilerPlugins,
       libraryDependencies ++= Seq(

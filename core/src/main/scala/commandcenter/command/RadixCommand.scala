@@ -8,7 +8,7 @@ import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.Str
-import zio.{IO, ZIO}
+import zio.*
 
 import scala.util.Try
 
