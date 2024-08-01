@@ -1,15 +1,15 @@
 package commandcenter.ject
 
 import com.typesafe.config.Config
-import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.config.Decoders.*
 import commandcenter.locale.JapaneseText
 import commandcenter.tools.Tools
+import commandcenter.CCRuntime.Env
 import fansi.{Back, Color, Str}
-import ject.SearchPattern
 import ject.ja.docs.WordDoc
 import ject.ja.lucene.WordReader
+import ject.SearchPattern
 import zio.*
 
 import java.nio.file.Path
