@@ -1,15 +1,15 @@
 object V {
-  val circe = "0.14.8"
+  val circe = "0.14.9"
 
   val circeConfig = "0.10.1"
 
   val decline = "2.4.1"
 
-  val enumeratum = "1.7.3"
+  val enumeratum = "1.7.4"
 
   val fansi = "0.5.0"
 
-  val fastparse = "3.1.0"
+  val fastparse = "3.1.1"
 
   val graal = "20.2.0"
 
@@ -33,7 +33,7 @@ object V {
 
   val swt = "3.126.0"
 
-  val zio = "2.1.5"
+  val zio = "2.1.6"
 
   val zioCache = "0.2.3"
 
