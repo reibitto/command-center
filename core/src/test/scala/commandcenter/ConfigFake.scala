@@ -17,7 +17,7 @@ final case class ConfigFake() extends Conf {
         keepOpen = false
       ),
       display = DisplayConfig(width = 0, maxHeight = 0, opacity = 1.0f, fonts = Nil, alternateOpacity = None),
-      keyboard = KeyboardConfig(KeyboardShortcut.empty, None),
+      keyboard = KeyboardConfig(KeyboardShortcut.empty, None, KeyboardShortcut.empty),
       globalActions = Vector.empty
     )
   )

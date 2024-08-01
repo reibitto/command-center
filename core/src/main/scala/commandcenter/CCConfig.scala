@@ -9,7 +9,7 @@ import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
 import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
-import io.circe.Decoder
+import io.circe.{Decoder, DecodingFailure}
 import zio.*
 
 import java.awt.Font
@@ -118,7 +118,11 @@ object DisplayConfig {
     Decoder.forProduct5("width", "maxHeight", "opacity", "alternateOpacity", "fonts")(DisplayConfig.apply)
 }
 
-final case class KeyboardConfig(openShortcut: KeyboardShortcut, suspendShortcut: Option[String])
+final case class KeyboardConfig(
+    openShortcut: KeyboardShortcut,
+    suspendShortcut: Option[String],
+    outputLookupShortcut: KeyboardShortcut
+)
 
 object KeyboardConfig {
 
@@ -127,7 +131,17 @@ object KeyboardConfig {
       openShortcut <-
         c.get[KeyboardShortcut](s"openShortcut_${OS.os.entryName}").orElse(c.get[KeyboardShortcut]("openShortcut"))
       suspendShortcut <- c.get[Option[String]]("suspendShortcut")
-    } yield KeyboardConfig(openShortcut, suspendShortcut)
+      outputLookupShortcut <- c.get[Option[KeyboardShortcut]]("outputLookupShortcut").flatMap { _ =>
+                                KeyboardShortcut
+                                  .fromString("alt+e")
+                                  .toOption
+                                  .toRight(DecodingFailure("outputLookupShortcut is not valid", Nil))
+                              }
+    } yield KeyboardConfig(
+      openShortcut,
+      suspendShortcut,
+      outputLookupShortcut
+    )
   }
 }
 

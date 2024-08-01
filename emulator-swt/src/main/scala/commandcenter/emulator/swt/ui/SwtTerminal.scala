@@ -2,6 +2,7 @@ package commandcenter.emulator.swt.ui
 
 import commandcenter.*
 import commandcenter.command.*
+import commandcenter.emulator.swt.event.KeyEventExtensions.KeyEventExtension
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
@@ -68,11 +69,43 @@ final case class SwtTerminal(
       }
     })
 
+    terminal.outputBox.addKeyListener(new KeyAdapter {
+      override def keyPressed(e: KeyEvent): Unit =
+        e.keyCode match {
+          case SWT.ESC =>
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                invoke {
+                  terminal.inputBox.setSelection(terminal.inputBox.getText.length)
+                  terminal.inputBox.setFocus()
+                }
+              }
+            }
+
+          case _ =>
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                for {
+                  config <- Conf.config
+                  shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
+                  _ <- invoke {
+                         val text = terminal.outputBox.getSelectionText
+                         terminal.inputBox.setText(text)
+                         terminal.inputBox.setSelection(text.length)
+                         terminal.inputBox.setFocus()
+                       }.when(config.keyboard.outputLookupShortcut == shortcutPressed)
+                } yield ()
+              }
+            }
+
+        }
+    })
+
     terminal.inputBox.addKeyListener(new KeyAdapter {
 
       override def keyReleased(e: KeyEvent): Unit =
         e.keyCode match {
-          case SWT.CR =>
+          case SWT.CR | SWT.KEYPAD_CR =>
             Unsafe.unsafe { implicit u =>
               runtime.unsafe.fork {
                 runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease))
@@ -91,7 +124,7 @@ final case class SwtTerminal(
 
       override def keyPressed(e: KeyEvent): Unit =
         e.keyCode match {
-          case SWT.CR =>
+          case SWT.CR | SWT.KEYPAD_CR =>
             Unsafe.unsafe { implicit u =>
               runtime.unsafe.fork {
                 runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
@@ -102,6 +135,15 @@ final case class SwtTerminal(
             Unsafe.unsafe { implicit u =>
               runtime.unsafe.fork {
                 resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
+              }
+            }
+
+          case SWT.ARROW_DOWN if e.isAltDown =>
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                invoke {
+                  terminal.outputBox.setFocus()
+                }
               }
             }
 
