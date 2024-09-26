@@ -23,7 +23,7 @@ object V {
 
   val prettytime = "5.0.9.Final"
 
-  val scalaReflect = "2.13.14"
+  val scalaReflect = "2.13.15"
 
   val slf4j = "1.7.30"
 
