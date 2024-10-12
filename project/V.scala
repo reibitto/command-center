@@ -23,7 +23,7 @@ object V {
 
   val prettytime = "5.0.9.Final"
 
-  val scalaReflect = "2.13.14"
+  val scalaReflect = "2.13.15"
 
   val slf4j = "1.7.30"
 
@@ -39,7 +39,7 @@ object V {
 
   val zioLogging = "2.3.1"
 
-  val zioPrelude = "1.0.0-RC27"
+  val zioPrelude = "1.0.0-RC31"
 
   val zioProcess = "0.7.2"
 }
