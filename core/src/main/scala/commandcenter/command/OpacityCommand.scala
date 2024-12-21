@@ -27,7 +27,7 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
       currentOpacity <- input.context.terminal.opacity.mapError(CommandError.UnexpectedError(this))
     } yield {
       val run = for {
-        opacity <- ZIO.fromEither(parsed).mapError(RunError.CliError.apply)
+        opacity <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
         _       <- input.context.terminal.setOpacity(opacity)
       } yield ()
 

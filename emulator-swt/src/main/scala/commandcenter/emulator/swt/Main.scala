@@ -20,7 +20,6 @@ object Main {
           ToolsLive.make,
           SttpLive.make,
           Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swt),
-          Runtime.setUnhandledErrorLogLevel(LogLevel.Warning),
           Scope.default
         )
       )

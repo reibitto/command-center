@@ -46,7 +46,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
                    )
     } yield {
       val run = for {
-        (i, chunkType) <- ZIO.fromEither(parsed).mapError(RunError.CliError.apply)
+        (i, chunkType) <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
         text = chunkType match {
                  case ChunkType.Word => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
                  case ChunkType.Sentence =>

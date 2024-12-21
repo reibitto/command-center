@@ -44,7 +44,21 @@ lazy val root = project
         "emulator-swing/assembly",
         "Create an executable JAR for running in terminal emulator mode (Swing)"
       )
-    )
+    ),
+    onLoad := {
+      if (enabledPlugins.nonEmpty) {
+        val pluginsFormatted = optionalPlugins
+          .map(_.project)
+          .collect { case p: LocalProject =>
+            fansi.Color.Blue(p.project)
+          }
+          .mkString(", ")
+
+        println(s"${fansi.Color.Magenta(s"Enabled plugins")}: $pluginsFormatted")
+      }
+
+      onLoad.value
+    }
   )
 
 lazy val core = module("core")
@@ -56,6 +70,7 @@ lazy val core = module("core")
       "dev.zio" %% "zio-prelude" % V.zioPrelude,
       "dev.zio" %% "zio-process" % V.zioProcess,
       "dev.zio" %% "zio-cache" % V.zioCache,
+      "org.cache2k" % "cache2k-core" % V.cache2k,
       "org.scala-lang" % "scala-reflect" % V.scalaReflect,
       "io.circe" %% "circe-core" % V.circe,
       "io.circe" %% "circe-parser" % V.circe,
@@ -100,7 +115,7 @@ lazy val cli = module("cli")
     assembly / assemblyJarName := "cc.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.deduplicate
+      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.concat
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
     },
@@ -126,19 +141,15 @@ lazy val cli = module("cli")
 lazy val enabledPlugins: Set[String] =
   Build.compilerOption("command-center-plugins").map(_.split(',').map(_.trim).toSet).getOrElse(Set.empty)
 
-def optionalPlugin(project: Project): Option[ClasspathDependency] = {
-  val cp =
-    if (enabledPlugins.contains(project.id) || enabledPlugins.contains("*")) Some(project: ClasspathDependency)
-    else None
-  println(s"${scala.Console.CYAN}${project.id} enabled?${scala.Console.RESET} ${cp.isDefined}")
-  cp
-}
+def optionalPlugin(project: Project): Option[ClasspathDependency] =
+  if (enabledPlugins.contains(project.id) || enabledPlugins.contains("*"))
+    Some(project: ClasspathDependency)
+  else
+    None
 
 lazy val emulatorCore = module("emulator-core")
   .dependsOn(coreUI)
-  .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq *
-  )
+  .dependsOn(optionalPlugins *)
   .settings(
     run / baseDirectory := file("."),
     libraryDependencies ++= Seq(
@@ -149,9 +160,7 @@ lazy val emulatorCore = module("emulator-core")
 
 lazy val emulatorSwt = module("emulator-swt")
   .dependsOn(emulatorCore)
-  .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq *
-  )
+  .dependsOn(optionalPlugins *)
   .settings(
     publishMavenStyle := false,
     run / baseDirectory := file("."),
@@ -160,7 +169,7 @@ lazy val emulatorSwt = module("emulator-swt")
     assembly / assemblyJarName := "cc-swt.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.deduplicate
+      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.concat
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
     },
@@ -170,16 +179,14 @@ lazy val emulatorSwt = module("emulator-swt")
 
 lazy val emulatorSwing = module("emulator-swing")
   .dependsOn(emulatorCore)
-  .dependsOn(
-    (optionalPlugin(strokeOrderPlugin) ++ optionalPlugin(jectPlugin)).toSeq: _*
-  )
+  .dependsOn(optionalPlugins *)
   .settings(
     run / baseDirectory := file("."),
     assembly / mainClass := Some("commandcenter.emulator.swing.Main"),
     assembly / assemblyJarName := "cc-swing.jar",
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.deduplicate
+      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.concat
       case PathList("META-INF", _ @_*)             => MergeStrategy.discard
       case _                                       => MergeStrategy.first
     },
@@ -198,9 +205,25 @@ lazy val jectPlugin = module("ject-plugin", Some("extras/ject"))
     )
   )
 
+lazy val experimentalPlugins = module("experimental-plugins", Some("extras/experimental"))
+  .dependsOn(core)
+  .settings(
+    libraryDependencies ++= Seq(
+      "net.ruippeixotog" %% "scala-scraper" % V.scalaScraper,
+      "com.lihaoyi" %% "pprint" % "0.9.0"
+    )
+  )
+
 lazy val extras = project
   .in(file("extras"))
-  .aggregate(strokeOrderPlugin, jectPlugin)
+  .aggregate(optionalPlugins.map(_.project) *)
+
+lazy val optionalPlugins =
+  Seq(
+    optionalPlugin(strokeOrderPlugin),
+    optionalPlugin(jectPlugin),
+    optionalPlugin(experimentalPlugins)
+  ).flatten
 
 def swtDependencies: Seq[ModuleID] =
   OS.os match {

@@ -11,6 +11,7 @@ import commandcenter.ui.CCTheme
 import commandcenter.util.{Debouncer, OS, WindowManager}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
+import fansi.Color
 import org.eclipse.swt.custom.StyleRange
 import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
 import org.eclipse.swt.widgets.Display
@@ -345,7 +346,7 @@ final case class SwtTerminal(
         for {
           _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
           _ <- preview.moreResults match {
-                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, _, pageSize, totalRemaining))
+                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, initialPageSize, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
                      _ <- preview.onRunSandboxedLogged.forkDaemon
@@ -354,22 +355,39 @@ final case class SwtTerminal(
                          rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
                            .mapError(_.toThrowable)
                        }
-                     _ <- showMore(
-                            results,
-                            preview.moreResults(
-                              MoreResults.Remaining(
-                                p.copy(
-                                  results = restStream,
-                                  totalRemaining = p.totalRemaining.map(_ - pageSize)
+                     _ <- if (initialPageSize == 1) {
+                            showMore(
+                              results,
+                              preview
+                                .rendered(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+                                .moreResults(
+                                  MoreResults.Remaining(
+                                    p.copy(
+                                      results = restStream,
+                                      totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                    )
+                                  )
+                                ),
+                              pageSize
+                            )
+                          } else {
+                            showMore(
+                              results,
+                              preview.moreResults(
+                                MoreResults.Remaining(
+                                  p.copy(
+                                    results = restStream,
+                                    totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                  )
                                 )
-                              )
-                            ),
-                            pageSize
-                          )
+                              ),
+                              pageSize
+                            )
+                          }
                    } yield ()
 
                  case _ =>
-                   preview.onRunSandboxedLogged.forkDaemon *> reset
+                   preview.onRunSandboxedLogged.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
                }
         } yield previewOpt
     }

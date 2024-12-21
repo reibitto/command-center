@@ -1,4 +1,6 @@
 object V {
+  val cache2k = "2.6.1.Final"
+
   val circe = "0.14.10"
 
   val circeConfig = "0.10.1"
@@ -13,7 +15,7 @@ object V {
 
   val graal = "20.2.0"
 
-  val ject = "0.4.1"
+  val ject = "0.4.1+0-85063916+20241026-1704-SNAPSHOT"
 
   val jkeymaster = "1.3"
 
@@ -24,6 +26,8 @@ object V {
   val prettytime = "5.0.9.Final"
 
   val scalaReflect = "2.13.15"
+
+  val scalaScraper = "3.1.2"
 
   val slf4j = "1.7.30"
 

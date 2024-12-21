@@ -202,7 +202,7 @@ final case class CliTerminal[T <: Terminal](
 
                case _ =>
                  // TODO: Log defects (need file logging for this)
-                 preview.onRun.absorb.forkDaemon *> reset
+                 preview.onRun.absorb.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
              }
       } yield preview
     }

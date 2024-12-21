@@ -3,6 +3,7 @@ package commandcenter.command
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
+import commandcenter.cache.ZCache
 import commandcenter.command.ITunesCommand.Opt
 import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
@@ -13,8 +14,7 @@ import zio.cache.{Cache, Lookup}
 
 import scala.io.Source
 
-final case class ITunesCommand(commandNames: List[String], cache: Cache[String, Nothing, String])
-    extends Command[Unit] {
+final case class ITunesCommand(commandNames: List[String], cache: ZCache[String, String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ITunesCommand
   val title: String = "iTunes"
 
@@ -100,7 +100,7 @@ final case class ITunesCommand(commandNames: List[String], cache: Cache[String, 
     } yield {
       val run = for {
         opt <-
-          ZIO.fromEither(parsed).mapError(RunError.CliError.apply).someOrFail(RunError.InternalError("No subcommand"))
+          ZIO.fromEither(parsed).orElseFail(RunError.Ignore).someOrFail(RunError.InternalError("No subcommand"))
         _ <- opt match {
                case Opt.Play          => playFn
                case Opt.Pause         => pauseFn
@@ -128,12 +128,11 @@ object ITunesCommand extends CommandPlugin[ITunesCommand] {
 
   def make(config: Config): IO[CommandPluginError, ITunesCommand] =
     for {
-      cache <- Cache
-                 .make(
-                   1024,
-                   Duration.Infinity,
-                   Lookup((resource: String) => ZIO.succeed(Source.fromResource(resource)).map(_.mkString))
-                 )
+      runtime <- ZIO.runtime[Any]
+      cache = ZCache
+                .memoizeZIO(1024, None)((resource: String) =>
+                  ZIO.succeed(Some(Source.fromResource(resource)).map(_.mkString))
+                )(runtime)
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ITunesCommand(commandNames.getOrElse(List("itunes")), cache)
 

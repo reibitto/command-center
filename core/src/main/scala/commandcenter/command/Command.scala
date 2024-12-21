@@ -90,26 +90,72 @@ object Command {
                       .flatMap {
                         case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
                         case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
-                        case p @ PreviewResults.Paginated(rs, pageSize, _, totalRemaining) =>
+                        case p @ PreviewResults.Paginated(
+                              rs,
+                              initialPageSize,
+                              _,
+                              totalRemaining
+                            ) =>
                           for {
                             (results, restStream) <- Scope.global.use {
-                                                       rs.peel(ZSink.take[PreviewResult[A]](pageSize))
+                                                       rs.peel(ZSink.take[PreviewResult[A]](initialPageSize))
                                                      }
                           } yield results match {
-                            case beforeLast :+ last if results.length >= pageSize =>
-                              beforeLast :+ last :+
-                                PreviewResult
-                                  .nothing(Rendered.Ansi(Color.Yellow("More...")))
+                            case beforeLast :+ last if results.length >= initialPageSize =>
+                              if (beforeLast.isEmpty)
+                                beforeLast :+ last
                                   .runOption(RunOption.RemainOpen)
-                                  .score(last.score)
                                   .moreResults(
                                     MoreResults.Remaining(
                                       p.copy(
                                         results = restStream,
-                                        totalRemaining = totalRemaining.map(_ - pageSize)
+                                        totalRemaining = totalRemaining.map(_ - initialPageSize)
                                       )
                                     )
                                   )
+                              else
+                                beforeLast :+ last :+
+                                  PreviewResult
+                                    .nothing(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+                                    .runOption(RunOption.RemainOpen)
+                                    .score(last.score)
+                                    .moreResults(
+                                      MoreResults.Remaining(
+                                        p.copy(
+                                          results = restStream,
+                                          totalRemaining = totalRemaining.map(_ - initialPageSize)
+                                        )
+                                      )
+                                    )
+
+//                              paginationStyle match {
+//                                case PaginationStyle.Lazy =>
+//                                  beforeLast :+ last
+//                                    .runOption(RunOption.RemainOpen)
+//                                    .moreResults(
+//                                      MoreResults.Remaining(
+//                                        p.copy(
+//                                          results = restStream,
+//                                          totalRemaining = totalRemaining.map(_ - initialPageSize)
+//                                        )
+//                                      )
+//                                    )
+//
+//                                case PaginationStyle.Immediate =>
+//                                  beforeLast :+ last :+
+//                                    PreviewResult
+//                                      .nothing(Rendered.Ansi(Color.Yellow(moreMessage)))
+//                                      .runOption(RunOption.RemainOpen)
+//                                      .score(last.score)
+//                                      .moreResults(
+//                                        MoreResults.Remaining(
+//                                          p.copy(
+//                                            results = restStream,
+//                                            totalRemaining = totalRemaining.map(_ - initialPageSize)
+//                                          )
+//                                        )
+//                                      )
+//                              }
 
                             case chunk => chunk
                           }
