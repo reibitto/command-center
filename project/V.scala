@@ -35,15 +35,15 @@ object V {
 
   val sttp = "3.10.1"
 
-  val swt = "3.127.0"
+  val swt = "3.128.0"
 
-  val zio = "2.1.11"
+  val zio = "2.1.14"
 
   val zioCache = "0.2.3"
 
-  val zioLogging = "2.3.2"
+  val zioLogging = "2.4.0"
 
-  val zioPrelude = "1.0.0-RC31"
+  val zioPrelude = "1.0.0-RC35"
 
   val zioProcess = "0.7.2"
 }
