@@ -2,13 +2,13 @@ package commandcenter.command
 
 import com.monovore.decline.Help
 import com.typesafe.config.Config
+import commandcenter.CCRuntime.Env
+import commandcenter.CommandContext
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.JavaVM
 import commandcenter.util.OS
 import commandcenter.view.Rendered
 import commandcenter.view.Renderer
-import commandcenter.CCRuntime.Env
-import commandcenter.CommandContext
 import fansi.Color
 import zio.*
 import zio.stream.ZSink
@@ -67,6 +67,8 @@ trait Command[+A] {
 
 object Command {
 
+  private val previewParallelism: Int = 8
+
   def search[A](
       commands: Vector[Command[A]],
       aliases: Map[String, List[String]],
@@ -82,43 +84,33 @@ object Command {
     val aliasedInputs = input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)
 
     (for {
-      chunks <- ZStream
-                  .fromIterable(commands)
-                  .mapZIOParUnordered(8) { command =>
-                    command
-                      .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
-                      .flatMap {
-                        case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
-                        case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
-                        case p @ PreviewResults.Paginated(
-                              rs,
-                              initialPageSize,
-                              _,
-                              totalRemaining
-                            ) =>
-                          for {
-                            (results, restStream) <- Scope.global.use {
-                                                       rs.peel(ZSink.take[PreviewResult[A]](initialPageSize))
-                                                     }
-                          } yield results match {
-                            case beforeLast :+ last if results.length >= initialPageSize =>
-                              if (beforeLast.isEmpty)
-                                beforeLast :+ last
-                                  .runOption(RunOption.RemainOpen)
-                                  .moreResults(
-                                    MoreResults.Remaining(
-                                      p.copy(
-                                        results = restStream,
-                                        totalRemaining = totalRemaining.map(_ - initialPageSize)
-                                      )
-                                    )
-                                  )
-                              else
-                                beforeLast :+ last :+
-                                  PreviewResult
-                                    .nothing(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+      _ <- ZIO.logTrace(s"Searching on input `$input` for ${commands.length} commands")
+      chunks <- if (input.isEmpty)
+                  ZIO.succeed(Chunk.empty)
+                else
+                  ZStream
+                    .fromIterable(commands)
+                    .mapZIOParUnordered(previewParallelism) { command =>
+                      command
+                        .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
+                        .flatMap {
+                          case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
+                          case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
+                          case p @ PreviewResults.Paginated(
+                                rs,
+                                initialPageSize,
+                                _,
+                                totalRemaining
+                              ) =>
+                            for {
+                              (results, restStream) <- Scope.global.use {
+                                                         rs.peel(ZSink.take[PreviewResult[A]](initialPageSize))
+                                                       }
+                            } yield results match {
+                              case beforeLast :+ last if results.length >= initialPageSize =>
+                                if (beforeLast.isEmpty)
+                                  beforeLast :+ last
                                     .runOption(RunOption.RemainOpen)
-                                    .score(last.score)
                                     .moreResults(
                                       MoreResults.Remaining(
                                         p.copy(
@@ -127,43 +119,36 @@ object Command {
                                         )
                                       )
                                     )
+                                else
+                                  beforeLast :+ last :+
+                                    PreviewResult
+                                      .nothing(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+                                      .runOption(RunOption.RemainOpen)
+                                      .score(last.score)
+                                      .moreResults(
+                                        MoreResults.Remaining(
+                                          p.copy(
+                                            results = restStream,
+                                            totalRemaining = totalRemaining.map(_ - initialPageSize)
+                                          )
+                                        )
+                                      )
 
-//                              paginationStyle match {
-//                                case PaginationStyle.Lazy =>
-//                                  beforeLast :+ last
-//                                    .runOption(RunOption.RemainOpen)
-//                                    .moreResults(
-//                                      MoreResults.Remaining(
-//                                        p.copy(
-//                                          results = restStream,
-//                                          totalRemaining = totalRemaining.map(_ - initialPageSize)
-//                                        )
-//                                      )
-//                                    )
-//
-//                                case PaginationStyle.Immediate =>
-//                                  beforeLast :+ last :+
-//                                    PreviewResult
-//                                      .nothing(Rendered.Ansi(Color.Yellow(moreMessage)))
-//                                      .runOption(RunOption.RemainOpen)
-//                                      .score(last.score)
-//                                      .moreResults(
-//                                        MoreResults.Remaining(
-//                                          p.copy(
-//                                            results = restStream,
-//                                            totalRemaining = totalRemaining.map(_ - initialPageSize)
-//                                          )
-//                                        )
-//                                      )
-//                              }
-
-                            case chunk => chunk
-                          }
-                      }
-                      .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
-                      .either
-                  }
-                  .runCollect
+                              case chunk => chunk
+                            }
+                        }
+                        .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
+                        .either
+//                        .timed
+//                        .flatMap { case (timeTaken, r) =>
+//                          ZIO.logTrace(s"Preview `${command.title}` took ${timeTaken.render}").as(r)
+//                        }
+                    }
+                    .runCollect
+                    .timed
+                    .flatMap { case (timeTaken, r) =>
+                      ZIO.logTrace(s"All previews took ${timeTaken.render} (parallelism=$previewParallelism)").as(r)
+                    }
     } yield chunks.flatMap {
       case Left(e)  => Chunk.single(Left(e))
       case Right(r) => r.map(Right(_))

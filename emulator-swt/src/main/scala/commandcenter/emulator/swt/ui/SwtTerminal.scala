@@ -1,6 +1,7 @@
 package commandcenter.emulator.swt.ui
 
 import commandcenter.*
+import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.emulator.swt.event.KeyEventExtensions.KeyEventExtension
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
@@ -8,14 +9,18 @@ import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{Debouncer, OS, WindowManager}
+import commandcenter.util.Debouncer
+import commandcenter.util.OS
+import commandcenter.util.WindowManager
 import commandcenter.view.Rendered
-import commandcenter.CCRuntime.Env
 import fansi.Color
-import org.eclipse.swt.custom.StyleRange
-import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
-import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
+import org.eclipse.swt.custom.StyleRange
+import org.eclipse.swt.events.KeyAdapter
+import org.eclipse.swt.events.KeyEvent
+import org.eclipse.swt.events.ModifyEvent
+import org.eclipse.swt.events.ModifyListener
+import org.eclipse.swt.widgets.Display
 import zio.*
 import zio.stream.ZSink
 
@@ -47,11 +52,12 @@ final case class SwtTerminal(
 
       override def modifyText(e: ModifyEvent): Unit = {
         val searchTerm = terminal.inputBox.getText
-        val context = CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0)
 
         Unsafe.unsafe { implicit u =>
           runtime.unsafe.fork {
             for {
+              _             <- ZIO.logTrace(s"Input text was modified to `$searchTerm`")
+              context       <- ZIO.succeed(CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0))
               config        <- Conf.config
               searchResults <- searchResultsRef.get
               // This is an optimization but it also helps with certain IMEs where they resend all the changes when
@@ -327,7 +333,9 @@ final case class SwtTerminal(
              }
 
              val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
-             terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
+             // The scrollbar displays as scrollable even if it's the exact size, so add one more pixel to prevent that.
+             val newHeight = newSize.y + 1
+             terminal.shell.setSize(config.display.width, newHeight min config.display.maxHeight)
 
              terminal.outputBox.setSelection(scrollToPosition)
            }
@@ -355,7 +363,7 @@ final case class SwtTerminal(
                          rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
                            .mapError(_.toThrowable)
                        }
-                     _ <- if (initialPageSize == 1) {
+                     _ <- if (initialPageSize == 1)
                             showMore(
                               results,
                               preview
@@ -370,7 +378,7 @@ final case class SwtTerminal(
                                 ),
                               pageSize
                             )
-                          } else {
+                          else
                             showMore(
                               results,
                               preview.moreResults(
@@ -383,7 +391,6 @@ final case class SwtTerminal(
                               ),
                               pageSize
                             )
-                          }
                    } yield ()
 
                  case _ =>
@@ -402,11 +409,11 @@ final case class SwtTerminal(
       searchResults <- searchResultsRef.updateAndGet { results =>
                          val (front, back) = results.previews.splitAt(cursorIndex)
 
-                         val previews = if (moreResults.length < pageSize) {
-                           front ++ moreResults ++ back.tail
-                         } else {
-                           front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
-                         }
+                         val previews =
+                           if (moreResults.length < pageSize)
+                             front ++ moreResults ++ back.tail
+                           else
+                             front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
 
                          results.copy(previews = previews)
                        }
@@ -459,11 +466,10 @@ final case class SwtTerminal(
              } yield ()
            }
       _ <- ZIO.foreachDiscard(config.display.alternateOpacity) { alternateOpacity =>
-             if (consecutiveOpenCount % 2 == 0) {
+             if (consecutiveOpenCount % 2 == 0)
                setOpacity(alternateOpacity).ignore
-             } else {
+             else
                setOpacity(config.display.opacity).ignore
-             }
            }
     } yield ()
 

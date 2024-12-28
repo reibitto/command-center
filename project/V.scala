@@ -37,7 +37,7 @@ object V {
 
   val swt = "3.128.0"
 
-  val zio = "2.1.14"
+  val zio = "2.1.12" // TODO:: temporarily using old version to debug potential debouncer issues
 
   val zioCache = "0.2.3"
 
