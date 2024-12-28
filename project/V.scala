@@ -19,7 +19,7 @@ object V {
 
   val jkeymaster = "1.3"
 
-  val jna = "5.15.0"
+  val jna = "5.16.0"
 
   val lanterna = "3.2.0-alpha1"
 
@@ -43,7 +43,7 @@ object V {
 
   val zioLogging = "2.4.0"
 
-  val zioPrelude = "1.0.0-RC35"
+  val zioPrelude = "1.0.0-RC36"
 
   val zioProcess = "0.7.2"
 }
