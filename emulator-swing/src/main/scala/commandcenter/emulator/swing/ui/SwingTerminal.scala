@@ -124,13 +124,14 @@ final case class SwingTerminal(
       // This is an optimization but it also helps with certain IMEs where they resend all the changes when
       // exiting out of composition mode (committing the changes).
       sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
-      _ <- searchDebouncer(
+      fiber <- searchDebouncer(
              Command
                .search(config.commands, config.aliases, searchTerm, context)
                .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
                .unless(sameAsLast)
                .unit
-           ).flatMap(_.join)
+           )
+      _ <- fiber.join
     } yield ()
   }
 
@@ -505,7 +506,7 @@ object SwingTerminal {
     for {
       runtime          <- ZIO.runtime[Env]
       debounceDelay    <- Conf.get(_.general.debounceDelay)
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay, Some(10.seconds)) // TODO:: Add config
       commandCursorRef <- Ref.make(0)
       searchResultsRef <- Ref.make(SearchResults.empty[Any])
       closePromise     <- Promise.make[Nothing, Unit]

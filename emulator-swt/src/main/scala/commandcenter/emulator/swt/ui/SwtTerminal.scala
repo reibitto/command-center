@@ -1,7 +1,6 @@
 package commandcenter.emulator.swt.ui
 
 import commandcenter.*
-import commandcenter.CCRuntime.Env
 import commandcenter.command.*
 import commandcenter.emulator.swt.event.KeyEventExtensions.KeyEventExtension
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
@@ -13,18 +12,20 @@ import commandcenter.util.Debouncer
 import commandcenter.util.OS
 import commandcenter.util.WindowManager
 import commandcenter.view.Rendered
+import commandcenter.CCRuntime.Env
 import fansi.Color
-import org.eclipse.swt.SWT
 import org.eclipse.swt.custom.StyleRange
 import org.eclipse.swt.events.KeyAdapter
 import org.eclipse.swt.events.KeyEvent
 import org.eclipse.swt.events.ModifyEvent
 import org.eclipse.swt.events.ModifyListener
 import org.eclipse.swt.widgets.Display
+import org.eclipse.swt.SWT
 import zio.*
 import zio.stream.ZSink
 
 import java.awt.Dimension
+import java.util.UUID
 import scala.collection.mutable
 
 final case class SwtTerminal(
@@ -63,13 +64,14 @@ final case class SwtTerminal(
               // This is an optimization but it also helps with certain IMEs where they resend all the changes when
               // exiting out of composition mode (committing the changes).
               sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
-              _ <- searchDebouncer(
-                     Command
-                       .search(config.commands, config.aliases, searchTerm, context)
-                       .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-                       .unless(sameAsLast)
-                       .unit
-                   ).flatMap(_.join)
+              fiber <- searchDebouncer(
+                         Command
+                           .search(config.commands, config.aliases, searchTerm, context)
+                           .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                           .unless(sameAsLast)
+                           .unit
+                       )
+              _ <- fiber.join
             } yield ()
           }
         }
@@ -529,7 +531,7 @@ object SwtTerminal {
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
       debounceDelay           <- Conf.get(_.general.debounceDelay)
-      searchDebouncer         <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      searchDebouncer         <- Debouncer.make[Env, Nothing, Unit](debounceDelay, Some(10.seconds)) // TODO:: Add config
       commandCursorRef        <- Ref.make(0)
       searchResultsRef        <- Ref.make(SearchResults.empty[Any])
       consecutiveOpenCountRef <- Ref.make(0)
