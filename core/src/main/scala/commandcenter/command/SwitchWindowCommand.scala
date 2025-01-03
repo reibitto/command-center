@@ -19,7 +19,7 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
       // TODO: Consider adding more info than just the title. Like "File Explorer" and so on.
       windows <- WindowManager.topLevelWindows.mapBoth(
                    CommandError.UnexpectedError(this),
-                   _.tail.filter(_.title.contains(input.rest))
+                   _.tail.filter(_.title.toLowerCase.contains(input.rest))
                  )
     } yield PreviewResults.fromIterable(windows.map { w =>
       Preview.unit

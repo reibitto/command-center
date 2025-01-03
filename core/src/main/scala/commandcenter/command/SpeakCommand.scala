@@ -1,12 +1,12 @@
 package commandcenter.command
 
 import com.typesafe.config.Config
+import commandcenter.cache.ZCache
 import commandcenter.event.KeyboardShortcut
 import commandcenter.util.{OS, PowerShellScript}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.cache.{Cache, Lookup}
 
 import scala.io.Source
 
@@ -14,7 +14,7 @@ final case class SpeakCommand(
     commandNames: List[String],
     override val shortcuts: Set[KeyboardShortcut] = Set.empty,
     voice: String,
-    cache: Cache[String, Nothing, String]
+    cache: ZCache[String, String]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.SpeakCommand
   val title: String = "Speak"
@@ -55,12 +55,11 @@ object SpeakCommand extends CommandPlugin[SpeakCommand] {
 
   def make(config: Config): IO[CommandPluginError, SpeakCommand] =
     for {
-      cache <- Cache
-                 .make(
-                   1024,
-                   Duration.Infinity,
-                   Lookup((resource: String) => ZIO.succeed(Source.fromResource(resource)).map(_.mkString))
-                 )
+      runtime <- ZIO.runtime[Any]
+      cache = ZCache
+                .memoizeZIO(1024, None)((resource: String) =>
+                  ZIO.succeed(Some(Source.fromResource(resource)).map(_.mkString))
+                )(runtime)
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
       shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
       voice        <- config.getZIO[Option[String]]("voice")

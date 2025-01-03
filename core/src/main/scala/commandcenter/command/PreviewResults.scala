@@ -19,7 +19,7 @@ object PreviewResults {
       initialPageSize: Int,
       morePageSize: Int,
       totalRemaining: Option[Long] = None
-  ): PreviewResults[A] =
+  ): PreviewResults.Paginated[A] =
     PreviewResults.Paginated(stream, initialPageSize, morePageSize, totalRemaining)
 
   final case class Single[A](result: PreviewResult[A]) extends PreviewResults[A]
@@ -31,7 +31,15 @@ object PreviewResults {
       initialPageSize: Int,
       morePageSize: Int,
       totalRemaining: Option[Long]
-  ) extends PreviewResults[A]
+  ) extends PreviewResults[A] {
+
+    def moreMessage: String =
+      totalRemaining match {
+        case Some(remaining) => s"Load $morePageSize of $remaining more..."
+        case None            => "More..."
+      }
+
+  }
 
   object Paginated {
 

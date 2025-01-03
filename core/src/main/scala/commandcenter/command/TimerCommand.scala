@@ -4,19 +4,26 @@ import cats.syntax.apply.*
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
+import commandcenter.cache.ZCache
 import commandcenter.command.CommonArgs.*
-import commandcenter.util.{AppleScript, OS, PowerShellScript}
+import commandcenter.command.TimerCommand.ActiveTimer
+import commandcenter.util.AppleScript
+import commandcenter.util.OS
+import commandcenter.util.PowerShellScript
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Color
 import fansi.Str
 import zio.*
-import zio.cache.{Cache, Lookup}
 
+import java.time.Instant
 import scala.io.Source
 
-final case class TimerCommand(commandNames: List[String], cache: Cache[String, Nothing, String]) extends Command[Unit] {
-  // TODO: Add option to list active timers and also one for canceling them
-
+final case class TimerCommand(
+    commandNames: List[String],
+    activeTimersRef: Ref[Set[ActiveTimer]],
+    cache: ZCache[String, String]
+) extends Command[Unit] {
   val commandType: CommandType = CommandType.TimerCommand
   val title: String = "Timer"
 
@@ -40,13 +47,33 @@ final case class TimerCommand(commandNames: List[String], cache: Cache[String, N
       parsed = timerCommand.parse(input.args)
       message <- ZIO
                    .fromEither(parsed)
-                   .fold(HelpMessage.formatted, f => Str(s"Reminder after ${f._1.render}"))
+                   .foldZIO(
+                     h =>
+                       for {
+                         activeTimers <- activeTimersRef.get
+                         now          <- Clock.instant
+                         lines =
+                           activeTimers.map { timer =>
+                             val relativeTime = java.time.Duration.between(now, timer.runsAt)
+                             s"\n${Color.Green(Str(timer.message.getOrElse("untitled")))} in ${relativeTime.render}"
+                           }
+                       } yield HelpMessage.formatted(h) ++ lines.mkString,
+                     { case (duration, messageOpt) =>
+                       val messagePart = messageOpt.fold("")(m => s" for ${Color.Magenta(m)}")
+
+                       ZIO.succeed(Str(s"Reminder after ${duration.render}$messagePart"))
+                     }
+                   )
     } yield {
       val run = for {
-        (delay, timerMessageOpt) <- ZIO.fromEither(parsed).mapError(RunError.CliError.apply)
+        (delay, timerMessageOpt) <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
+        runsAt                   <- Clock.instant.map(_.plus(delay))
+        activeTimer = ActiveTimer(timerMessageOpt, runsAt)
+        _ <- activeTimersRef.update(_ + activeTimer)
         timerDoneMessage = timerMessageOpt.getOrElse(s"Timer completed after ${delay.render}")
         // Note: Can't use JOptionPane here for message dialogs until Graal native-image supports Swing
         _ <- notifyFn(timerDoneMessage, "Command Center Timer Event").delay(delay)
+        _ <- activeTimersRef.update(_ - activeTimer)
       } yield ()
 
       PreviewResults.one(
@@ -61,15 +88,17 @@ final case class TimerCommand(commandNames: List[String], cache: Cache[String, N
 
 object TimerCommand extends CommandPlugin[TimerCommand] {
 
+  final case class ActiveTimer(message: Option[String], runsAt: Instant)
+
   def make(config: Config): IO[CommandPluginError, TimerCommand] =
     for {
-      cache <- Cache
-                 .make(
-                   1024,
-                   Duration.Infinity,
-                   Lookup((resource: String) => ZIO.succeed(Source.fromResource(resource)).map(_.mkString))
-                 )
+      runtime         <- ZIO.runtime[Any]
+      activeTimersRef <- Ref.make(Set.empty[ActiveTimer])
+      cache = ZCache
+                .memoizeZIO(1024, None)((resource: String) =>
+                  ZIO.succeed(Some(Source.fromResource(resource)).map(_.mkString))
+                )(runtime)
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), cache)
+    } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), activeTimersRef, cache)
 
 }

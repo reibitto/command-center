@@ -5,14 +5,16 @@ import zio.logging.*
 import zio.logging.LogFilter.LogLevelByNameConfig
 import zio.logging.LogFormat.*
 
+import java.time.format.DateTimeFormatter
+
 object CCLogging {
 
   val coloredFormat: LogFormat =
-    timestamp.color(LogColor.BLUE) |-|
+    timestamp(DateTimeFormatter.ofPattern("H:mm:ss.SSS")).color(LogColor.BLUE) |-|
       level.highlight |-|
-      fiberId.color(LogColor.WHITE) |-|
+      fiberId.color(LogColor(fansi.Color.DarkGray.escape)) |-|
+      (LogFormat.enclosingClass + LogFormat.text(":") + LogFormat.traceLine).color(LogColor.MAGENTA) |-|
       line.highlight |-|
-      newLine +
       cause.highlight.filter(LogFilter.causeNonEmpty)
 
   def addLoggerFor(terminalType: TerminalType): ZLayer[Any, Nothing, Unit] =

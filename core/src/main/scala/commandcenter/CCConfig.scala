@@ -77,6 +77,7 @@ object CCConfig {
 
 final case class GeneralConfig(
     debounceDelay: Duration,
+    opTimeout: Option[Duration],
     /** If defined the window will be opened again after the specified delay has
       * elapsed. This is used as a hack to get around apps/games that do weird
       * things like steal focus or force "always on top".
@@ -84,7 +85,9 @@ final case class GeneralConfig(
     reopenDelay: Option[Duration],
     hideOnKeyRelease: Boolean,
     keepOpen: Boolean
-)
+) {
+  def opTimeoutOrDefault: Duration = opTimeout.getOrElse(10.seconds)
+}
 
 object GeneralConfig {
 
@@ -92,11 +95,13 @@ object GeneralConfig {
     Decoder.instance { c =>
       for {
         debounceDelay    <- c.get[ScalaDuration]("debounceDelay")
+        opTimeout        <- c.get[Option[ScalaDuration]]("opTimeout")
         reopenDelay      <- c.get[Option[ScalaDuration]]("reopenDelay")
         hideOnKeyRelease <- c.get[Option[Boolean]]("hideOnKeyRelease")
         keepOpen         <- c.get[Option[Boolean]]("keepOpen")
       } yield GeneralConfig(
         Duration.fromScala(debounceDelay),
+        opTimeout.map(Duration.fromScala),
         reopenDelay.map(Duration.fromScala),
         hideOnKeyRelease.getOrElse(false),
         keepOpen.getOrElse(false)
