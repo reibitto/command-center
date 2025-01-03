@@ -50,11 +50,11 @@ lazy val root = project
         val pluginsFormatted = optionalPlugins
           .map(_.project)
           .collect { case p: LocalProject =>
-            fansi.Color.Blue(p.project)
+            s"${scala.Console.BLUE}${p.project}${scala.Console.RESET}"
           }
           .mkString(", ")
 
-        println(s"${fansi.Color.Magenta(s"Enabled plugins")}: $pluginsFormatted")
+        println(s"${scala.Console.MAGENTA}Enabled plugins${scala.Console.RESET}: $pluginsFormatted")
       }
 
       onLoad.value

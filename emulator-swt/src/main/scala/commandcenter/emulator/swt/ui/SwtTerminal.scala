@@ -65,12 +65,12 @@ final case class SwtTerminal(
               // exiting out of composition mode (committing the changes).
               sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
               _ <- searchDebouncer(
-                         Command
-                           .search(config.commands, config.aliases, searchTerm, context)
-                           .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-                           .unless(sameAsLast)
-                           .unit
-                       )
+                     Command
+                       .search(config.commands, config.aliases, searchTerm, context)
+                       .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                       .unless(sameAsLast)
+                       .unit
+                   )
             } yield ()
           }
         }
