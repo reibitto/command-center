@@ -15,7 +15,7 @@ object V {
 
   val graal = "20.2.0"
 
-  val ject = "0.4.1+0-85063916+20241026-1704-SNAPSHOT"
+  val ject = "0.5.1"
 
   val jkeymaster = "1.3"
 
@@ -37,7 +37,7 @@ object V {
 
   val swt = "3.128.0"
 
-  val zio = "2.1.12" // TODO:: temporarily using old version to debug potential debouncer issues
+  val zio = "2.1.14"
 
   val zioCache = "0.2.3"
 

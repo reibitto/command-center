@@ -124,14 +124,13 @@ final case class SwingTerminal(
       // This is an optimization but it also helps with certain IMEs where they resend all the changes when
       // exiting out of composition mode (committing the changes).
       sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
-      fiber <- searchDebouncer(
+      _ <- searchDebouncer(
              Command
                .search(config.commands, config.aliases, searchTerm, context)
                .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
                .unless(sameAsLast)
                .unit
            )
-      _ <- fiber.join
     } yield ()
   }
 
