@@ -139,10 +139,6 @@ object Command {
                         }
                         .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
                         .either
-//                        .timed
-//                        .flatMap { case (timeTaken, r) =>
-//                          ZIO.logTrace(s"Preview `${command.title}` took ${timeTaken.render}").as(r)
-//                        }
                     }
                     .runCollect
                     .timed

@@ -12,6 +12,7 @@ final case class ConfigFake() extends Conf {
       aliases = Map.empty,
       general = GeneralConfig(
         debounceDelay = 150.millis,
+        opTimeout = None,
         reopenDelay = None,
         hideOnKeyRelease = false,
         keepOpen = false

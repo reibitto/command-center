@@ -14,6 +14,13 @@ import scala.jdk.CollectionConverters.*
   */
 class ZCache[K, V](underlying: Cache[K, V]) {
 
+  def apply(key: K): Task[V] =
+    ZIO
+      .attempt(Option(underlying.get(key)))
+      .someOrFail(
+        new Exception(s"Key `$key` not found in cache")
+      )
+
   // When using a loading cache, a `CacheLoaderException` will be thrown if the load function failed, hence why this
   // returns a `Task`. You may or may not want to handle this exception explicitly in the error channel.
   def get(key: K): Task[Option[V]] =

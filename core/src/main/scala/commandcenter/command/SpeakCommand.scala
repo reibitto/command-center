@@ -7,7 +7,6 @@ import commandcenter.util.{OS, PowerShellScript}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.cache.{Cache, Lookup}
 
 import scala.io.Source
 

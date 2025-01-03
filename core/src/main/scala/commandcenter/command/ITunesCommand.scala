@@ -10,7 +10,6 @@ import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
 import zio.*
-import zio.cache.{Cache, Lookup}
 
 import scala.io.Source
 

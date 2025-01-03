@@ -11,14 +11,14 @@ object AppleScript {
 
   def loadFunction0(cache: ZCache[String, String])(resource: String): Task[String] =
     for {
-      script <- cache.get(s"applescript/$resource").someOrFailException // TODO::
+      script <- cache(s"applescript/$resource")
       result <- Command("osascript", "-e", script).string
     } yield result
 
   def loadFunction1[A](cache: ZCache[String, String])(resource: String): A => Task[String] =
     p =>
       for {
-        script <- cache.get(s"applescript/$resource").someOrFailException // TODO::
+        script <- cache(s"applescript/$resource")
         // TODO: Escape properly
         result <- Command("osascript", "-e", script.replace("{0}", p.toString)).string
       } yield result
@@ -28,7 +28,7 @@ object AppleScript {
   )(resource: String): (A, A2) => Task[String] =
     (a, a2) =>
       for {
-        script <- cache.get(s"applescript/$resource").someOrFailException // TODO::
+        script <- cache(s"applescript/$resource")
         // TODO: Escape properly
         result <- Command("osascript", "-e", script.replace("{0}", a.toString).replace("{1}", a2.toString)).string
       } yield result

@@ -25,7 +25,6 @@ import zio.*
 import zio.stream.ZSink
 
 import java.awt.Dimension
-import java.util.UUID
 import scala.collection.mutable
 
 final case class SwtTerminal(
@@ -529,8 +528,11 @@ object SwtTerminal {
 
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
-      debounceDelay           <- Conf.get(_.general.debounceDelay)
-      searchDebouncer         <- Debouncer.make[Env, Nothing, Unit](debounceDelay, Some(10.seconds)) // TODO:: Add config
+      generalConfig <- Conf.get(_.general)
+      searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
+                           generalConfig.debounceDelay,
+                           Some(generalConfig.opTimeoutOrDefault)
+                         )
       commandCursorRef        <- Ref.make(0)
       searchResultsRef        <- Ref.make(SearchResults.empty[Any])
       consecutiveOpenCountRef <- Ref.make(0)
