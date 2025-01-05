@@ -15,6 +15,9 @@ trait CommandBaseSpec extends ZIOSpec[TestEnvironment & Env] {
 
   val defaultCommandContext: CommandContext =
     CommandContext(Locale.ENGLISH, TestTerminal, 1.0)
+
+  def eventuallySucceed(timeout: Duration): Schedule[Any, Any, Duration] =
+    Schedule.spaced(10.millis) zipRight Schedule.elapsed.whileOutput(_ < timeout)
 }
 
 object CommandBaseSpec {

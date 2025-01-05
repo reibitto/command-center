@@ -29,6 +29,61 @@ object CacheSpec extends ZIOSpecDefault {
           results.distinct.length == 1,
           expensiveGetOperationsCalled.get == 1
         )
+      },
+      test("set expiration per key") {
+        val cache = ZCache.make[String, String]()
+
+        for {
+          _    <- cache.set("foo1", "bar1", 1.second)
+          _    <- cache.set("foo2", "bar2", 2.second)
+          _    <- cache.set("foo3", "bar3", 3.second)
+          foo1 <- cache.get("foo1")
+          foo2 <- cache.get("foo2")
+          foo3 <- cache.get("foo3")
+          foo4 <- cache.get("foo4")
+          _ <- assertTrue(
+                 foo1.get == "bar1",
+                 foo2.get == "bar2",
+                 foo3.get == "bar3",
+                 foo4.isEmpty
+               )
+          _    <- ZIO.sleep(1.second)
+          foo1 <- cache.get("foo1")
+          foo2 <- cache.get("foo2")
+          foo3 <- cache.get("foo3")
+          foo4 <- cache.get("foo4")
+          // 1st entry should expire after 1 second
+          _ <- assertTrue(
+                 foo1.isEmpty,
+                 foo2.get == "bar2",
+                 foo3.get == "bar3",
+                 foo4.isEmpty
+               )
+          _    <- ZIO.sleep(1.second)
+          foo1 <- cache.get("foo1")
+          foo2 <- cache.get("foo2")
+          foo3 <- cache.get("foo3")
+          foo4 <- cache.get("foo4")
+          // 2nd entry should expire after 1 more second
+          _ <- assertTrue(
+                 foo1.isEmpty,
+                 foo2.isEmpty,
+                 foo3.get == "bar3",
+                 foo4.isEmpty
+               )
+          _    <- ZIO.sleep(1.second)
+          foo1 <- cache.get("foo1")
+          foo2 <- cache.get("foo2")
+          foo3 <- cache.get("foo3")
+          foo4 <- cache.get("foo4")
+          // 3rd entry should expire after 1 more second
+          _ <- assertTrue(
+                 foo1.isEmpty,
+                 foo2.isEmpty,
+                 foo3.isEmpty,
+                 foo4.isEmpty
+               )
+        } yield assertCompletes
       }
     ) @@ TestAspect.withLiveClock
 }

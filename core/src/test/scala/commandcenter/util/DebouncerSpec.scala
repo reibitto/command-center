@@ -21,7 +21,9 @@ object DebouncerSpec extends CommandBaseSpec {
                    ZIO.succeed(countRef.incrementAndGet())
                  )
                }
-          _ <- ZIO.sleep(20.millis)
+          _ <- ZIO.attempt {
+                 scala.Predef.assert(countRef.get() == 1)
+               }.retry(eventuallySucceed(5.seconds))
         } yield assertTrue(countRef.get() == 1)
       },
       test("interrupt operation in progress if newer debounced request comes in") {

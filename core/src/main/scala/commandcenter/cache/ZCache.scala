@@ -1,22 +1,21 @@
 package commandcenter.cache
 
-import org.cache2k.config.Cache2kConfig
-import org.cache2k.io.AsyncCacheLoader
-import org.cache2k.Cache
-import org.cache2k.Cache2kBuilder
+import com.github.benmanes.caffeine.cache.{AsyncCacheLoader, AsyncLoadingCache, Caffeine, Expiry}
 import zio.*
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent
+import java.util.concurrent.CompletableFuture
 import scala.jdk.CollectionConverters.*
+import scala.jdk.FutureConverters.FutureOps
 
-/** Wraps the Cache2k object to provide safe methods and better integrate with
-  * ZIO.
+/** Wraps the caffeine cache object to provide safe methods and better integrate
+  * with ZIO.
   */
-class ZCache[K, V](underlying: Cache[K, V]) {
+class ZCache[K, V](underlying: AsyncLoadingCache[K, V]) {
 
   def apply(key: K): Task[V] =
     ZIO
-      .attempt(Option(underlying.get(key)))
+      .succeed(Option(underlying.synchronous.get(key)))
       .someOrFail(
         new Exception(s"Key `$key` not found in cache")
       )
@@ -24,127 +23,129 @@ class ZCache[K, V](underlying: Cache[K, V]) {
   // When using a loading cache, a `CacheLoaderException` will be thrown if the load function failed, hence why this
   // returns a `Task`. You may or may not want to handle this exception explicitly in the error channel.
   def get(key: K): Task[Option[V]] =
-    ZIO.attempt(Option(underlying.get(key)))
+    ZIO.succeed(Option(underlying.synchronous.get(key)))
 
-  def getOrElseUpdate(key: K, expiration: Duration)(orElse: => Task[V]): Task[V] =
-    ZIO.succeed {
-      var time = 0L
-
-      val value = underlying.computeIfAbsent(
+  def getOrElseUpdate(key: K, expiration: Duration)(orElse: => Task[V]): Task[V] = {
+    val value = underlying
+      .asMap()
+      .computeIfAbsent(
         key,
         k =>
           Unsafe.unsafe { implicit u =>
             Runtime.default.unsafe
-              .run(
-                for {
-                  v           <- orElse
-                  currentTime <- Clock.currentTime(TimeUnit.MILLISECONDS)
-                } yield {
-                  time = currentTime
-                  v
-                }
-              )
-              .getOrThrowFiberFailure()
+              .runToFuture(orElse)
+              .asJava
+              .toCompletableFuture
           }
       )
 
-      underlying.expireAt(key, time + expiration.toMillis)
+    underlying.synchronous.policy.expireVariably.ifPresent(_.setExpiresAfter(key, expiration))
 
-      value
-    }
+    ZIO.fromCompletableFuture(value)
+  }
 
   def contains(key: K): UIO[Boolean] =
-    ZIO.succeed(underlying.containsKey(key))
+    ZIO.succeed(underlying.asMap.containsKey(key))
 
-  def entries: UIO[Map[K, Option[V]]] = ZIO.succeed(
-    underlying.entries.asScala.map { x =>
-      x.getKey -> Option(x.getValue)
-    }.toMap
+  def entries: UIO[Map[K, V]] = ZIO.succeed(
+    underlying.synchronous.asMap.asScala.toMap
   )
 
   def set(key: K, value: V, expiration: Duration): UIO[Unit] =
-    for {
-      currentTime <- Clock.currentTime(TimeUnit.MILLISECONDS)
-      _ = underlying.invoke(key, _.setValue(value).setExpiryTime(currentTime + expiration.toMillis))
-    } yield ()
+    ZIO.succeed(
+      underlying.synchronous.policy.expireVariably.ifPresent { x =>
+        x.put(key, value, expiration)
+      }
+    )
 
   def invalidate(key: K): UIO[Unit] =
-    ZIO.succeed(underlying.remove(key))
+    ZIO.succeed(underlying.synchronous.invalidate(key))
 
-  def invalidateAll(keys: K*): UIO[Unit] =
-    ZIO.succeed(underlying.removeAll(keys.asJava))
+  def invalidateAll(key: K, keys: K*): UIO[Unit] =
+    ZIO.succeed(underlying.synchronous.invalidateAll((key +: keys).asJava))
 
   def clear: UIO[Unit] =
-    ZIO.succeed(underlying.clear())
+    ZIO.succeed(underlying.synchronous.invalidateAll())
 }
 
 object ZCache {
 
-  def make[K, V](capacity: Long = Cache2kConfig.DEFAULT_ENTRY_CAPACITY): ZCache[K, V] = {
-    val cache = Cache2kBuilder
-      .of(new Cache2kConfig[K, V]())
-      .entryCapacity(capacity)
-      .permitNullValues(true)
-      .build()
+  def make[K, V](capacity: Int = 32): ZCache[K, V] = {
+    val cacheLoader: AsyncCacheLoader[K, V] = (key: K, executor: concurrent.Executor) =>
+      CompletableFuture.completedFuture(null.asInstanceOf[V])
+
+    val cache = Caffeine
+      .newBuilder()
+      .initialCapacity(capacity)
+      .expireAfter(new Expiry[K, V] {
+        def expireAfterCreate(key: K, value: V, currentTime: Long): Long = Long.MaxValue
+
+        def expireAfterUpdate(key: K, value: V, currentTime: Long, currentDuration: Long): Long = currentDuration
+
+        def expireAfterRead(key: K, value: V, currentTime: Long, currentDuration: Long): Long = currentDuration
+      })
+      .buildAsync[K, V](cacheLoader)
 
     new ZCache(cache)
   }
 
   def memoize[K, V](
-      capacity: Long = Cache2kConfig.DEFAULT_ENTRY_CAPACITY,
+      capacity: Int = 32,
       expireAfter: Option[Duration] = None
   )(op: K => V): ZCache[K, V] = {
-    val builder = Cache2kBuilder
-      .of(new Cache2kConfig[K, V]())
-      .entryCapacity(capacity)
-      .permitNullValues(true)
-      .loader((input: K) => op(input))
 
-    val cache = expireAfter.fold(builder.build)(expireAfter => builder.expireAfterWrite(expireAfter).build)
+    val builder = Caffeine
+      .newBuilder()
+      .expireAfter(new Expiry[K, V] {
+        def expireAfterCreate(key: K, value: V, currentTime: Long): Long = expireAfter.fold(Long.MaxValue)(_.toNanos)
 
-    new ZCache(cache)
+        def expireAfterUpdate(key: K, value: V, currentTime: Long, currentDuration: Long): Long = currentDuration
+
+        def expireAfterRead(key: K, value: V, currentTime: Long, currentDuration: Long): Long = currentDuration
+      })
+      .initialCapacity(capacity)
+
+    val cacheLoader: AsyncCacheLoader[K, V] = (key: K, executor: concurrent.Executor) =>
+      CompletableFuture.completedFuture(op(key))
+
+    new ZCache(builder.buildAsync[K, V](cacheLoader))
   }
 
   def memoizeZIO[K, V, R, E](
-      capacity: Long = Cache2kConfig.DEFAULT_ENTRY_CAPACITY,
+      capacity: Int = 32,
       expireAfter: Option[Duration] = None
   )(op: K => ZIO[R, E, Option[V]])(implicit runtime: Runtime[R]): ZCache[K, V] = {
 
-    val builder = Cache2kBuilder
-      .of(new Cache2kConfig[K, V]())
-      .entryCapacity(capacity)
-      .permitNullValues(true)
-      .loader(new AsyncCacheLoader[K, V] {
+    val builder = Caffeine
+      .newBuilder()
+      .expireAfter(new Expiry[K, V] {
+        def expireAfterCreate(key: K, value: V, currentTime: Long): Long = expireAfter.fold(Long.MaxValue)(_.toNanos)
 
-        def load(
-            key: K,
-            context: AsyncCacheLoader.Context[K, V],
-            callback: AsyncCacheLoader.Callback[V]
-        ): Unit =
-          Unsafe.unsafe { implicit u =>
-            runtime.unsafe.fork(
-              op(key).foldCauseZIO(
-                e =>
-                  ZIO.succeed(
-                    callback.onLoadFailure(
-                      e.squashWith {
-                        case t: Throwable => t
-                        case other        => new Exception(s"Cache loading failed due to underlying cause: $other")
-                      }
-                    )
-                  ),
-                {
-                  case Some(v) => ZIO.succeed(callback.onLoadSuccess(v))
-                  case None    => ZIO.succeed(callback.onLoadSuccess(null.asInstanceOf[V]))
-                }
-              )
-            )
-          }
+        def expireAfterUpdate(key: K, value: V, currentTime: Long, currentDuration: Long): Long = currentDuration
 
+        def expireAfterRead(key: K, value: V, currentTime: Long, currentDuration: Long): Long = currentDuration
       })
+      .initialCapacity(capacity)
 
-    val cache = expireAfter.fold(builder.build)(expireAfter => builder.expireAfterWrite(expireAfter).build)
+    val cacheLoader: AsyncCacheLoader[K, V] = (key: K, executor: concurrent.Executor) =>
+      Unsafe.unsafe { implicit u =>
+        runtime.unsafe.runToFuture(
+          op(key).foldCauseZIO(
+            e =>
+              ZIO.fail(
+                e.squashWith {
+                  case t: Throwable => t
+                  case other        => new Exception(s"Cache loading failed due to underlying cause: $other")
+                }
+              ),
+            {
+              case Some(a) => ZIO.succeed(a)
+              case None    => ZIO.succeed(null.asInstanceOf[V])
+            }
+          )
+        )
+      }.asJava.toCompletableFuture
 
-    new ZCache(cache)
+    new ZCache(builder.buildAsync[K, V](cacheLoader))
   }
 }

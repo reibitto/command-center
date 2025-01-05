@@ -1,6 +1,4 @@
 object V {
-  val cache2k = "2.6.1.Final"
-
   val circe = "0.14.10"
 
   val circeConfig = "0.10.1"
