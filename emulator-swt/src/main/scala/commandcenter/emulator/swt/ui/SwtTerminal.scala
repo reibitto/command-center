@@ -8,11 +8,17 @@ import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.{Debouncer, OS, WindowManager}
+import commandcenter.util.Debouncer
+import commandcenter.util.OS
+import commandcenter.util.WindowManager
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
+import fansi.Color
 import org.eclipse.swt.custom.StyleRange
-import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
+import org.eclipse.swt.events.KeyAdapter
+import org.eclipse.swt.events.KeyEvent
+import org.eclipse.swt.events.ModifyEvent
+import org.eclipse.swt.events.ModifyListener
 import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
 import zio.*
@@ -46,11 +52,12 @@ final case class SwtTerminal(
 
       override def modifyText(e: ModifyEvent): Unit = {
         val searchTerm = terminal.inputBox.getText
-        val context = CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0)
 
         Unsafe.unsafe { implicit u =>
-          runtime.unsafe.fork {
+          runtime.unsafe.run {
             for {
+              _             <- ZIO.logTrace(s"Input text was modified to `$searchTerm`")
+              context       <- ZIO.succeed(CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0))
               config        <- Conf.config
               searchResults <- searchResultsRef.get
               // This is an optimization but it also helps with certain IMEs where they resend all the changes when
@@ -62,7 +69,7 @@ final case class SwtTerminal(
                        .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
                        .unless(sameAsLast)
                        .unit
-                   ).flatMap(_.join)
+                   )
             } yield ()
           }
         }
@@ -326,7 +333,9 @@ final case class SwtTerminal(
              }
 
              val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
-             terminal.shell.setSize(config.display.width, newSize.y min config.display.maxHeight)
+             // The scrollbar displays as scrollable even if it's the exact size, so add one more pixel to prevent that.
+             val newHeight = newSize.y + 1
+             terminal.shell.setSize(config.display.width, newHeight min config.display.maxHeight)
 
              terminal.outputBox.setSelection(scrollToPosition)
            }
@@ -345,7 +354,7 @@ final case class SwtTerminal(
         for {
           _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
           _ <- preview.moreResults match {
-                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, _, pageSize, totalRemaining))
+                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, initialPageSize, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
                      _ <- preview.onRunSandboxedLogged.forkDaemon
@@ -354,22 +363,38 @@ final case class SwtTerminal(
                          rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
                            .mapError(_.toThrowable)
                        }
-                     _ <- showMore(
-                            results,
-                            preview.moreResults(
-                              MoreResults.Remaining(
-                                p.copy(
-                                  results = restStream,
-                                  totalRemaining = p.totalRemaining.map(_ - pageSize)
+                     _ <- if (initialPageSize == 1)
+                            showMore(
+                              results,
+                              preview
+                                .rendered(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+                                .moreResults(
+                                  MoreResults.Remaining(
+                                    p.copy(
+                                      results = restStream,
+                                      totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                    )
+                                  )
+                                ),
+                              pageSize
+                            )
+                          else
+                            showMore(
+                              results,
+                              preview.moreResults(
+                                MoreResults.Remaining(
+                                  p.copy(
+                                    results = restStream,
+                                    totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                  )
                                 )
-                              )
-                            ),
-                            pageSize
-                          )
+                              ),
+                              pageSize
+                            )
                    } yield ()
 
                  case _ =>
-                   preview.onRunSandboxedLogged.forkDaemon *> reset
+                   preview.onRunSandboxedLogged.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
                }
         } yield previewOpt
     }
@@ -384,11 +409,11 @@ final case class SwtTerminal(
       searchResults <- searchResultsRef.updateAndGet { results =>
                          val (front, back) = results.previews.splitAt(cursorIndex)
 
-                         val previews = if (moreResults.length < pageSize) {
-                           front ++ moreResults ++ back.tail
-                         } else {
-                           front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
-                         }
+                         val previews =
+                           if (moreResults.length < pageSize)
+                             front ++ moreResults ++ back.tail
+                           else
+                             front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
 
                          results.copy(previews = previews)
                        }
@@ -441,11 +466,10 @@ final case class SwtTerminal(
              } yield ()
            }
       _ <- ZIO.foreachDiscard(config.display.alternateOpacity) { alternateOpacity =>
-             if (consecutiveOpenCount % 2 == 0) {
+             if (consecutiveOpenCount % 2 == 0)
                setOpacity(alternateOpacity).ignore
-             } else {
+             else
                setOpacity(config.display.opacity).ignore
-             }
            }
     } yield ()
 
@@ -504,8 +528,11 @@ object SwtTerminal {
 
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
-      debounceDelay           <- Conf.get(_.general.debounceDelay)
-      searchDebouncer         <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      generalConfig <- Conf.get(_.general)
+      searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
+                           generalConfig.debounceDelay,
+                           Some(generalConfig.opTimeoutOrDefault)
+                         )
       commandCursorRef        <- Ref.make(0)
       searchResultsRef        <- Ref.make(SearchResults.empty[Any])
       consecutiveOpenCountRef <- Ref.make(0)

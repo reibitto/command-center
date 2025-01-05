@@ -31,7 +31,7 @@ class ZTextField(implicit runtime: Runtime[Env]) extends JTextField {
 
         def onChange(e: DocumentEvent): Unit =
           Unsafe.unsafe { implicit u =>
-            runtime.unsafe.fork(handler(e))
+            runtime.unsafe.run(handler(e))
           }
 
         override def insertUpdate(e: DocumentEvent): Unit = onChange(e)

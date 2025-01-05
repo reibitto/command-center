@@ -32,7 +32,10 @@ sealed trait PreviewResult[+A] {
         case p: PreviewResult.Some[A] => p.source.getClass.getCanonicalName
       }
 
-      ZIO.logWarningCause(s"Failed to run $commandName", c)
+      c.squash match {
+        case RunError.Ignore => ZIO.unit
+        case _               => ZIO.logWarningCause(s"Failed to run $commandName", c)
+      }
     }.absorb
 }
 

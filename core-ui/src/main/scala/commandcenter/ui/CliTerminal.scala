@@ -202,7 +202,7 @@ final case class CliTerminal[T <: Terminal](
 
                case _ =>
                  // TODO: Log defects (need file logging for this)
-                 preview.onRun.absorb.forkDaemon *> reset
+                 preview.onRun.absorb.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
              }
       } yield preview
     }
@@ -253,6 +253,7 @@ final case class CliTerminal[T <: Terminal](
              searchResultsRef.set(resultsWithNewInput) *> renderQueue.offer(resultsWithNewInput)
            }
       _ <- ZIO.when(previousResults.hasChange(searchTerm)) {
+             // TODO: confirm if this flatMap(_.join) is still necessary (it used to be)
              searchDebouncer(search(commands, aliases)(searchTerm)).flatMap(_.join).forkDaemon
            }
       _ <- textCursorRef.get
@@ -321,9 +322,12 @@ object CliTerminal {
       textCursorRef    <- Ref.make(TextCursor.unit)
       searchResultsRef <- Ref.make(SearchResults.empty[Any])
       keyHandlersRef   <- Ref.make(Map.empty[KeyStroke, URIO[Env, EventResult]])
-      debounceDelay    <- Conf.get(_.general.debounceDelay)
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
-      renderQueue      <- Queue.sliding[SearchResults[Any]](1)
+      generalConfig    <- Conf.get(_.general)
+      searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
+                           generalConfig.debounceDelay,
+                           Some(generalConfig.opTimeoutOrDefault)
+                         )
+      renderQueue <- Queue.sliding[SearchResults[Any]](1)
     } yield CliTerminal(
       terminal,
       screen,

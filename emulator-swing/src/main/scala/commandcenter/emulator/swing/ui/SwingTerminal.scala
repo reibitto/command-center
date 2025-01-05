@@ -130,7 +130,7 @@ final case class SwingTerminal(
                .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
                .unless(sameAsLast)
                .unit
-           ).flatMap(_.join)
+           )
     } yield ()
   }
 
@@ -503,9 +503,12 @@ object SwingTerminal {
 
   def create: RIO[Scope & Env, SwingTerminal] =
     for {
-      runtime          <- ZIO.runtime[Env]
-      debounceDelay    <- Conf.get(_.general.debounceDelay)
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](debounceDelay)
+      runtime       <- ZIO.runtime[Env]
+      generalConfig <- Conf.get(_.general)
+      searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
+                           generalConfig.debounceDelay,
+                           Some(generalConfig.opTimeoutOrDefault)
+                         )
       commandCursorRef <- Ref.make(0)
       searchResultsRef <- Ref.make(SearchResults.empty[Any])
       closePromise     <- Promise.make[Nothing, Unit]

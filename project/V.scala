@@ -13,7 +13,7 @@ object V {
 
   val graal = "20.2.0"
 
-  val ject = "0.4.1"
+  val ject = "0.5.1"
 
   val jkeymaster = "1.3"
 
@@ -25,6 +25,8 @@ object V {
 
   val scalaReflect = "2.13.15"
 
+  val scalaScraper = "3.1.2"
+
   val slf4j = "1.7.30"
 
   val spire = "0.18.0"
@@ -34,8 +36,6 @@ object V {
   val swt = "3.128.0"
 
   val zio = "2.1.14"
-
-  val zioCache = "0.2.3"
 
   val zioLogging = "2.4.0"
 

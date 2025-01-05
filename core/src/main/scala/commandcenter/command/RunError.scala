@@ -8,4 +8,6 @@ object RunError {
   final case class UnexpectedException(cause: Throwable) extends RunError(cause)
   final case class InternalError(message: String) extends RunError(null)
   final case class CliError(help: Help) extends RunError(null)
+
+  case object Ignore extends RunError(null)
 }
