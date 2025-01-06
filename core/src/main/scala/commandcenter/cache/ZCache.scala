@@ -14,16 +14,17 @@ import scala.jdk.FutureConverters.FutureOps
 class ZCache[K, V](underlying: AsyncLoadingCache[K, V]) {
 
   def apply(key: K): Task[V] =
-    ZIO
-      .succeed(Option(underlying.synchronous.get(key)))
-      .someOrFail(
-        new Exception(s"Key `$key` not found in cache")
-      )
+    ZIO.fromCompletableFuture(underlying.get(key)).flatMap { v =>
+      Option(v) match {
+        case Some(a) => ZIO.succeed(a)
+        case None    => ZIO.fail(new Exception(s"Key `$key` not found in cache"))
+      }
+    }
 
   // When using a loading cache, a `CacheLoaderException` will be thrown if the load function failed, hence why this
   // returns a `Task`. You may or may not want to handle this exception explicitly in the error channel.
   def get(key: K): Task[Option[V]] =
-    ZIO.succeed(Option(underlying.synchronous.get(key)))
+    ZIO.fromCompletableFuture(underlying.get(key)).map(Option(_))
 
   def getOrElseUpdate(key: K, expiration: Duration)(orElse: => Task[V]): Task[V] = {
     val value = underlying
