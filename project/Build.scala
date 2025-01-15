@@ -1,5 +1,5 @@
-import sbt._
-import Keys._
+import sbt.*
+import Keys.*
 
 import scala.Console
 
@@ -61,7 +61,7 @@ object Build {
       incOptions ~= (_.withLogRecompileOnMacro(false)),
       autoAPIMappings := true,
       resolvers := Resolvers,
-      testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
+      testFrameworks := Seq(TestFrameworks.ZIOTest),
       fork := true,
       run / connectInput := true,
       Test / logBuffered := false
@@ -69,8 +69,10 @@ object Build {
 
   // Order of resolvers affects resolution time. More general purpose repositories should come first.
   lazy val Resolvers =
-    Resolver.sonatypeOssRepos("releases") ++ Seq(Resolver.typesafeRepo("releases"), Resolver.jcenterRepo) ++ Resolver
-      .sonatypeOssRepos("snapshots") :+ Resolver.mavenLocal
+    Resolver.sonatypeOssRepos("releases") ++
+      Seq(Resolver.typesafeRepo("releases"), Resolver.jcenterRepo) ++
+      Resolver.sonatypeOssRepos("snapshots") :+
+      Resolver.mavenLocal
 
   def compilerOption(key: String): Option[String] =
     sys.props.get(key).orElse {
@@ -78,13 +80,8 @@ object Build {
       sys.env.get(envVarName)
     }
 
-  def compilerFlag(key: String, default: Boolean): Boolean = {
-    val flagValue = compilerOption(key).map(_.toBoolean).getOrElse(default)
-
-    println(s"${scala.Console.MAGENTA}$key:${scala.Console.RESET} $flagValue")
-
-    flagValue
-  }
+  def compilerFlag(key: String, default: Boolean): Boolean =
+    compilerOption(key).map(_.toBoolean).getOrElse(default)
 
   /** Uses more lenient rules for local development so that warnings for unused
     * imports and so on doesn't get in your way when code is still a work in
