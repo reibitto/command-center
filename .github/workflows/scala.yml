@@ -11,14 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
           cache: sbt
+
+      - uses: sbt/setup-sbt@v1
 
       - name: Run tests
         run: sbt -Dscalac.lenientDev.enabled=false fmtCheck test

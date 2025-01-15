@@ -13,7 +13,7 @@ object V {
 
   val graal = "20.2.0"
 
-  val ject = "0.5.1"
+  val ject = "0.6.0"
 
   val jkeymaster = "1.3"
 
@@ -23,7 +23,7 @@ object V {
 
   val prettytime = "5.0.9.Final"
 
-  val scalaReflect = "2.13.15"
+  val scalaReflect = "2.13.16"
 
   val scalaScraper = "3.1.2"
 
