@@ -41,12 +41,12 @@ object ShortcutsLive {
                        Try(Toolkit.getDefaultToolkit)
 
                        new ShortcutsLive(Provider.getCurrentProvider(true))
-                     })({ shortcuts =>
+                     })(shortcuts =>
                        ZIO.succeed {
                          shortcuts.provider.reset()
                          shortcuts.provider.stop()
                        }
-                     })
+                     )
       } yield shortcuts
     }
 }
