@@ -1,0 +1,3 @@
+[submodule "extras/experimental"]
+	path = extras/experimental
+	url = https://github.com/reibitto/command-center-extras.git

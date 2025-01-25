@@ -34,10 +34,8 @@ final case class SwtTerminal(
     searchResultsRef: Ref[SearchResults[Any]],
     consecutiveOpenCountRef: Ref[Int]
 )(implicit runtime: Runtime[Env])
-    extends GuiTerminal {
+    extends BaseGuiTerminal {
   val terminalType: TerminalType = TerminalType.Swt
-
-  val theme = CCTheme.default
 
   val smartBuffer: TerminalBuffer = new TerminalBuffer(new StringBuilder, mutable.ArrayDeque.empty)
 
@@ -66,7 +64,7 @@ final case class SwtTerminal(
               _ <- searchDebouncer(
                      Command
                        .search(config.commands, config.aliases, searchTerm, context)
-                       .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
+                       .tap(r => setResults(r))
                        .unless(sameAsLast)
                        .unit
                    )
@@ -204,24 +202,6 @@ final case class SwtTerminal(
     })
   }
 
-  private def runSelected: ZIO[Env, Nothing, Unit] =
-    for {
-      _               <- searchDebouncer.triggerNowAwait
-      previousResults <- searchResultsRef.get
-      cursorIndex     <- commandCursorRef.get
-      resultOpt       <- runIndex(previousResults, cursorIndex).catchAll(_ => ZIO.none)
-      _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-             ZIO.succeed(java.lang.System.exit(0)).forkDaemon
-           }
-    } yield ()
-
-  private def resetAndHide: ZIO[Env, Nothing, Unit] =
-    for {
-      _ <- hide
-      _ <- deactivate.ignore
-      _ <- reset
-    } yield ()
-
   private def renderSelectionCursor(cursorDelta: Int): UIO[Unit] =
     for {
       commandCursor <- commandCursorRef.get
@@ -251,7 +231,7 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  private def render(searchResults: SearchResults[Any]): URIO[Conf, Unit] = {
+  override protected def render(searchResults: SearchResults[Any]): URIO[Env, Unit] = {
     var scrollToPosition: Int = 0
 
     for {
@@ -342,84 +322,6 @@ final case class SwtTerminal(
     } yield ()
   }
 
-  def runIndex(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
-    results.previews.lift(cursorIndex) match {
-      case None =>
-        for {
-          _ <- hide
-          _ <- deactivate.ignore
-        } yield None
-
-      case previewOpt @ Some(preview) =>
-        for {
-          _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
-          _ <- preview.moreResults match {
-                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, initialPageSize, pageSize, totalRemaining))
-                     if totalRemaining.forall(_ > 0) =>
-                   for {
-                     _ <- preview.onRunSandboxedLogged.forkDaemon
-                     (results, restStream) <-
-                       Scope.global.use {
-                         rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
-                           .mapError(_.toThrowable)
-                       }
-                     _ <- if (initialPageSize == 1)
-                            showMore(
-                              results,
-                              preview
-                                .rendered(Rendered.Ansi(Color.Yellow(p.moreMessage)))
-                                .moreResults(
-                                  MoreResults.Remaining(
-                                    p.copy(
-                                      results = restStream,
-                                      totalRemaining = p.totalRemaining.map(_ - pageSize)
-                                    )
-                                  )
-                                ),
-                              pageSize
-                            )
-                          else
-                            showMore(
-                              results,
-                              preview.moreResults(
-                                MoreResults.Remaining(
-                                  p.copy(
-                                    results = restStream,
-                                    totalRemaining = p.totalRemaining.map(_ - pageSize)
-                                  )
-                                )
-                              ),
-                              pageSize
-                            )
-                   } yield ()
-
-                 case _ =>
-                   preview.onRunSandboxedLogged.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
-               }
-        } yield previewOpt
-    }
-
-  def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
-  ): RIO[Env, Unit] =
-    for {
-      cursorIndex <- commandCursorRef.get
-      searchResults <- searchResultsRef.updateAndGet { results =>
-                         val (front, back) = results.previews.splitAt(cursorIndex)
-
-                         val previews =
-                           if (moreResults.length < pageSize)
-                             front ++ moreResults ++ back.tail
-                           else
-                             front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
-
-                         results.copy(previews = previews)
-                       }
-      _ <- render(searchResults)
-    } yield ()
-
   def invoke(effect: => Unit): UIO[Unit] =
     ZIO.succeed(Display.getDefault.asyncExec(() => effect))
 
@@ -431,7 +333,7 @@ final case class SwtTerminal(
       }
     }
 
-  def reset: UIO[Unit] =
+  def reset: URIO[Env, Unit] =
     for {
       _ <- commandCursorRef.set(0)
       _ <- invoke {
@@ -439,18 +341,6 @@ final case class SwtTerminal(
            }
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
-
-  def deactivate: RIO[Tools, Unit] =
-    ZIO
-      .whenCase(OS.os) { case OS.MacOS =>
-        Tools.hide
-      }
-      .unit
-
-  def clearScreen: UIO[Unit] =
-    ZIO.succeed {
-      terminal.outputBox.setText("")
-    }
 
   def openActivated: URIO[Env, Unit] =
     for {

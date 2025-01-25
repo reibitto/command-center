@@ -26,4 +26,6 @@ object TestTerminal extends CCTerminal {
       previewSource: PreviewResult[A],
       pageSize: Int
   ): RIO[Env, Unit] = ZIO.unit
+
+  def reset: URIO[Env, Unit] = ZIO.unit
 }
