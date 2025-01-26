@@ -7,23 +7,16 @@ import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
-import commandcenter.util.Debouncer
-import commandcenter.util.OS
-import commandcenter.util.WindowManager
-import commandcenter.view.Rendered
-import commandcenter.view.Style
+import commandcenter.util.{Debouncer, OS, WindowManager}
+import commandcenter.view.{Rendered, Style}
 import commandcenter.CCRuntime.Env
 import zio.*
-import zio.stream.ZSink
 
 import java.awt.*
 import java.awt.event.KeyEvent
 import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
-import javax.swing.text.DefaultStyledDocument
-import javax.swing.text.SimpleAttributeSet
-import javax.swing.text.StyleConstants
-import javax.swing.text.StyleContext
+import javax.swing.text.{DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext}
 
 final case class SwingTerminal(
     commandCursorRef: Ref[Int],

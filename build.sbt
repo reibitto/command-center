@@ -121,6 +121,7 @@ lazy val cli = module("cli")
       case _                                    => MergeStrategy.first
     },
     assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
+    installCC := installCCTask.value,
     graalVMNativeImageGraalVersion := Build.imageGraal,
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
@@ -175,30 +176,7 @@ lazy val emulatorSwt = module("emulator-swt")
       case _                                    => MergeStrategy.first
     },
     assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
-    installCC := Def.taskDyn {
-      Def.task {
-        val jarName = (assembly / assemblyJarName).value
-        val outputPath = (assembly / assemblyOutputPath).value
-        val installDirectoryEnvVarName = "COMMAND_CENTER_INSTALL_DIR"
-
-        sys.env.get(installDirectoryEnvVarName) match {
-          case Some(installDirectory) =>
-            val installPath = new File(installDirectory, jarName)
-
-            if (outputPath.exists) {
-              Files.copy(outputPath.toPath, installPath.toPath, StandardCopyOption.REPLACE_EXISTING)
-
-              println(s"Installed uberjar to: ${outputPath.absolutePath}")
-            } else {
-              println(s"Could not install uberjar because the file was not found: ${outputPath.absolutePath}")
-            }
-
-          case None =>
-            println(s"No environment variable found for install directory: $installDirectoryEnvVarName")
-        }
-
-      }.dependsOn(assembly)
-    }.value,
+    installCC := installCCTask.value,
     libraryDependencies ++= swtDependencies
   )
 
@@ -215,7 +193,8 @@ lazy val emulatorSwing = module("emulator-swing")
       case PathList("META-INF", _*)             => MergeStrategy.discard
       case _                                    => MergeStrategy.first
     },
-    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true")
+    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
+    installCC := installCCTask.value
   )
 
 lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
@@ -250,8 +229,6 @@ lazy val optionalPlugins =
     optionalPlugin(experimentalPlugins)
   ).flatten
 
-lazy val installCC = taskKey[Unit]("install Command Center uberjar")
-
 def swtDependencies: Seq[ModuleID] =
   OS.os match {
     case OS.Windows =>
@@ -263,6 +240,34 @@ def swtDependencies: Seq[ModuleID] =
     case OS.Other(name) =>
       println(s"SWT does not support OS '$name'")
       Seq.empty
+  }
+
+lazy val installCC = taskKey[Unit]("install Command Center uberjar")
+
+def installCCTask =
+  Def.taskDyn {
+    Def.task {
+      val jarName = (assembly / assemblyJarName).value
+      val outputPath = (assembly / assemblyOutputPath).value
+      val installDirectoryEnvVarName = "COMMAND_CENTER_INSTALL_DIR"
+
+      sys.env.get(installDirectoryEnvVarName) match {
+        case Some(installDirectory) =>
+          val installPath = new File(installDirectory, jarName)
+
+          if (outputPath.exists) {
+            Files.copy(outputPath.toPath, installPath.toPath, StandardCopyOption.REPLACE_EXISTING)
+
+            println(s"Installed uberjar to: ${installPath.absolutePath}")
+          } else {
+            println(s"Could not install uberjar because the uberjar was not found at: ${outputPath.absolutePath}")
+          }
+
+        case None =>
+          println(s"No environment variable found for install directory: $installDirectoryEnvVarName")
+      }
+
+    }.dependsOn(assembly)
   }
 
 def module(projectId: String, moduleFile: Option[String] = None): Project =

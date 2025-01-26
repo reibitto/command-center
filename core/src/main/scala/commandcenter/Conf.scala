@@ -23,7 +23,7 @@ final case class ConfigLive(configRef: Ref[Option[ReloadableConfig]]) extends Co
 
   def config: UIO[CCConfig] = configRef.get.some
     .map(_.config)
-    .orDieWith(_ => new Exception("A config hasn't been loaded. You likely forgot to call `Config.load` on startup."))
+    .orDieWith(_ => new Exception("A config hasn't been loaded. You likely forgot to call `Conf.load` on startup."))
 
   def load: RIO[Scope & Env, CCConfig] =
     (for {

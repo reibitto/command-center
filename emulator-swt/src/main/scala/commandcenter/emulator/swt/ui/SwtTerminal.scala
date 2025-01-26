@@ -6,23 +6,14 @@ import commandcenter.emulator.swt.event.KeyEventExtensions.KeyEventExtension
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
 import commandcenter.locale.Language
-import commandcenter.tools.Tools
-import commandcenter.ui.CCTheme
-import commandcenter.util.Debouncer
-import commandcenter.util.OS
-import commandcenter.util.WindowManager
+import commandcenter.util.{Debouncer, WindowManager}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
-import fansi.Color
 import org.eclipse.swt.custom.StyleRange
-import org.eclipse.swt.events.KeyAdapter
-import org.eclipse.swt.events.KeyEvent
-import org.eclipse.swt.events.ModifyEvent
-import org.eclipse.swt.events.ModifyListener
+import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
 import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
 import zio.*
-import zio.stream.ZSink
 
 import java.awt.Dimension
 import scala.collection.mutable
@@ -313,8 +304,10 @@ final case class SwtTerminal(
              }
 
              val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
+
              // The scrollbar displays as scrollable even if it's the exact size, so add one more pixel to prevent that.
              val newHeight = newSize.y + 1
+
              terminal.shell.setSize(config.display.width, newHeight min config.display.maxHeight)
 
              terminal.outputBox.setSelection(scrollToPosition)
