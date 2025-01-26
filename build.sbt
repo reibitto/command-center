@@ -179,18 +179,24 @@ lazy val emulatorSwt = module("emulator-swt")
       Def.task {
         val jarName = (assembly / assemblyJarName).value
         val outputPath = (assembly / assemblyOutputPath).value
-        val installPath = new File(s"C:\\bin\\lib\\command-center\\", jarName)
+        val installDirectoryEnvVarName = "COMMAND_CENTER_INSTALL_DIR"
 
-        // TODO::
-        sys.env.get("COMMAND_CENTER_INSTALL_PATH")
+        sys.env.get(installDirectoryEnvVarName) match {
+          case Some(installDirectory) =>
+            val installPath = new File(installDirectory, jarName)
 
-        if(outputPath.exists) {
-          Files.copy(outputPath.toPath, installPath.toPath, StandardCopyOption.REPLACE_EXISTING)
+            if (outputPath.exists) {
+              Files.copy(outputPath.toPath, installPath.toPath, StandardCopyOption.REPLACE_EXISTING)
 
-          println(s"Installed uberjar to: ${outputPath.absolutePath}")
-        } else {
-          println(s"Could not install uberjar because the file was not found: ${outputPath.absolutePath}")
+              println(s"Installed uberjar to: ${outputPath.absolutePath}")
+            } else {
+              println(s"Could not install uberjar because the file was not found: ${outputPath.absolutePath}")
+            }
+
+          case None =>
+            println(s"No environment variable found for install directory: $installDirectoryEnvVarName")
         }
+
       }.dependsOn(assembly)
     }.value,
     libraryDependencies ++= swtDependencies
