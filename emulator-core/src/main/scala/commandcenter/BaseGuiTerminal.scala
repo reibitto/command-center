@@ -1,10 +1,10 @@
 package commandcenter
 
-import commandcenter.CCRuntime.Env
 import commandcenter.command.{MoreResults, PreviewResult, PreviewResults, RunOption, SearchResults}
 import commandcenter.tools.Tools
 import commandcenter.util.{Debouncer, OS}
 import commandcenter.view.Rendered
+import commandcenter.CCRuntime.Env
 import fansi.Color
 import zio.*
 import zio.stream.ZSink
@@ -43,48 +43,48 @@ abstract class BaseGuiTerminal extends GuiTerminal {
         for {
           _ <- (hide *> deactivate.ignore).when(preview.runOption != RunOption.RemainOpen)
           _ <- preview.moreResults match {
-            case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, initialPageSize, pageSize, totalRemaining))
-              if totalRemaining.forall(_ > 0) =>
-              for {
-                _ <- preview.onRunSandboxedLogged.forkDaemon
-                (results, restStream) <-
-                  Scope.global.use {
-                    rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
-                      .mapError(_.toThrowable)
-                  }
-                _ <- if (initialPageSize == 1)
-                  showMore(
-                    results,
-                    preview
-                      .rendered(Rendered.Ansi(Color.Yellow(p.moreMessage)))
-                      .moreResults(
-                        MoreResults.Remaining(
-                          p.copy(
-                            results = restStream,
-                            totalRemaining = p.totalRemaining.map(_ - pageSize)
-                          )
-                        )
-                      ),
-                    pageSize
-                  )
-                else
-                  showMore(
-                    results,
-                    preview.moreResults(
-                      MoreResults.Remaining(
-                        p.copy(
-                          results = restStream,
-                          totalRemaining = p.totalRemaining.map(_ - pageSize)
-                        )
-                      )
-                    ),
-                    pageSize
-                  )
-              } yield ()
+                 case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, initialPageSize, pageSize, totalRemaining))
+                     if totalRemaining.forall(_ > 0) =>
+                   for {
+                     _ <- preview.onRunSandboxedLogged.forkDaemon
+                     (results, restStream) <-
+                       Scope.global.use {
+                         rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
+                           .mapError(_.toThrowable)
+                       }
+                     _ <- if (initialPageSize == 1)
+                            showMore(
+                              results,
+                              preview
+                                .rendered(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+                                .moreResults(
+                                  MoreResults.Remaining(
+                                    p.copy(
+                                      results = restStream,
+                                      totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                    )
+                                  )
+                                ),
+                              pageSize
+                            )
+                          else
+                            showMore(
+                              results,
+                              preview.moreResults(
+                                MoreResults.Remaining(
+                                  p.copy(
+                                    results = restStream,
+                                    totalRemaining = p.totalRemaining.map(_ - pageSize)
+                                  )
+                                )
+                              ),
+                              pageSize
+                            )
+                   } yield ()
 
-            case _ =>
-              preview.onRunSandboxedLogged.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
-          }
+                 case _ =>
+                   preview.onRunSandboxedLogged.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
+               }
         } yield previewOpt
     }
 
@@ -95,8 +95,8 @@ abstract class BaseGuiTerminal extends GuiTerminal {
       cursorIndex     <- commandCursorRef.get
       resultOpt       <- runIndex(previousResults, cursorIndex).catchAll(_ => ZIO.none)
       _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
-        ZIO.succeed(java.lang.System.exit(0)).forkDaemon
-      }
+             ZIO.succeed(java.lang.System.exit(0)).forkDaemon
+           }
     } yield ()
 
   def deactivate: RIO[Tools, Unit] =
@@ -106,29 +106,29 @@ abstract class BaseGuiTerminal extends GuiTerminal {
       }
 
   def showMore[A](
-                   moreResults: Chunk[PreviewResult[A]],
-                   previewSource: PreviewResult[A],
-                   pageSize: Int
-                 ): RIO[Env, Unit] =
+      moreResults: Chunk[PreviewResult[A]],
+      previewSource: PreviewResult[A],
+      pageSize: Int
+  ): RIO[Env, Unit] =
     for {
       cursorIndex <- commandCursorRef.get
       searchResults <- searchResultsRef.updateAndGet { results =>
-        val (front, back) = results.previews.splitAt(cursorIndex)
+                         val (front, back) = results.previews.splitAt(cursorIndex)
 
-        val previews =
-          if (moreResults.isEmpty) {
-            val inBetween =
-              PreviewResult
-                .nothing(Rendered.Ansi(Color.Yellow("No results found.")))
+                         val previews =
+                           if (moreResults.isEmpty) {
+                             val inBetween =
+                               PreviewResult
+                                 .nothing(Rendered.Ansi(Color.Yellow("No results found.")))
 
-            front ++ Chunk(inBetween) ++ back.tail
-          } else if (moreResults.length < pageSize)
-            front ++ moreResults ++ back.tail
-          else
-            front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
+                             front ++ Chunk(inBetween) ++ back.tail
+                           } else if (moreResults.length < pageSize)
+                             front ++ moreResults ++ back.tail
+                           else
+                             front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
 
-        results.copy(previews = previews)
-      }
+                         results.copy(previews = previews)
+                       }
       _ <- render(searchResults)
     } yield ()
 
