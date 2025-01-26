@@ -22,6 +22,8 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
 
   def reload: RIO[Env, Unit] = ZIO.unit
 
+  def reset: URIO[Env, Unit] = searchResultsRef.set(SearchResults.empty)
+
   def search(commands: Vector[Command[Any]], aliases: Map[String, List[String]])(
       searchTerm: String
   ): URIO[Env, SearchResults[Any]] = {

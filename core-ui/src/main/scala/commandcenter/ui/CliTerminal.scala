@@ -107,7 +107,7 @@ final case class CliTerminal[T <: Terminal](
       )
     )
 
-  def reset: UIO[Unit] =
+  def reset: URIO[Env, Unit] =
     for {
       _ <- commandCursorRef.set(0)
       _ <- textCursorRef.set(TextCursor.unit)

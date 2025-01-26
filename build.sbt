@@ -3,6 +3,8 @@ import sbt.Keys.*
 import sbt.Package.ManifestAttributes
 import sbtwelcome.*
 
+import java.nio.file.{Files, StandardCopyOption}
+
 lazy val root = project
   .in(file("."))
   .aggregate(
@@ -113,12 +115,13 @@ lazy val cli = module("cli")
     assembly / mainClass := Some("commandcenter.cli.Main"),
     assembly / assemblyJarName := "cc.jar",
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.concat
-      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
-      case _                                       => MergeStrategy.first
+      case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", "versions", _*) => MergeStrategy.concat
+      case PathList("META-INF", _*)             => MergeStrategy.discard
+      case _                                    => MergeStrategy.first
     },
     assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
+    installCC := installCCTask.value,
     graalVMNativeImageGraalVersion := Build.imageGraal,
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
@@ -167,12 +170,13 @@ lazy val emulatorSwt = module("emulator-swt")
     javaOptions ++= Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
     assembly / assemblyJarName := "cc-swt.jar",
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.concat
-      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
-      case _                                       => MergeStrategy.first
+      case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", "versions", _*) => MergeStrategy.concat
+      case PathList("META-INF", _*)             => MergeStrategy.discard
+      case _                                    => MergeStrategy.first
     },
     assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
+    installCC := installCCTask.value,
     libraryDependencies ++= swtDependencies
   )
 
@@ -184,12 +188,13 @@ lazy val emulatorSwing = module("emulator-swing")
     assembly / mainClass := Some("commandcenter.emulator.swing.Main"),
     assembly / assemblyJarName := "cc-swing.jar",
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "services", _ @_*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _ @_*) => MergeStrategy.concat
-      case PathList("META-INF", _ @_*)             => MergeStrategy.discard
-      case _                                       => MergeStrategy.first
+      case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", "versions", _*) => MergeStrategy.concat
+      case PathList("META-INF", _*)             => MergeStrategy.discard
+      case _                                    => MergeStrategy.first
     },
-    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true")
+    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
+    installCC := installCCTask.value
   )
 
 lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
@@ -235,6 +240,34 @@ def swtDependencies: Seq[ModuleID] =
     case OS.Other(name) =>
       println(s"SWT does not support OS '$name'")
       Seq.empty
+  }
+
+lazy val installCC = taskKey[Unit]("install Command Center uberjar")
+
+def installCCTask =
+  Def.taskDyn {
+    Def.task {
+      val jarName = (assembly / assemblyJarName).value
+      val outputPath = (assembly / assemblyOutputPath).value
+      val installDirectoryEnvVarName = "COMMAND_CENTER_INSTALL_DIR"
+
+      sys.env.get(installDirectoryEnvVarName) match {
+        case Some(installDirectory) =>
+          val installPath = new File(installDirectory, jarName)
+
+          if (outputPath.exists) {
+            Files.copy(outputPath.toPath, installPath.toPath, StandardCopyOption.REPLACE_EXISTING)
+
+            println(s"Installed uberjar to: ${installPath.absolutePath}")
+          } else {
+            println(s"Could not install uberjar because the uberjar was not found at: ${outputPath.absolutePath}")
+          }
+
+        case None =>
+          println(s"No environment variable found for install directory: $installDirectoryEnvVarName")
+      }
+
+    }.dependsOn(assembly)
   }
 
 def module(projectId: String, moduleFile: Option[String] = None): Project =
