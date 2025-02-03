@@ -42,7 +42,7 @@ final case class KanjiCommand(
           .renderedAnsi(render(kanji.doc, kanji.score))
       },
       initialPageSize = 30,
-      morePageSize = 30
+      morePageSize = 50
     )
 
   // TODO: Consider creating a StrBuilder class to make this nicer

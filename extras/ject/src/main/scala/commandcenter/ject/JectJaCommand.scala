@@ -40,7 +40,7 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
           .renderedAnsi(renderWord(word.doc, word.score))
       },
       initialPageSize = 10,
-      morePageSize = 30
+      morePageSize = 100
     )
 
   def renderWord(word: WordDoc, score: Double): Str = {

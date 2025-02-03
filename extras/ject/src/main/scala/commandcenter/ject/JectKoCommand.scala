@@ -41,7 +41,7 @@ final case class JectKoCommand(commandNames: List[String], luceneIndex: WordRead
           .renderedAnsi(renderWord(word.doc, word.score))
       },
       initialPageSize = 10,
-      morePageSize = 30
+      morePageSize = 50
     )
 
   def renderWord(word: WordDoc, score: Double): Str = {
