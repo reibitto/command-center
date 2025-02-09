@@ -8,7 +8,7 @@ import commandcenter.CCRuntime.Env
 import zio.*
 
 final case class StrokeOrderCommand(commandNames: List[String]) extends Command[Unit] {
-  val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
+  val commandType: CommandType = CommandType.External.of(getClass)
   val title: String = "Stroke Order"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =

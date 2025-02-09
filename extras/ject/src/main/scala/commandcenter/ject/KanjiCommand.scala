@@ -18,7 +18,7 @@ final case class KanjiCommand(
     quickPrefixes: List[String],
     showScore: Boolean
 ) extends Command[Unit] {
-  val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
+  val commandType: CommandType = CommandType.External.of(getClass)
   val title: String = "Kanji"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =

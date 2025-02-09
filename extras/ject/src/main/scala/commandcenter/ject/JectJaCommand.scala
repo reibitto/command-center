@@ -16,7 +16,7 @@ import java.nio.file.Path
 
 final case class JectJaCommand(commandNames: List[String], luceneIndex: WordReader, showScore: Boolean)
     extends Command[Unit] {
-  val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
+  val commandType: CommandType = CommandType.External.of(getClass)
   val title: String = "Ject (ja)"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
@@ -34,9 +34,13 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
       wordStream = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.paginated(
       wordStream.map { word =>
+        val targetWord = word.doc.kanjiTerms.headOption
+          .orElse(word.doc.readingTerms.headOption)
+          .getOrElse(input)
+
         Preview.unit
           .score(Scores.high(searchInput.context))
-          .onRun(Tools.setClipboard(input))
+          .onRun(Tools.setClipboard(targetWord))
           .renderedAnsi(renderWord(word.doc, word.score))
       },
       initialPageSize = 10,

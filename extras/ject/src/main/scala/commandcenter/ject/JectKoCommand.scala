@@ -6,8 +6,7 @@ import commandcenter.config.Decoders.*
 import commandcenter.locale.KoreanText
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
-import fansi.Color
-import fansi.Str
+import fansi.{Color, Str}
 import ject.ko.docs.WordDoc
 import ject.ko.lucene.WordReader
 import ject.SearchPattern
@@ -17,7 +16,7 @@ import java.nio.file.Path
 
 final case class JectKoCommand(commandNames: List[String], luceneIndex: WordReader, showScore: Boolean)
     extends Command[Unit] {
-  val commandType: CommandType = CommandType.External(getClass.getCanonicalName)
+  val commandType: CommandType = CommandType.External.of(getClass)
   val title: String = "Ject (ko)"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
@@ -35,9 +34,13 @@ final case class JectKoCommand(commandNames: List[String], luceneIndex: WordRead
       wordStream = luceneIndex.search(searchPattern).mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.paginated(
       wordStream.map { word =>
+        val targetWord = word.doc.hangulTerms.headOption
+          .orElse(word.doc.hanjaTerms.headOption)
+          .getOrElse(input)
+
         Preview.unit
           .score(Scores.high(searchInput.context))
-          .onRun(Tools.setClipboard(input))
+          .onRun(Tools.setClipboard(targetWord))
           .renderedAnsi(renderWord(word.doc, word.score))
       },
       initialPageSize = 10,

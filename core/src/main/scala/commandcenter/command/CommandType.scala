@@ -51,5 +51,11 @@ object CommandType extends Enum[CommandType] {
 
   final case class External(typeName: String) extends CommandType
 
+  object External {
+
+    def of[T](commandClass: Class[T]): CommandType.External =
+      External(commandClass.getCanonicalName)
+  }
+
   lazy val values: IndexedSeq[CommandType] = findValues
 }
