@@ -5,7 +5,7 @@ object V {
 
   val decline = "2.5.0"
 
-  val enumeratum = "1.7.5"
+  val enumeratum = "1.7.6"
 
   val fansi = "0.5.0"
 
