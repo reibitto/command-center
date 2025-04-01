@@ -33,7 +33,7 @@ object V {
 
   val sttp = "3.10.3"
 
-  val swt = "3.128.0"
+  val swt = "3.129.0"
 
   val zio = "2.1.16"
 
