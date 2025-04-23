@@ -1,6 +1,7 @@
 package commandcenter.command
 
 import commandcenter.scorers.LengthScorer
+import commandcenter.util.StringExtensions.StringExtension
 import commandcenter.CommandContext
 
 import scala.collection.mutable.ArrayBuffer
@@ -65,7 +66,7 @@ final case class SearchInput(
     */
   def asPrefixedQuick(prefixes: String*): Option[CommandInput.Prefixed] =
     prefixes.collectFirst {
-      case prefix if input.startsWith(prefix) =>
+      case prefix if input.startsWithIgnoreCase(prefix) =>
         val rest = input.substring(prefix.length)
 
         CommandInput.Prefixed(prefix, rest, context)
