@@ -192,6 +192,7 @@ object Command {
                    case CommandType.Foobar2000Command         => Foobar2000Command.make(config)
                    case CommandType.HashCommand               => HashCommand.make(config)
                    case CommandType.HoogleCommand             => HoogleCommand.make(config)
+                   case CommandType.HttpCommand               => HttpCommand.make(config)
                    case CommandType.ITunesCommand             => ITunesCommand.make(config)
                    case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
                    case CommandType.LockCommand               => LockCommand.make(config)

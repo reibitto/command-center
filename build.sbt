@@ -79,7 +79,7 @@ lazy val core = module("core")
       "com.monovore" %% "decline" % V.decline,
       "com.lihaoyi" %% "fansi" % V.fansi,
       "com.beachape" %% "enumeratum" % V.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % V.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % V.enumeratumCirce,
       "com.softwaremill.sttp.client3" %% "core" % V.sttp,
       "com.softwaremill.sttp.client3" %% "circe" % V.sttp,
       "com.softwaremill.sttp.client3" %% "zio" % V.sttp,
