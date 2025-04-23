@@ -31,5 +31,5 @@ object EncodeBase64Command extends CommandPlugin[EncodeBase64Command] {
   def make(config: Config): IO[CommandPluginError, EncodeBase64Command] =
     for {
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield EncodeBase64Command(commandNames.getOrElse(List("decodeurl")))
+    } yield EncodeBase64Command(commandNames.getOrElse(List("encodebase64")))
 }
