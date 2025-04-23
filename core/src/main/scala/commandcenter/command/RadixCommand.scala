@@ -4,12 +4,15 @@ import cats.syntax.apply.*
 import com.monovore.decline
 import com.monovore.decline.{Help, Opts}
 import com.typesafe.config.Config
+import commandcenter.command.RadixCommand.hexRegex
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import commandcenter.CommandContext
 import fansi.Str
 import zio.*
 
+import scala.util.matching.Regex
 import scala.util.Try
 
 final case class RadixCommand(commandNames: List[String]) extends Command[Unit] {
@@ -23,6 +26,11 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
   val radixCommand = decline.Command("radix", title)((fromRadixOpt, toRadixOpt, numberArg).tupled)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
+    ZIO
+      .succeed(detectAndPreviewHex(searchInput))
+      .someOrElseZIO(previewRadixCommand(searchInput))
+
+  private def previewRadixCommand(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
       parsed = radixCommand.parse(input.args)
@@ -30,19 +38,12 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
                    .fromEither(parsed)
                    .fold(
                      h => Preview.help(h).score(Scores.veryHigh(input.context)),
-                     { case (fromRadixOpt, toRadixOpt, number) =>
+                     { case (fromRadixOpt, toRadixOpt, numberAsString) =>
                        val fromRadix = fromRadixOpt.getOrElse(10)
                        val toRadix = toRadixOpt.getOrElse(10)
 
                        Try {
-                         val n = java.lang.Long.valueOf(number, fromRadix)
-                         val formatted = java.lang.Long.toString(n, toRadix)
-                         val message = Str(s"$formatted")
-
-                         Preview.unit
-                           .score(Scores.veryHigh(input.context))
-                           .onRun(Tools.setClipboard(message.plainText))
-                           .rendered(Renderer.renderDefault(title, message))
+                         convertNumber(numberAsString, fromRadix, toRadix, input.context)
                        }.getOrElse {
                          Preview.help(Help.fromCommand(radixCommand)).score(Scores.veryHigh(input.context))
                        }
@@ -50,9 +51,40 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
                    )
     } yield PreviewResults.one(preview)
 
+  private def detectAndPreviewHex(searchInput: SearchInput): Option[PreviewResults[Unit]] =
+    searchInput.input match {
+      case hexRegex(n) =>
+        Some(
+          PreviewResults.multiple(
+            convertNumber(n, 16, 10, searchInput.context),
+            convertNumber(n, 16, 2, searchInput.context)
+          )
+        )
+
+      case _ => None
+    }
+
+  private def convertNumber(
+      numberAsString: String,
+      fromRadix: Int,
+      toRadix: Int,
+      context: CommandContext
+  ): PreviewResult[Unit] = {
+    val n = java.lang.Long.valueOf(numberAsString, fromRadix)
+    val formatted = java.lang.Long.toString(n, toRadix)
+    val message = Str(s"$formatted")
+
+    Preview.unit
+      .score(Scores.veryHigh(context))
+      .onRun(Tools.setClipboard(message.plainText))
+      .rendered(Renderer.renderDefault(s"Convert base $fromRadix to $toRadix", message))
+  }
+
 }
 
 object RadixCommand extends CommandPlugin[RadixCommand] {
+
+  val hexRegex: Regex = "0[xX]([0-9a-fA-F]+)".r
 
   def make(config: Config): IO[CommandPluginError, RadixCommand] =
     for {

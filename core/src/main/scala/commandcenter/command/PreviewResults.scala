@@ -11,6 +11,9 @@ object PreviewResults {
   def one[A](result: PreviewResult[A]): PreviewResults[A] =
     PreviewResults.Single(result)
 
+  def multiple[A](result: PreviewResult[A], resultsRest: PreviewResult[A]*): PreviewResults[A] =
+    PreviewResults.Multiple(NonEmptyChunk(result, resultsRest*))
+
   def fromIterable[A](results: Iterable[PreviewResult[A]]): PreviewResults[A] =
     PreviewResults.Multiple(Chunk.fromIterable(results))
 
