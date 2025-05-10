@@ -34,9 +34,9 @@ final case class TimerCommand(
 
   val notifyFn =
     if (OS.os == OS.MacOS)
-      AppleScript.loadFunction2[String, String](cache)("applescript/system/notify.applescript")
+      AppleScript.loadFunction2[String, String](cache)("system/notify.applescript")
     else
-      PowerShellScript.loadFunction2[String, String](cache)("powershell/system/notify.ps1")
+      PowerShellScript.loadFunction2[String, String](cache)("system/notify.ps1")
 
   // TODO: Support all OSes
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)

@@ -11,7 +11,7 @@ object PowerShellScript {
   )(resource: String): (A, A2) => Task[String] =
     (a, a2) =>
       for {
-        script <- cache(resource)
+        script <- cache(s"powershell/$resource")
         result <- Command("powershell", script.replace("{0}", a.toString).replace("{1}", a2.toString)).string
       } yield result
 

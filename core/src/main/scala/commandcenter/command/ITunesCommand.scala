@@ -51,15 +51,15 @@ final case class ITunesCommand(commandNames: List[String], cache: ZCache[String,
 
   val itunesCommand = decline.Command("itunes", "iTunes commands")(opts)
 
-  val playFn = AppleScript.loadFunction0(cache)("applescript/itunes/play.applescript")
-  val pauseFn = AppleScript.loadFunction0(cache)("applescript/itunes/pause.applescript")
-  val stopFn = AppleScript.loadFunction0(cache)("applescript/itunes/stop.applescript")
-  val nextTrackFn = AppleScript.loadFunction0(cache)("applescript/itunes/next-track.applescript")
-  val previousTrackFn = AppleScript.loadFunction0(cache)("applescript/itunes/previous-track.applescript")
-  val trackDetailsFn = AppleScript.loadFunction0(cache)("applescript/itunes/track-details.applescript")
-  val seekFn = AppleScript.loadFunction1[Int](cache)("applescript/itunes/seek.applescript")
-  val rateTrackFn = AppleScript.loadFunction1[Int](cache)("applescript/itunes/rate.applescript")
-  val deleteTrackFn = AppleScript.loadFunction0(cache)("applescript/itunes/delete-track.applescript")
+  val playFn = AppleScript.loadFunction0(cache)("itunes/play.applescript")
+  val pauseFn = AppleScript.loadFunction0(cache)("itunes/pause.applescript")
+  val stopFn = AppleScript.loadFunction0(cache)("itunes/stop.applescript")
+  val nextTrackFn = AppleScript.loadFunction0(cache)("itunes/next-track.applescript")
+  val previousTrackFn = AppleScript.loadFunction0(cache)("itunes/previous-track.applescript")
+  val trackDetailsFn = AppleScript.loadFunction0(cache)("itunes/track-details.applescript")
+  val seekFn = AppleScript.loadFunction1[Int](cache)("itunes/seek.applescript")
+  val rateTrackFn = AppleScript.loadFunction1[Int](cache)("itunes/rate.applescript")
+  val deleteTrackFn = AppleScript.loadFunction0(cache)("itunes/delete-track.applescript")
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {

@@ -42,7 +42,7 @@ final case class SpeakCommand(
 
   val speakFn =
     if (OS.os == OS.Windows)
-      PowerShellScript.loadFunction2[String, String](cache)("powershell/system/speak.ps1")
+      PowerShellScript.loadFunction2[String, String](cache)("system/speak.ps1")
     else
       (_: String, _: String) => ZIO.succeed("")
 
