@@ -53,6 +53,7 @@ final case class SwingTerminal(
   frame.getContentPane.add(inputTextField, BorderLayout.NORTH)
 
   val outputTextPane = new JTextPane(document)
+  outputTextPane.setFont(preferredFont)
   outputTextPane.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 10))
 
   outputTextPane.setBackground(theme.background)

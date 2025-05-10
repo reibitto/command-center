@@ -3,7 +3,9 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.tools.Tools
 import commandcenter.util.OS
+import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
+import fansi.Color
 import zio.*
 import zio.process.Command as PCommand
 
@@ -19,6 +21,9 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
       Preview(externalIP)
         .score(Scores.veryHigh(input.context))
         .onRun(Tools.setClipboard(externalIP))
+        .rendered(
+          Renderer.renderDefault(title, Color.Magenta(externalIP))
+        )
     )
 
   private def getExternalIP: ZIO[Any, CommandError, String] =
@@ -27,10 +32,13 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
         val prefix = "Address:"
         (for {
           lines <- PCommand("nslookup", "myip.opendns.com", "resolver1.opendns.com").lines
-        } yield lines.filter(_.startsWith("Address:")).drop(1).headOption.map { a =>
-          a.drop(prefix.length).trim
-        }).mapError(CommandError.UnexpectedError(this))
+          ipOpt = lines.filter(_.startsWith("Address:")).drop(1).headOption.map { a =>
+                    a.drop(prefix.length).trim
+                  }
+        } yield ipOpt)
+          .mapError(CommandError.UnexpectedError(this))
           .someOrFail(CommandError.UnexpectedError.fromMessage(this)("Could not parse nslookup results"))
+
       case _ =>
         PCommand("dig", "+short", "myip.opendns.com", "@resolver1.opendns.com").string
           .mapError(CommandError.UnexpectedError(this))

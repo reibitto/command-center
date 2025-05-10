@@ -11,10 +11,11 @@ import com.typesafe.config.Config
 import commandcenter.command.native.win.PowrProf
 import commandcenter.command.SystemCommand.SystemSubcommand
 import commandcenter.config.Decoders.*
-import commandcenter.util.OS
+import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.process.Command as PCommand
 
 import scala.concurrent.duration.Duration as ScalaDuration
 
@@ -28,17 +29,21 @@ final case class SystemCommand(commandNames: List[String], screensaverDelay: Opt
   val screensaverCommand =
     decline.Command("screensaver", "Activate the screensaver")(Opts(SystemSubcommand.Screensaver))
 
+  val shutdownCommand =
+    decline.Command("shutdown", "Shut down the computer")(Opts(SystemSubcommand.Shutdown))
+
   val helpCommand = decline.Command("help", "Display usage help")(Opts(SystemSubcommand.Help))
 
   val opts: Opts[SystemSubcommand] =
     Opts.subcommand(sleepCommand) orElse
       Opts.subcommand(monitorOffCommand) orElse
       Opts.subcommand(screensaverCommand) orElse
+      Opts.subcommand(shutdownCommand) orElse
       Opts.subcommand(helpCommand) withDefault SystemSubcommand.Help
 
   val systemCommand: decline.Command[SystemSubcommand] = decline.Command("system", title)(opts)
 
-  override val supportedOS: Set[OS] = Set(OS.Windows)
+  override val supportedOS: Set[OS] = Set(OS.Windows, OS.MacOS)
 
   val SC_MONITORPOWER: Int = 0xf170
   val SC_SCREENSAVE: Int = 0xf140
@@ -56,39 +61,25 @@ final case class SystemCommand(commandNames: List[String], screensaverDelay: Opt
                          case SystemSubcommand.Sleep =>
                            Tuple2(
                              Renderer.renderDefault("Sleep", "Put computer to sleep"),
-                             ZIO.attempt {
-                               PowrProf
-                                 .SetSuspendState(bHibernate = false, bForce = false, bWakeupEventsDisabled = false)
-                               ()
-                             }
+                             systemSleep
                            )
 
                          case SystemSubcommand.MonitorOff =>
                            Tuple2(
                              Renderer.renderDefault("Turn off monitor", ""),
-                             ZIO.attempt {
-                               User32.INSTANCE.SendMessage(
-                                 WinUser.HWND_BROADCAST,
-                                 WinUser.WM_SYSCOMMAND,
-                                 new WPARAM(SC_MONITORPOWER),
-                                 new LPARAM(2)
-                               )
-                               ()
-                             }
+                             turnMonitorOff
                            )
 
                          case SystemSubcommand.Screensaver =>
                            Tuple2(
                              Renderer.renderDefault("Activate screensaver", ""),
-                             ZIO.attempt {
-                               User32.INSTANCE.SendMessage(
-                                 WinUser.HWND_BROADCAST,
-                                 WinUser.WM_SYSCOMMAND,
-                                 new WPARAM(SC_SCREENSAVE),
-                                 new LPARAM(0)
-                               )
-                               ()
-                             }.delay(screensaverDelay.getOrElse(0.seconds))
+                             enableScreenSaver.delay(screensaverDelay.getOrElse(0.seconds))
+                           )
+
+                         case SystemSubcommand.Shutdown =>
+                           Tuple2(
+                             Renderer.renderDefault("Shut down computer", ""),
+                             shutdownComputer
                            )
 
                          case SystemSubcommand.Help =>
@@ -103,6 +94,66 @@ final case class SystemCommand(commandNames: List[String], screensaverDelay: Opt
                      }
                    )
     } yield PreviewResults.one(preview)
+
+  def systemSleep: Task[Unit] =
+    OS.os match {
+      case OS.Windows =>
+        ZIO.attempt {
+          PowrProf.SetSuspendState(bHibernate = false, bForce = false, bWakeupEventsDisabled = false)
+        }.unit
+
+      case OS.MacOS =>
+        AppleScript.runScript("""tell app "System Events" to sleep""").unit
+
+      case _ => ZIO.unit
+    }
+
+  def turnMonitorOff: Task[Unit] =
+    OS.os match {
+      case OS.Windows =>
+        ZIO.attempt {
+          User32.INSTANCE.SendMessage(
+            WinUser.HWND_BROADCAST,
+            WinUser.WM_SYSCOMMAND,
+            new WPARAM(SC_MONITORPOWER),
+            new LPARAM(2)
+          )
+        }.unit
+
+      case OS.MacOS =>
+        AppleScript.runScript("""activate application "ScreenSaverEngine"""").unit
+
+      case _ => ZIO.unit
+    }
+
+  def enableScreenSaver: Task[Unit] =
+    OS.os match {
+      case OS.Windows =>
+        ZIO.attempt {
+          User32.INSTANCE.SendMessage(
+            WinUser.HWND_BROADCAST,
+            WinUser.WM_SYSCOMMAND,
+            new WPARAM(SC_SCREENSAVE),
+            new LPARAM(0)
+          )
+        }.unit
+
+      case OS.MacOS =>
+        AppleScript.runScript("""activate application "ScreenSaverEngine"""").unit
+
+      case _ => ZIO.unit
+    }
+
+  def shutdownComputer: Task[Unit] =
+    OS.os match {
+      case OS.Windows =>
+        PCommand("shutdown", "/s", "/t", "0").successfulExitCode.unit
+
+      case OS.MacOS =>
+        AppleScript.runScript("""tell app "System Events" to shut down"""").unit
+
+      case _ => ZIO.unit
+    }
 }
 
 object SystemCommand extends CommandPlugin[SystemCommand] {
@@ -119,6 +170,7 @@ object SystemCommand extends CommandPlugin[SystemCommand] {
     case object Sleep extends SystemSubcommand
     case object MonitorOff extends SystemSubcommand
     case object Screensaver extends SystemSubcommand
+    case object Shutdown extends SystemSubcommand
     case object Help extends SystemSubcommand
   }
 }

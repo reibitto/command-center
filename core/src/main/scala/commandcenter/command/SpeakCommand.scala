@@ -3,11 +3,14 @@ package commandcenter.command
 import com.typesafe.config.Config
 import commandcenter.cache.ZCache
 import commandcenter.event.KeyboardShortcut
+import commandcenter.locale.Language
 import commandcenter.util.{OS, PowerShellScript}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
+import zio.process.Command as PCommand
 
+import java.util.Locale
 import scala.io.Source
 
 final case class SpeakCommand(
@@ -19,14 +22,32 @@ final case class SpeakCommand(
   val commandType: CommandType = CommandType.SpeakCommand
   val title: String = "Speak"
 
+  def speak(voice: String, speakText: String): ZIO[Any, Throwable, Unit] =
+    OS.os match {
+      case OS.Windows =>
+        speakFn(voice, speakText).unit
+
+      case OS.MacOS =>
+        val voice = Language.detect(speakText) match {
+          case Locale.ENGLISH  => "Samantha"
+          case Locale.KOREAN   => "Yuna"
+          case Locale.JAPANESE => "Kyoko"
+        }
+
+        PCommand("say", "-v", voice, speakText).exitCode.unit
+
+      case _ => ZIO.unit
+
+    }
+
   val speakFn =
     if (OS.os == OS.Windows)
       PowerShellScript.loadFunction2[String, String](cache)("powershell/system/speak.ps1")
     else
       (_: String, _: String) => ZIO.succeed("")
 
-  // TODO: Support all OSes
-  override val supportedOS: Set[OS] = Set(OS.Windows)
+  // TODO: Support Linux
+  override val supportedOS: Set[OS] = Set(OS.Windows, OS.MacOS)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] = {
     val inputOpt = searchInput.asPrefixed
@@ -36,7 +57,7 @@ final case class SpeakCommand(
       _         <- ZIO.fail(CommandError.NotApplicable).when(speakText.isEmpty)
     } yield {
       val run = for {
-        _ <- speakFn(voice, speakText)
+        _ <- speak(voice, speakText)
       } yield ()
 
       PreviewResults.one(
