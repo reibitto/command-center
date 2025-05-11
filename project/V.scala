@@ -23,11 +23,13 @@ object V {
 
   val lanterna = "3.2.0-alpha1"
 
+  val pprint = "0.9.0"
+
   val prettytime = "5.0.9.Final"
 
   val scalaReflect = "2.13.16"
 
-  val scalaScraper = "3.1.2"
+  val scalaScraper = "3.2.0"
 
   val slf4j = "1.7.30"
 

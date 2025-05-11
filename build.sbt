@@ -214,7 +214,9 @@ lazy val experimentalPlugins = module("experimental-plugins", Some("extras/exper
   .settings(
     libraryDependencies ++= Seq(
       "net.ruippeixotog" %% "scala-scraper" % V.scalaScraper,
-      "com.lihaoyi" %% "pprint" % "0.9.0"
+      "com.lihaoyi" %% "pprint" % V.pprint,
+      "com.github.reibitto" %% "ject-ja" % V.ject,
+      "com.github.reibitto" %% "ject-ko" % V.ject
     )
   )
 
