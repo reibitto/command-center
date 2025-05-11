@@ -4,7 +4,6 @@ import cats.syntax.apply.*
 import com.monovore.decline
 import com.monovore.decline.{Help, Opts}
 import com.typesafe.config.Config
-import commandcenter.command.RadixCommand.hexRegex
 import commandcenter.tools.Tools
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
@@ -24,6 +23,8 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
   val numberArg = Opts.argument[String]("number")
 
   val radixCommand = decline.Command("radix", title)((fromRadixOpt, toRadixOpt, numberArg).tupled)
+
+  val hexRegex: Regex = "0[xX]([0-9a-fA-F]+)".r
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     ZIO
@@ -83,8 +84,6 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
 }
 
 object RadixCommand extends CommandPlugin[RadixCommand] {
-
-  val hexRegex: Regex = "0[xX]([0-9a-fA-F]+)".r
 
   def make(config: Config): IO[CommandPluginError, RadixCommand] =
     for {
