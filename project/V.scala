@@ -7,7 +7,7 @@ object V {
 
   val enumeratum = "1.7.6"
 
-  val enumeratumCirce = "1.7.5"
+  val enumeratumCirce = "1.9.0"
 
   val fansi = "0.5.0"
 
