@@ -41,7 +41,7 @@ object CacheSpec extends ZIOSpecDefault {
           foo2 <- cache.get("foo2")
           foo3 <- cache.get("foo3")
           foo4 <- cache.get("foo4")
-          _ <- assertTrue(
+          _    <- assertTrue(
                  foo1.get == "bar1",
                  foo2.get == "bar2",
                  foo3.get == "bar3",

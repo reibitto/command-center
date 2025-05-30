@@ -23,7 +23,7 @@ object KeyboardShortcut {
 
   def fromString(shortcut: String): ValidatedNel[String, KeyboardShortcut] =
     shortcut.split("[ +]+") match {
-      case Array() => Invalid(NonEmptyList.one("Keyboard shortcut cannot be empty"))
+      case Array()        => Invalid(NonEmptyList.one("Keyboard shortcut cannot be empty"))
       case Array(keyName) =>
         KeyCode.withNameInsensitiveOption(keyName) match {
           case Some(keyCode) => Valid(KeyboardShortcut(keyCode, Set.empty))

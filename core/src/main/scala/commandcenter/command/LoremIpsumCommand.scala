@@ -48,7 +48,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
       val run = for {
         (i, chunkType) <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
         text = chunkType match {
-                 case ChunkType.Word => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
+                 case ChunkType.Word     => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
                  case ChunkType.Sentence =>
                    Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
                  case ChunkType.Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
@@ -76,7 +76,7 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
   def make(config: Config): IO[CommandPluginError, LoremIpsumCommand] =
     for {
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-      lipsum <- ZIO.scoped {
+      lipsum       <- ZIO.scoped {
                   ZIO
                     .fromAutoCloseable(ZIO.attempt(Source.fromResource("lipsum")))
                     .mapAttempt(_.getLines().mkString("\n"))

@@ -150,7 +150,7 @@ final case class SwtTerminal(
               runtime.unsafe.fork {
                 for {
                   previousResults <- searchResultsRef.get
-                  previousCursor <-
+                  previousCursor  <-
                     commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
                   _ <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
                 } yield ()
@@ -290,7 +290,7 @@ final case class SwtTerminal(
       }
 
       config <- Conf.config
-      _ <- invoke {
+      _      <- invoke {
              if (smartBuffer.buffer.isEmpty || !terminal.shell.isVisible) {
                terminal.outputBox.setVisible(false)
                terminal.outputBoxGridData.exclude = true
@@ -341,7 +341,7 @@ final case class SwtTerminal(
       config               <- Conf.config
       _                    <- open
       _                    <- activate
-      _ <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
+      _                    <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
              for {
                _ <- ZIO.sleep(delay)
                _ <- open
@@ -369,7 +369,7 @@ final case class SwtTerminal(
   def hide: URIO[Conf, Unit] =
     for {
       keepOpen <- Conf.get(_.general.keepOpen)
-      _ <- if (keepOpen)
+      _        <- if (keepOpen)
              WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
            else
              invoke(terminal.shell.setVisible(false))
@@ -399,7 +399,7 @@ final case class SwtTerminal(
     for {
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
-      _ <- invoke {
+      _      <- invoke {
              val preferredFont = terminal.getPreferredFont(config.display.fonts)
              terminal.inputBox.setFont(preferredFont)
              terminal.outputBox.setFont(preferredFont)
@@ -411,7 +411,7 @@ object SwtTerminal {
 
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
-      generalConfig <- Conf.get(_.general)
+      generalConfig   <- Conf.get(_.general)
       searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
                            generalConfig.debounceDelay,
                            Some(generalConfig.opTimeoutOrDefault)

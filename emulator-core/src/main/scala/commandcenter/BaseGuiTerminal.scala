@@ -46,7 +46,7 @@ abstract class BaseGuiTerminal extends GuiTerminal {
                  case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, initialPageSize, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
-                     _ <- preview.onRunSandboxedLogged.forkDaemon
+                     _                     <- preview.onRunSandboxedLogged.forkDaemon
                      (results, restStream) <-
                        Scope.global.use {
                          rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
@@ -94,7 +94,7 @@ abstract class BaseGuiTerminal extends GuiTerminal {
       previousResults <- searchResultsRef.get
       cursorIndex     <- commandCursorRef.get
       resultOpt       <- runIndex(previousResults, cursorIndex).catchAll(_ => ZIO.none)
-      _ <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
+      _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
              ZIO.succeed(java.lang.System.exit(0)).forkDaemon
            }
     } yield ()
@@ -111,7 +111,7 @@ abstract class BaseGuiTerminal extends GuiTerminal {
       pageSize: Int
   ): RIO[Env, Unit] =
     for {
-      cursorIndex <- commandCursorRef.get
+      cursorIndex   <- commandCursorRef.get
       searchResults <- searchResultsRef.updateAndGet { results =>
                          val (front, back) = results.previews.splitAt(cursorIndex)
 

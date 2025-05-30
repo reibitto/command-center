@@ -18,7 +18,7 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
     } yield {
       val run = for {
         showingIcons <- PCommand("defaults", "read", "com.apple.finder", "CreateDesktop").string.map(_.trim == "1")
-        _ <-
+        _            <-
           PCommand("defaults", "write", "com.apple.finder", "CreateDesktop", "-bool", (!showingIcons).toString).exitCode
         _ <- PCommand("killall", "Finder").exitCode
       } yield ()

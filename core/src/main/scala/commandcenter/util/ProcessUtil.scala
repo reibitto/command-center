@@ -42,7 +42,7 @@ object ProcessUtil {
         for {
           asn       <- PCommand("lsappinfo", "front").string
           pidString <- PCommand("lsappinfo", "info", "-only", "pid", asn.trim).string
-          pid <- pidString.split('=') match {
+          pid       <- pidString.split('=') match {
                    case Array(_, pid) => ZIO.succeed(pid.trim.toLong)
                    case _             => ZIO.fail(new Exception(s"pid could not be extracted from: $pidString"))
                  }

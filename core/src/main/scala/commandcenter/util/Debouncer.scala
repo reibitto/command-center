@@ -38,7 +38,7 @@ final case class Debouncer[R, E, A](
   def triggerNowAwait: IO[E, Unit] =
     for {
       promiseOpt <- triggerNow
-      _ <- ZIO.foreachDiscard(promiseOpt) { promise =>
+      _          <- ZIO.foreachDiscard(promiseOpt) { promise =>
              promise.await
            }
     } yield ()
@@ -55,16 +55,16 @@ object Debouncer {
                  for {
                    delayPromise      <- Promise.make[Nothing, Unit]
                    completionPromise <- Promise.make[Nothing, Unit]
-                   _ <- ZIO.foreachDiscard(state) { s =>
+                   _                 <- ZIO.foreachDiscard(state) { s =>
                           s.running.interruptFork.unless(s.triggered)
                         }
                    opFiber <- (for {
-                                _ <- delayPromise.await.timeout(waitTime)
+                                _      <- delayPromise.await.timeout(waitTime)
                                 result <- opTimeout match {
                                             case Some(timeout) =>
                                               op.timeout(timeout).flatMap {
                                                 case Some(a) => ZIO.succeed(a)
-                                                case None =>
+                                                case None    =>
                                                   val errorMessage = "Operation in debouncer timed out"
                                                   ZIO.logWarning(errorMessage) *> ZIO.dieMessage(errorMessage)
                                               }

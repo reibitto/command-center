@@ -61,7 +61,7 @@ final case class CliTerminal[T <: Terminal](
       }).catchAll(t => ZIO.succeed(EventResult.UnexpectedError(t))),
       new KeyStroke(KeyType.Backspace) -> (for {
         currentCursor <- textCursorRef.get
-        _ <- if (buffer.nonEmpty && currentCursor.logical.column > 0) {
+        _             <- if (buffer.nonEmpty && currentCursor.logical.column > 0) {
                val delta = buffer.lift(currentCursor.logical.column - 1).map(TextUtils.charWidth).getOrElse(0)
 
                textCursorRef.update(_.offsetColumnBy(-1, -delta)) *> ZIO.succeed(
@@ -73,7 +73,7 @@ final case class CliTerminal[T <: Terminal](
       new KeyStroke(KeyType.Escape) -> ZIO.succeed(EventResult.Exit),
       new KeyStroke(KeyType.Delete) -> (for {
         currentCursor <- textCursorRef.get
-        _ <- if (buffer.nonEmpty && currentCursor.logical.column < buffer.length)
+        _             <- if (buffer.nonEmpty && currentCursor.logical.column < buffer.length)
                ZIO.succeed(buffer.deleteCharAt(currentCursor.logical.column))
              else
                ZIO.succeed(currentCursor)
@@ -88,7 +88,7 @@ final case class CliTerminal[T <: Terminal](
       new KeyStroke(KeyType.ArrowLeft) -> (
         for {
           currentCursor <- textCursorRef.get
-          _ <- if (currentCursor.logical.column > 0) {
+          _             <- if (currentCursor.logical.column > 0) {
                  val delta = buffer.lift(currentCursor.logical.column - 1).map(TextUtils.charWidth).getOrElse(0)
                  textCursorRef.update(_.offsetColumnBy(-1, -delta))
                } else
@@ -98,7 +98,7 @@ final case class CliTerminal[T <: Terminal](
       new KeyStroke(KeyType.ArrowRight) -> (
         for {
           currentCursor <- textCursorRef.get
-          _ <- if (currentCursor.logical.column < buffer.length) {
+          _             <- if (currentCursor.logical.column < buffer.length) {
                  val delta = buffer.lift(currentCursor.logical.column).map(TextUtils.charWidth).getOrElse(0)
                  textCursorRef.update(_.offsetColumnBy(1, delta))
                } else
@@ -167,7 +167,7 @@ final case class CliTerminal[T <: Terminal](
       bufferDisplay = buffer.toString.takeRight(columns - prompt.length)
       _          <- putAnsiStr(prompt.length, 0, Color.White(bufferDisplay))
       textCursor <- textCursorRef.get
-      _ <- ZIO.attempt(
+      _          <- ZIO.attempt(
              screen
                .setCursorPosition(new TerminalPosition(prompt.length + (textCursor.actual.column min columns), 0))
            )
@@ -182,7 +182,7 @@ final case class CliTerminal[T <: Terminal](
                    if totalRemaining.forall(_ > 0) =>
                  for {
                    // TODO: Log defects (need file logging for this)
-                   _ <- preview.onRun.absorb.forkDaemon
+                   _                     <- preview.onRun.absorb.forkDaemon
                    (results, restStream) <- Scope.global.use {
                                               rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
                                             }
@@ -213,7 +213,7 @@ final case class CliTerminal[T <: Terminal](
       pageSize: Int
   ): RIO[Env, Unit] =
     for {
-      cursorIndex <- commandCursorRef.get
+      cursorIndex   <- commandCursorRef.get
       searchResults <- searchResultsRef.updateAndGet { results =>
                          val (front, back) = results.previews.splitAt(cursorIndex)
 
@@ -232,7 +232,7 @@ final case class CliTerminal[T <: Terminal](
     (for {
       keyStroke       <- readInput
       previousResults <- searchResultsRef.get
-      eventResult <- for {
+      eventResult     <- for {
                        handlers <- keyHandlersRef.get
                        result   <- handlers.getOrElse(keyStroke, ZIO.succeed(EventResult.Success))
                      } yield result
@@ -323,7 +323,7 @@ object CliTerminal {
       searchResultsRef <- Ref.make(SearchResults.empty[Any])
       keyHandlersRef   <- Ref.make(Map.empty[KeyStroke, URIO[Env, EventResult]])
       generalConfig    <- Conf.get(_.general)
-      searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
+      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](
                            generalConfig.debounceDelay,
                            Some(generalConfig.opTimeoutOrDefault)
                          )

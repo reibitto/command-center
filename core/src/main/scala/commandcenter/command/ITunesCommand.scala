@@ -70,12 +70,12 @@ final case class ITunesCommand(commandNames: List[String], cache: ZCache[String,
                    .foldZIO(
                      help => ZIO.succeed(HelpMessage.formatted(help)),
                      {
-                       case Some(Opt.Play)          => ZIO.succeed(Str(playCommand.header))
-                       case Some(Opt.Pause)         => ZIO.succeed(Str(pauseCommand.header))
-                       case Some(Opt.Stop)          => ZIO.succeed(Str(stopCommand.header))
-                       case Some(Opt.NextTrack)     => ZIO.succeed(Str(nextTrackCommand.header))
-                       case Some(Opt.PreviousTrack) => ZIO.succeed(Str(previousTrackCommand.header))
-                       case Some(Opt.Rewind)        => ZIO.succeed(Str("Rewind current track to the beginning"))
+                       case Some(Opt.Play)                          => ZIO.succeed(Str(playCommand.header))
+                       case Some(Opt.Pause)                         => ZIO.succeed(Str(pauseCommand.header))
+                       case Some(Opt.Stop)                          => ZIO.succeed(Str(stopCommand.header))
+                       case Some(Opt.NextTrack)                     => ZIO.succeed(Str(nextTrackCommand.header))
+                       case Some(Opt.PreviousTrack)                 => ZIO.succeed(Str(previousTrackCommand.header))
+                       case Some(Opt.Rewind)                        => ZIO.succeed(Str("Rewind current track to the beginning"))
                        case Some(Opt.Seek(seconds)) if seconds >= 0 =>
                          ZIO.succeed(Str(s"Skip forward by $seconds seconds"))
                        case Some(Opt.Seek(seconds)) => ZIO.succeed(Str(s"Skip backward by $seconds seconds"))

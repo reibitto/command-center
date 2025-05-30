@@ -31,7 +31,7 @@ object Main extends ZIOApp {
       _        <- terminal.keyHandlersRef.set(terminal.defaultKeyHandlers)
       _        <- ZIO.attempt(terminal.screen.startScreen())
       _        <- terminal.render(SearchResults.empty)
-      _ <- ZStream
+      _        <- ZStream
              .fromQueue(terminal.renderQueue)
              .foreach(terminal.render)
              .forkDaemon
@@ -54,7 +54,7 @@ object Main extends ZIOApp {
     (for {
       args   <- ZIOAppArgs.getArgs
       config <- Conf.load
-      _ <- CliArgs.rootCommand
+      _      <- CliArgs.rootCommand
              .parse(args)
              .fold(
                help => printLine(help.toString),

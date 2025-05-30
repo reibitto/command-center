@@ -33,7 +33,7 @@ object Main {
           config  <- Conf.load
           rawTerminal = new RawSwtTerminal(config)
           terminal <- SwtTerminal.create(runtime, rawTerminal)
-          _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
+          _        <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
                  (for {
                    _ <- ZIO.logDebug("Opening emulated terminal...")
                    _ <- terminal.openActivated
