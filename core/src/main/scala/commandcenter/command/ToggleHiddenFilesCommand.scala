@@ -27,7 +27,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
   private def runMacOS: ZIO[Any, PCommandError, Unit] =
     for {
       showingAll <- PCommand("defaults", "read", "com.apple.finder", "AppleShowAllFiles").string.map(_.trim == "1")
-      _ <- PCommand(
+      _          <- PCommand(
              "defaults",
              "write",
              "com.apple.finder",

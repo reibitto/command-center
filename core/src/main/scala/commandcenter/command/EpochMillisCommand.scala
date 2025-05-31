@@ -15,7 +15,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       (output, score) <- if (input.rest.trim.isEmpty) {
                            Clock.currentTime(TimeUnit.MILLISECONDS).map(time => (time.toString, Scores.veryHigh))
                          } else {

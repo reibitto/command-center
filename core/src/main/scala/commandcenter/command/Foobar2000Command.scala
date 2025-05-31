@@ -47,7 +47,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
-      opt <-
+      opt   <-
         ZIO
           .fromEither(foobarCommand.parse(input.args))
           .mapBoth(
@@ -61,7 +61,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
               case Opt.Stop          => PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode
               case Opt.NextTrack     => PCommand(foobarPath.getCanonicalPath, "/next").successfulExitCode
               case Opt.PreviousTrack => PCommand(foobarPath.getCanonicalPath, "/prev").successfulExitCode
-              case Opt.Rewind =>
+              case Opt.Rewind        =>
                 PCommand(foobarPath.getCanonicalPath, "/stop").successfulExitCode *> PCommand(
                   foobarPath.getCanonicalPath,
                   "/play"
@@ -84,7 +84,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
                    case Opt.Rewind        => ZIO.succeed(Str("Rewind current track to the beginning"))
                    case Opt.DeleteTrack   => ZIO.succeed(Str(deleteTrackCommand.header))
                    case Opt.Help          => ZIO.succeed(Str(foobarCommand.showHelp))
-                   case Opt.Show =>
+                   case Opt.Show          =>
                      for {
                        trackInfo <- trackInfoFromWindow.catchAll(_ => ZIO.none)
                      } yield trackInfo

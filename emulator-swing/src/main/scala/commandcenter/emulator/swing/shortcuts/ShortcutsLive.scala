@@ -15,7 +15,7 @@ final case class ShortcutsLive(provider: Provider) extends Shortcuts {
   def addGlobalShortcut(shortcut: KeyboardShortcut)(handler: KeyboardShortcut => URIO[Env, Unit]): RIO[Env, Unit] =
     for {
       runtime <- ZIO.runtime[Env]
-      _ <- ZIO.succeed {
+      _       <- ZIO.succeed {
              provider.register(
                KeyboardShortcutUtil.toKeyStroke(shortcut),
                new HotKeyListener {

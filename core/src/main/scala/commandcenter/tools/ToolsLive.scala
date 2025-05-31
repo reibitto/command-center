@@ -21,7 +21,7 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
   def activate: Task[Unit] =
     toolsPath match {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "activate", pid.toString).exitCode.unit
-      case None =>
+      case None          =>
         AppleScript
           .runScript(s"""
                         |tell application "System Events"
@@ -58,7 +58,7 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
         clip             <- ZIO.attemptBlocking(AudioSystem.getClip)
         _                <- ZIO.addFinalizer(ZIO.succeed(clip.close()))
         donePromise      <- Promise.make[Nothing, Unit]
-        _ <- ZIO
+        _                <- ZIO
                .async[Any, Throwable, Boolean] { cb =>
                  clip.addLineListener { e =>
                    if (e.getType == LineEvent.Type.STOP) {

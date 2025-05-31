@@ -16,7 +16,7 @@ object DebouncerSpec extends CommandBaseSpec {
 
         for {
           debouncer <- Debouncer.make[Env, Nothing, Unit](10.millis, None)
-          _ <- ZIO.foreachParDiscard(1 to 10) { _ =>
+          _         <- ZIO.foreachParDiscard(1 to 10) { _ =>
                  debouncer(
                    ZIO.succeed(countRef.incrementAndGet())
                  )

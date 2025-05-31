@@ -243,7 +243,7 @@ object WindowManager {
   def frontWindow: Task[Option[FrontWindow]] =
     for {
       windowHandleOpt <- ZIO.attempt(Option(User32.INSTANCE.GetForegroundWindow()))
-      window <- ZIO.foreach(windowHandleOpt) { windowHandle =>
+      window          <- ZIO.foreach(windowHandleOpt) { windowHandle =>
                   ZIO.attempt {
                     val title = fromCString(512)(a => User32.INSTANCE.GetWindowText(windowHandle, a, a.length))
                     val processId = new IntByReference()
@@ -360,7 +360,7 @@ object WindowManager {
   def switchFocusToPreviousActiveWindow: Task[Unit] =
     for {
       windows <- topLevelWindows
-      _ <- ZIO.foreachDiscard(windows.lift(1)) { w =>
+      _       <- ZIO.foreachDiscard(windows.lift(1)) { w =>
              giveWindowFocus(w.windowHandle)
            }
     } yield ()

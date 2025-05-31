@@ -22,7 +22,7 @@ final case class HashCommand(algorithm: String) extends Command[String] {
       all = (stringArg, encodingOpt).tupled
       parsedCommand = decline.Command(algorithm, s"Hashes the argument with $algorithm")(all).parse(input.args)
       (valueToHash, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
-      hashResult <- ZIO
+      hashResult             <- ZIO
                       .fromEither(HashUtil.hash(algorithm)(valueToHash, charset))
                       .mapError(CommandError.UnexpectedError(this))
     } yield PreviewResults.one(

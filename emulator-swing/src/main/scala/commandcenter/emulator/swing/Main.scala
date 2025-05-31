@@ -28,7 +28,7 @@ object Main extends ZIOApp {
     (for {
       config   <- Conf.load
       terminal <- SwingTerminal.create
-      _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
+      _        <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
              (for {
                _ <- ZIO.logDebug("Opening emulated terminal...")
                _ <- terminal.open

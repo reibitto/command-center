@@ -272,7 +272,7 @@ final case class SwingTerminal(
 
           for {
             previousResults <- searchResultsRef.get
-            previousCursor <-
+            previousCursor  <-
               commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
             // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
             _ <- render(previousResults).when(previousCursor < previousResults.previews.length - 1)
@@ -334,7 +334,7 @@ final case class SwingTerminal(
   def hide: URIO[Conf, Unit] =
     for {
       keepOpen <- Conf.get(_.general.keepOpen)
-      _ <- if (keepOpen)
+      _        <- if (keepOpen)
              WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
            else
              ZIO.succeed(frame.setVisible(false))
@@ -343,7 +343,7 @@ final case class SwingTerminal(
   def activate: RIO[Tools, Unit] =
     OS.os match {
       case OS.MacOS => Tools.activate
-      case _ =>
+      case _        =>
         ZIO.succeed {
           frame.toFront()
           frame.requestFocus()
@@ -372,7 +372,7 @@ final case class SwingTerminal(
     for {
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
-      _ <- ZIO.attempt {
+      _      <- ZIO.attempt {
              inputTextField.setFont(preferredFont)
              outputTextPane.setFont(preferredFont)
            }
@@ -382,7 +382,7 @@ final case class SwingTerminal(
     def fallbackFont = new Font("Monospaced", Font.PLAIN, 18)
 
     (for {
-      fonts <- Conf.get(_.display.fonts)
+      fonts              <- Conf.get(_.display.fonts)
       installedFontNames <-
         ZIO.attempt(
           GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.map(_.toLowerCase).toSet
@@ -393,7 +393,7 @@ final case class SwingTerminal(
 
   def getPreferredFrameWidth: URIO[Conf, Int] =
     for {
-      width <- Conf.get(_.display.width)
+      width       <- Conf.get(_.display.width)
       screenWidth <-
         ZIO
           .attempt(
@@ -407,8 +407,8 @@ object SwingTerminal {
 
   def create: RIO[Scope & Env, SwingTerminal] =
     for {
-      runtime       <- ZIO.runtime[Env]
-      generalConfig <- Conf.get(_.general)
+      runtime         <- ZIO.runtime[Env]
+      generalConfig   <- Conf.get(_.general)
       searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
                            generalConfig.debounceDelay,
                            Some(generalConfig.opTimeoutOrDefault)
@@ -416,7 +416,7 @@ object SwingTerminal {
       commandCursorRef <- Ref.make(0)
       searchResultsRef <- Ref.make(SearchResults.empty[Any])
       closePromise     <- Promise.make[Nothing, Unit]
-      swingTerminal <-
+      swingTerminal    <-
         ZIO.acquireRelease(
           ZIO.succeed(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
         )(t => ZIO.succeed(t.frame.dispose()))

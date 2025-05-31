@@ -78,7 +78,7 @@ final case class HttpCommand(
                     basicRequest.method(method, uri)
                 }
       response <- Sttp.send(request)
-      _ <- ZIO.foreachDiscard(response.body.left.toOption) { error =>
+      _        <- ZIO.foreachDiscard(response.body.left.toOption) { error =>
              ZIO.logWarning(s"`$title` HTTP command failed: $error")
            }
     } yield ()
@@ -97,7 +97,7 @@ object HttpCommand extends CommandPlugin[HttpCommand] {
       title       <- config.getZIO[String]("title")
       urlTemplate <- config.getZIO[String]("urlTemplate")
       methodOpt   <- config.getZIO[Option[String]]("method")
-      method <- methodOpt match {
+      method      <- methodOpt match {
                   case Some(method) =>
                     ZIO.fromEither(Method.safeApply(method)).catchAll { e =>
                       ZIO

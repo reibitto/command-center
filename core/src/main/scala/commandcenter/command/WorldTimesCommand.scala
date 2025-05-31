@@ -32,7 +32,7 @@ final case class WorldTimesCommand(
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input    <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
       previews <- if (input.rest.isEmpty) {
                     configuredZones(input.context)
                   } else {

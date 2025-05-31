@@ -32,7 +32,7 @@ final case class SuspendProcessCommand(
     } yield {
       val run = for {
         pid <- ZIO.fromEither(parsedCommand).orElseFail(RunError.Ignore)
-        _ <- for {
+        _   <- for {
                _ <- ZIO.logDebug(s"Toggling suspend for process `$pid`...")
                _ <- OS.os match {
                       case OS.MacOS | OS.Linux =>
@@ -65,7 +65,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
       commandNames     <- config.getZIO[Option[List[String]]]("commandNames")
       suspendShortcuts <- config.getZIO[Option[List[KeyboardShortcut]]]("suspendShortcuts")
       suspendedPidRef  <- Ref.make(Option.empty[Long])
-      _ <- ZIO
+      _                <- ZIO
              .foreach(suspendShortcuts.getOrElse(List.empty)) { suspendShortcut =>
                Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
                  (for {
@@ -94,7 +94,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
       for {
         tryingToSuspendSelf <- ZIO.succeed(pid.contains(ProcessHandle.current.pid))
-        _ <- ZIO
+        _                   <- ZIO
                .foreachDiscard(pid) { pid =>
                  for {
                    _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
@@ -110,7 +110,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
-        _ <- ZIO.foreachDiscard(pidOpt) { pid =>
+        _      <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  _ <- PCommand("kill", "-CONT", pid.toString).exitCode.unit
                  _ <- Tools
@@ -124,7 +124,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
       for {
         suspendedPid <- suspendedPidRef.get
-        _ <- if (suspendedPid.isEmpty)
+        _            <- if (suspendedPid.isEmpty)
                suspendProcess(pid, suspendedPidRef)
              else
                resumeProcess(pid, suspendedPidRef)
@@ -141,7 +141,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                .foreachDiscard(pidOpt) { pid =>
                  for {
                    windowHandle <- WindowManager.openProcess(pid)
-                   _ <- WindowManager
+                   _            <- WindowManager
                           .suspendProcess(windowHandle)
                           .tapErrorCause(t => ZIO.logWarningCause("Could not suspend process", t))
                    _ <- Tools
@@ -156,10 +156,10 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
         pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
-        _ <- ZIO.foreachDiscard(pidOpt) { pid =>
+        _      <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  windowHandle <- WindowManager.openProcess(pid)
-                 _ <- WindowManager
+                 _            <- WindowManager
                         .resumeProcess(windowHandle)
                         .tapErrorCause(t => ZIO.logWarningCause("Could not resume process", t))
                  _ <- Tools
@@ -173,7 +173,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
     def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
         suspendedPid <- suspendedPidRef.get
-        _ <- if (suspendedPid.isEmpty)
+        _            <- if (suspendedPid.isEmpty)
                suspendProcess(pid, suspendedPidRef)
              else
                resumeProcess(pid, suspendedPidRef)

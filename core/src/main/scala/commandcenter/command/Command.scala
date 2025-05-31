@@ -84,7 +84,7 @@ object Command {
     val aliasedInputs = input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)
 
     (for {
-      _ <- ZIO.logTrace(s"Searching on input `$input` for ${commands.length} commands")
+      _            <- ZIO.logTrace(s"Searching on input `$input` for ${commands.length} commands")
       resultChunks <- if (input.isEmpty)
                         ZIO.succeed(Chunk.empty)
                       else
@@ -175,7 +175,7 @@ object Command {
   def parse(config: Config): ZIO[Scope & Env, CommandPluginError, Command[?]] =
     for {
       typeName <- ZIO.attempt(config.getString("type")).mapError(CommandPluginError.UnexpectedException.apply)
-      command <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
+      command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
                    case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
                    case CommandType.ConfigCommand             => ConfigCommand.make(config)
                    case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
