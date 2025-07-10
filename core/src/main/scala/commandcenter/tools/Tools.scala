@@ -8,6 +8,7 @@ trait Tools {
   def processId: Long
   def activate: Task[Unit]
   def hide: Task[Unit]
+  def getClipboard: Task[String]
   def setClipboard(text: String): Task[Unit]
   def beep: Task[Unit]
   def playSound(inputStream: InputStream): Task[Unit]
@@ -23,6 +24,9 @@ object Tools {
 
   def hide: RIO[Tools, Unit] =
     ZIO.serviceWithZIO[Tools](_.hide)
+
+  def getClipboard: RIO[Tools, String] =
+    ZIO.serviceWithZIO[Tools](_.getClipboard)
 
   def setClipboard(text: String): RIO[Tools, Unit] =
     ZIO.serviceWithZIO[Tools](_.setClipboard(text))

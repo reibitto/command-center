@@ -4,14 +4,10 @@ import commandcenter.util.AppleScript
 import zio.*
 import zio.process.Command as PCommand
 
-import java.awt.datatransfer.StringSelection
+import java.awt.datatransfer.{DataFlavor, StringSelection}
 import java.awt.Toolkit
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.InputStream
-import javax.sound.sampled.AudioSystem
-import javax.sound.sampled.FloatControl
-import javax.sound.sampled.LineEvent
+import java.io.{BufferedInputStream, File, InputStream}
+import javax.sound.sampled.{AudioSystem, FloatControl, LineEvent}
 import scala.util.Try
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
@@ -36,6 +32,18 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
       case Some(ccTools) => PCommand(ccTools.getAbsolutePath, "hide", pid.toString).exitCode.unit
       // TODO: Fallback to AppleScript if macOS
       case None => ZIO.unit
+    }
+
+  def getClipboard: Task[String] =
+    ZIO.attemptBlocking {
+      // Not using `isDataFlavorAvailable` here because technically it's a race condition unless we resort to locking.
+      // Plus it doesn't prevent stuff like:
+      //   Exception "java.lang.ClassNotFoundException: com/intellij/codeInsight/editorActions/FoldingData" while
+      //   constructing DataFlavor for: application/x-java-jvm-local-objectref;
+      //   class=com.intellij.codeInsight.editorActions.FoldingData
+      Try {
+        Toolkit.getDefaultToolkit.getSystemClipboard.getData(DataFlavor.stringFlavor).asInstanceOf[String]
+      }.getOrElse("")
     }
 
   def setClipboard(text: String): Task[Unit] =
