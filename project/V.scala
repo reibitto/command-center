@@ -41,7 +41,7 @@ object V {
   // TODO: Might be an issue with sbt-assembly config. Try to fix later.
   val swt = "3.129.0"
 
-  val zio = "2.1.19"
+  val zio = "2.1.20"
 
   val zioLogging = "2.5.0"
 
