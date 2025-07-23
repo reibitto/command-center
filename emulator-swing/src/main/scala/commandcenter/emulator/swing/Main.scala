@@ -24,7 +24,7 @@ object Main extends ZIOApp {
     Scope.default
   )
 
-  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] =
+  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, Unit] =
     (for {
       config   <- Conf.load
       terminal <- SwingTerminal.create
@@ -47,6 +47,6 @@ object Main extends ZIOApp {
            )
       _ <- GlobalActions.setupCommon(config.globalActions)
       _ <- terminal.closePromise.await
-    } yield ()).tapErrorCause(c => ZIO.logFatalCause(c)).exitCode
+    } yield ()).tapErrorCause(c => ZIO.logFatalCause(c))
 
 }
