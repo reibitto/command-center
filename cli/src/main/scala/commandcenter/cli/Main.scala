@@ -50,7 +50,7 @@ object Main extends ZIOApp {
              }
     } yield ()
 
-  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, ExitCode] =
+  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, Unit] =
     (for {
       args   <- ZIOAppArgs.getArgs
       config <- Conf.load
@@ -69,8 +69,8 @@ object Main extends ZIOApp {
                    printLine(s"Command Center CLI v${commandcenter.BuildInfo.version}")
                }
              )
-    } yield ExitCode.success).tapErrorCause { t =>
-      ZIO.succeed(t.squash.printStackTrace()).exitCode
+    } yield ()).tapErrorCause { t =>
+      ZIO.succeed(t.squash.printStackTrace())
     }
 
 }
