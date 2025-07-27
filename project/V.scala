@@ -9,7 +9,7 @@ object V {
 
   val enumeratumCirce = "1.9.0"
 
-  val fansi = "0.5.0"
+  val fansi = "0.5.1"
 
   val fastparse = "3.1.1"
 
