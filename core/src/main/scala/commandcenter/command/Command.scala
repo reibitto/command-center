@@ -90,7 +90,7 @@ object Command {
                       else
                         ZStream
                           .fromIterable(commands)
-                          .mapZIOParUnordered(previewParallelism) { command =>
+                          .mapZIOPar(previewParallelism) { command =>
                             command
                               .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
                               .flatMap {
