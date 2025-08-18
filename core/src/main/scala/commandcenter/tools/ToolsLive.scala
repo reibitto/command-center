@@ -1,6 +1,7 @@
 package commandcenter.tools
 
 import commandcenter.util.AppleScript
+import commandcenter.util.OS
 import zio.*
 import zio.process.Command as PCommand
 
@@ -99,6 +100,13 @@ object ToolsLive {
                         .map(home => new File(home, ".command-center/cc-tools"))
                         .filter(_.exists())
                     }
+        // cc-tools CLI program is recommended for a better user experience for macOS. Particularly for the better
+        // activate/hide support.
+        _ <- ZIO
+               .logWarning("No Command Center tools program found for macOS")
+               .when(
+                 toolsPath.isEmpty && OS.os == OS.MacOS
+               )
       } yield new ToolsLive(pid, toolsPath)
     }
 }
