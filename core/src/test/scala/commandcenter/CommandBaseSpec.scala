@@ -22,12 +22,15 @@ trait CommandBaseSpec extends ZIOSpec[TestEnvironment & Env] {
 
 object CommandBaseSpec {
 
-  val testLayer: ZLayer[Any, Any, Env] = ZLayer.make[Env](
-    ConfigFake.layer,
-    Shortcuts.unsupported,
-    ToolsLive.make,
-    SttpLive.make,
-    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Test),
-    Runtime.setUnhandledErrorLogLevel(LogLevel.Warning)
-  )
+  val testLayer: ZLayer[Any, Any, Env] =
+    Runtime.setExecutor(Executor.makeDefault(autoBlocking = false)) >>>
+      Runtime.removeDefaultLoggers >>>
+      ZLayer.make[Env](
+        ConfigFake.layer,
+        Shortcuts.unsupported,
+        ToolsLive.make,
+        SttpLive.make,
+        CCLogging.addLoggerFor(TerminalType.Test),
+        Runtime.setUnhandledErrorLogLevel(LogLevel.Warning)
+      )
 }

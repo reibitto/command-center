@@ -22,3 +22,19 @@ object OS {
   }
 
 }
+
+sealed trait OSArch
+
+object OSArch {
+  case object AArch64 extends OSArch
+  final case class Other(name: String) extends OSArch
+
+  lazy val current: OSArch = {
+    val osArch = System.getProperty("os.arch", "unknown").toLowerCase(Locale.ENGLISH)
+
+    if (osArch == "aarch64")
+      OSArch.AArch64
+    else
+      OSArch.Other(osArch)
+  }
+}

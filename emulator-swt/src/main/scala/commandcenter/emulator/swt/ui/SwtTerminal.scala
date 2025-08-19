@@ -11,7 +11,6 @@ import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import org.eclipse.swt.custom.StyleRange
 import org.eclipse.swt.events.{KeyAdapter, KeyEvent, ModifyEvent, ModifyListener}
-import org.eclipse.swt.widgets.Display
 import org.eclipse.swt.SWT
 import zio.*
 
@@ -36,7 +35,7 @@ final case class SwtTerminal(
       _       <- setOpacity(opacity)
     } yield ()
 
-  Display.getDefault.asyncExec { () =>
+  terminal.display.asyncExec { () =>
     terminal.inputBox.addModifyListener(new ModifyListener {
 
       override def modifyText(e: ModifyEvent): Unit = {
@@ -120,7 +119,16 @@ final case class SwtTerminal(
 
       override def keyPressed(e: KeyEvent): Unit =
         e.keyCode match {
-          case SWT.CR | SWT.KEYPAD_CR =>
+          // We also check the `character` field to that hitting `Enter` in IME composition mode doesn't immediately
+          // run the command.
+          case SWT.CR if e.character == SWT.CR =>
+            Unsafe.unsafe { implicit u =>
+              runtime.unsafe.fork {
+                runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
+              }
+            }
+
+          case SWT.KEYPAD_CR =>
             Unsafe.unsafe { implicit u =>
               runtime.unsafe.fork {
                 runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
@@ -316,7 +324,7 @@ final case class SwtTerminal(
   }
 
   def invoke(effect: => Unit): UIO[Unit] =
-    ZIO.succeed(Display.getDefault.asyncExec(() => effect))
+    ZIO.succeed(terminal.display.asyncExec(() => effect))
 
   def invokeReturn[A](effect: => A): Task[A] =
     ZIO.asyncZIO { cb =>
@@ -359,7 +367,7 @@ final case class SwtTerminal(
   def open: URIO[Env, Unit] =
     for {
       _ <- invoke {
-             val bounds = terminal.shell.getDisplay.getPrimaryMonitor.getClientArea
+             val bounds = terminal.display.getPrimaryMonitor.getClientArea
              val x = (bounds.width - terminal.shell.getSize.x) / 2
              terminal.shell.setLocation(x, 0)
              terminal.shell.open()
