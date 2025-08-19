@@ -236,7 +236,14 @@ def swtDependencies: Seq[ModuleID] =
     case OS.Windows =>
       Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % V.swt intransitive ())
     case OS.MacOS =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % V.swt intransitive ())
+      OSArch.current match {
+        case OSArch.AArch64 =>
+          Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.aarch64" % V.swt intransitive ())
+
+        case OSArch.Other(_) =>
+          Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % V.swt intransitive ())
+      }
+
     case OS.Linux =>
       Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % V.swt intransitive ())
     case OS.Other(name) =>

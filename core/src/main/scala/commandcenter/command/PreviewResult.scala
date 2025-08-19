@@ -25,8 +25,8 @@ sealed trait PreviewResult[+A] {
 
   def renderedAnsi(renderedAnsi: => fansi.Str): PreviewResult[A] = rendered(Rendered.Ansi(renderedAnsi))
 
-  def onRunSandboxedLogged: RIO[Env, Unit] =
-    onRun.tapErrorCause { c =>
+  def onRunSandboxedLogged: URIO[Env, Unit] =
+    onRun.catchAllCause { c =>
       val commandName = this match {
         case _: PreviewResult.None    => ""
         case p: PreviewResult.Some[A] => p.source.getClass.getCanonicalName
@@ -36,7 +36,7 @@ sealed trait PreviewResult[+A] {
         case RunError.Ignore => ZIO.unit
         case _               => ZIO.logWarningCause(s"Failed to run $commandName", c)
       }
-    }.absorb
+    }
 }
 
 object PreviewResult {

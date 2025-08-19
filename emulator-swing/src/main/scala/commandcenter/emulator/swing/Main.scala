@@ -5,6 +5,7 @@ import commandcenter.emulator.swing.shortcuts.ShortcutsLive
 import commandcenter.emulator.swing.ui.SwingTerminal
 import commandcenter.shortcuts.Shortcuts
 import commandcenter.tools.ToolsLive
+import commandcenter.util.EnvironmentSetup
 import commandcenter.CCRuntime.Env
 import zio.*
 
@@ -14,17 +15,22 @@ object Main extends ZIOApp {
 
   val environmentTag: EnvironmentTag[Environment] = EnvironmentTag[Environment]
 
-  override def bootstrap: ZLayer[Any, Any, Environment] = ZLayer.make[Environment](
-    ConfigLive.layer,
-    ShortcutsLive.layer,
-    ToolsLive.make,
-    SttpLive.make,
-    Runtime.removeDefaultLoggers >>> CCLogging.addLoggerFor(TerminalType.Swing),
-    Runtime.setUnhandledErrorLogLevel(LogLevel.Warning),
-    Scope.default
-  )
+  override def bootstrap: ZLayer[Any, Any, Environment] =
+    Runtime.setExecutor(Executor.makeDefault(autoBlocking = false)) >>>
+      Runtime.removeDefaultLoggers >>>
+      ZLayer.make[Environment](
+        ConfigLive.layer,
+        ShortcutsLive.layer,
+        ToolsLive.make,
+        SttpLive.make,
+        CCLogging.addLoggerFor(TerminalType.Swing),
+        Runtime.setUnhandledErrorLogLevel(LogLevel.Warning),
+        Scope.default
+      )
 
-  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, Unit] =
+  def run: ZIO[ZIOAppArgs & Scope & Environment, Any, Unit] = {
+    EnvironmentSetup.setup()
+
     (for {
       config   <- Conf.load
       terminal <- SwingTerminal.create
@@ -48,5 +54,6 @@ object Main extends ZIOApp {
       _ <- GlobalActions.setupCommon(config.globalActions)
       _ <- terminal.closePromise.await
     } yield ()).tapErrorCause(c => ZIO.logFatalCause(c))
+  }
 
 }
