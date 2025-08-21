@@ -39,7 +39,7 @@ object V {
 
   // For some reason 3.130.0 causes "Libraries for platform win32 cannot be loaded because of incompatible environment"
   // TODO: Might be an issue with sbt-assembly config. Try to fix later.
-  val swt = "3.129.0"
+  val swt = "3.130.0"
 
   val zio = "2.1.20"
 
