@@ -40,6 +40,20 @@ object ChessCommandSpec extends CommandBaseSpec {
         assertTrue(
           pgn.get.moves.startsWith("1.e4 ")
         )
+      },
+      test("extract moves from a raw move list") {
+        val pgn = ChessCommand.ChessState.Pgn.parse(
+          """|1. e4 c6 2. d4 d6 3. Nc3 Nf6 4. f4 Qb6 5. Nf3 Bg4 6. Be2 Nbd7 7. e5 Nd5 8. O-O Nc3 9. bc3 e6
+             |10. Ng5 Be2 11. Qe2 h6 12. Nf7 Kf7 13. f5 de5 14. fe6 Ke6 15. Rb1 Qb1 16. Qc4 Kd6 17. Ba3 Kc7
+             |18. Rb1 Ba3 19. Qb3 Be7 20. Qb7 Kd6 21. de5 Ne5 22. Rd1 Ke6 23. Qb3 Kf5 24. Rf1 Ke4 25. Re1 Kf5
+             |26. g4 Kf6 27. Rf1 Kg6 28. Qe6 Kh7 29. Qe5 Rhe8 30. Rf7 Bf8 31. Qf5 Kg8 32. Kf2 Bc5 33. Kg3 Re3
+             |34. Kh4 Rae8 35. Rg7 Kg7 36. Qc5 R8e6 37. Qa7 Kg6 38. Qa8 Kf6 39. a4 Ke5 40. a5 Kd5 41. Qd8 Ke4
+             |42. a6 Kf3 43. a7 Re2 44. Qd3 R6e3 45. Qe3""".stripMargin
+        )
+
+        assertTrue(
+          pgn.get.moves.startsWith("1. e4 ")
+        )
       }
     )
 }

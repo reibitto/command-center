@@ -3,16 +3,13 @@ package commandcenter.command
 import com.monovore.decline.Help
 import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
-import commandcenter.util.JavaVM
-import commandcenter.util.OS
-import commandcenter.view.Rendered
-import commandcenter.view.Renderer
+import commandcenter.util.{JavaVM, OS}
+import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import fansi.Color
 import zio.*
-import zio.stream.ZSink
-import zio.stream.ZStream
+import zio.stream.{ZSink, ZStream}
 
 import java.util.Locale
 
@@ -214,11 +211,11 @@ object Command {
                    case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
                    case CommandType.SwitchWindowCommand       => SwitchWindowCommand.make(config)
                    case CommandType.SystemCommand             => SystemCommand.make(config)
-                   case CommandType.TemperatureCommand        => TemperatureCommand.make(config)
                    case CommandType.TerminalCommand           => TerminalCommand.make(config)
                    case CommandType.TimerCommand              => TimerCommand.make(config)
                    case CommandType.ToggleDesktopIconsCommand => ToggleDesktopIconsCommand.make(config)
                    case CommandType.ToggleHiddenFilesCommand  => ToggleHiddenFilesCommand.make(config)
+                   case CommandType.UnitConversionCommand     => UnitConversionCommand.make(config)
                    case CommandType.UUIDCommand               => UUIDCommand.make(config)
                    case CommandType.WorldTimesCommand         => WorldTimesCommand.make(config)
 
