@@ -54,7 +54,7 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
 
   // TODO: Properly detect a PGN string. This is an extremely lazy "good enough" filter.
   def isPgn(text: String): Boolean =
-    text.contains("[Result")
+    text.startsWith("1.") || text.contains("[Result")
 
   def extractFenFromPgn(pgnText: String): Option[String] =
     extractFenRegex.unapplySeq(pgnText).flatMap {

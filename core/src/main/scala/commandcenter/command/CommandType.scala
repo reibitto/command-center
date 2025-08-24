@@ -43,7 +43,7 @@ object CommandType extends Enum[CommandType] {
   case object SuspendProcessCommand extends CommandType
   case object SwitchWindowCommand extends CommandType
   case object SystemCommand extends CommandType
-  case object TemperatureCommand extends CommandType
+  case object UnitConversionCommand extends CommandType
   case object TerminalCommand extends CommandType
   case object TimerCommand extends CommandType
   case object ToggleDesktopIconsCommand extends CommandType

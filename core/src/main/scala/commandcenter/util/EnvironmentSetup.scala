@@ -11,9 +11,14 @@ object EnvironmentSetup {
     Try {
       val flavorMap = SystemFlavorMap.getDefaultFlavorMap.asInstanceOf[SystemFlavorMap]
 
-      flavorMap.setFlavorsForNative(
+      flavorMap.addFlavorForUnencodedNative(
         "JAVA_DATAFLAVOR:application/x-java-jvm-local-objectref; class=com.intellij.codeInsight.editorActions.FoldingData",
-        Array(DataFlavor.getTextPlainUnicodeFlavor)
+        DataFlavor.getTextPlainUnicodeFlavor
+      )
+
+      flavorMap.addFlavorForUnencodedNative(
+        "JAVA_DATAFLAVOR:application/x-java-serialized-object; class=com.intellij.openapi.editor.impl.EditorCopyPasteHelperImpl$CopyPasteOptionsTransferableData",
+        DataFlavor.getTextPlainUnicodeFlavor
       )
     }
 

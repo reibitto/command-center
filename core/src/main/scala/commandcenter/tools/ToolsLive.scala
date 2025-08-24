@@ -38,10 +38,6 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
   def getClipboard: Task[String] =
     ZIO.attemptBlocking {
       // Not using `isDataFlavorAvailable` here because technically it's a race condition unless we resort to locking.
-      // Plus it doesn't prevent stuff like:
-      //   Exception "java.lang.ClassNotFoundException: com/intellij/codeInsight/editorActions/FoldingData" while
-      //   constructing DataFlavor for: application/x-java-jvm-local-objectref;
-      //   class=com.intellij.codeInsight.editorActions.FoldingData
       Try {
         Toolkit.getDefaultToolkit.getSystemClipboard.getData(DataFlavor.stringFlavor).asInstanceOf[String]
       }.getOrElse("")
