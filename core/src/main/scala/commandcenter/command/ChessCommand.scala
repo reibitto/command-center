@@ -83,6 +83,24 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
     final case class Pgn(value: String) extends ChessState {
       lazy val hasFen: Boolean = value.contains("[FEN ")
 
+      lazy val tags: Map[String, String] =
+        Pgn.tagRegex
+          .findAllMatchIn(value)
+          .map { m =>
+            m.group(1) -> m.group(2)
+          }
+          .toMap
+
+      /** Tries to determine whether the player is from the white perspective or
+        * not. This isn't necessarily an absolute thing, but we try to make the
+        * best guess.
+        */
+      def isPlayerWhite: Boolean =
+        // chesstempo.com (and others) marks you as "player" for their puzzles.
+        !tags.get("Black").exists(_.equalsIgnoreCase("player"))
+
+      def isPlayerBlack: Boolean = !isPlayerWhite
+
       def moves: String =
         value.linesIterator.toSeq
           .map(_.trim)
@@ -91,6 +109,8 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
     }
 
     object Pgn {
+
+      val tagRegex: Regex = """\[(\w+)\s+"(.+?)"\]""".r
 
       def parse(text: String): Option[Pgn] =
         Option.when(isPgn(text))(Pgn(text))
@@ -111,9 +131,9 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
 
       def url(state: Option[ChessState]): String =
         state match {
-          case Some(ChessState.Pgn(pgn)) =>
+          case Some(p @ ChessState.Pgn(pgn)) =>
             val encodedQuery = encodeQuery(pgn)
-            s"https://www.chess.com/analysis?flip=false&pgn=$encodedQuery"
+            s"https://www.chess.com/analysis?flip=${p.isPlayerBlack}&pgn=$encodedQuery"
 
           case Some(ChessState.Fen(fen)) =>
             val encodedQuery = fen.replace(' ', '_')
@@ -128,9 +148,9 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
 
       def url(state: Option[ChessState]): String =
         state match {
-          case Some(ChessState.Pgn(pgn)) =>
+          case Some(p @ ChessState.Pgn(pgn)) =>
             val encodedQuery = encodeQuery(pgn)
-            s"https://www.chess.com/analysis?flip=false&pgn=$encodedQuery"
+            s"https://www.chess.com/analysis?flip=${p.isPlayerBlack}&pgn=$encodedQuery"
 
           case Some(ChessState.Fen(fen)) =>
             s"https://www.chess.com/analysis?flip=false&fen=$fen"

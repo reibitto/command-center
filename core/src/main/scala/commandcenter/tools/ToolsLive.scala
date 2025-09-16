@@ -5,7 +5,7 @@ import commandcenter.util.OS
 import zio.*
 import zio.process.Command as PCommand
 
-import java.awt.datatransfer.{DataFlavor, StringSelection}
+import java.awt.datatransfer.{Clipboard, DataFlavor, StringSelection}
 import java.awt.Toolkit
 import java.io.{BufferedInputStream, File, InputStream}
 import javax.sound.sampled.{AudioSystem, FloatControl, LineEvent}
@@ -13,6 +13,13 @@ import scala.util.Try
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
 final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
+  private val clipboard: Clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
+
+  // `Clipboard` is not thread-safe so we need to ensure it's only accessed one at a time.
+  private val clipboardSemaphore: Semaphore = Unsafe.unsafe { implicit u =>
+    Semaphore.unsafe.make(1)
+  }
+
   def processId: Long = pid
 
   def activate: Task[Unit] =
@@ -36,20 +43,25 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
     }
 
   def getClipboard: Task[String] =
-    ZIO.attemptBlocking {
-      // Not using `isDataFlavorAvailable` here because technically it's a race condition unless we resort to locking.
-      Try {
-        Toolkit.getDefaultToolkit.getSystemClipboard.getData(DataFlavor.stringFlavor).asInstanceOf[String]
-      }.getOrElse("")
+    clipboardSemaphore.withPermit {
+      ZIO.attemptBlocking {
+        // Not using `isDataFlavorAvailable` here because technically it's a race condition unless we resort to locking.
+        Try {
+          clipboard.getData(DataFlavor.stringFlavor).asInstanceOf[String]
+        }.getOrElse("")
+      }
     }
 
   def setClipboard(text: String): Task[Unit] =
     toolsPath match {
       case Some(ccTools) =>
         PCommand(ccTools.getAbsolutePath, "set-clipboard", text).exitCode.unit
+
       case None =>
-        ZIO.attemptBlocking {
-          Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(text), null)
+        clipboardSemaphore.withPermit {
+          ZIO.attemptBlocking {
+            clipboard.setContents(new StringSelection(text), null)
+          }
         }
     }
 
