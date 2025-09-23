@@ -19,7 +19,7 @@ object V {
 
   val jkeymaster = "1.3"
 
-  val jna = "5.17.0"
+  val jna = "5.18.0"
 
   val lanterna = "3.2.0-alpha1"
 
