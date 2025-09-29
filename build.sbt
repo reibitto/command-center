@@ -175,9 +175,14 @@ lazy val emulatorSwt = module("emulator-swt")
       case PathList("META-INF", _*)             => MergeStrategy.discard
       case _                                    => MergeStrategy.first
     },
-    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
+    assembly / packageOptions += ManifestAttributes(
+      "Multi-Release" -> "true",
+      "SWT-WS" -> SwtInfo.local.ws,
+      "SWT-OS" -> SwtInfo.local.os,
+      "SWT-Arch" -> SwtInfo.local.arch
+    ),
     installCC := installCCTask.value,
-    libraryDependencies ++= swtDependencies
+    libraryDependencies ++= SwtInfo.local.dependencies
   )
 
 lazy val emulatorSwing = module("emulator-swing")
@@ -230,26 +235,6 @@ lazy val optionalPlugins =
     optionalPlugin(jectPlugin),
     optionalPlugin(experimentalPlugins)
   ).flatten
-
-def swtDependencies: Seq[ModuleID] =
-  OS.os match {
-    case OS.Windows =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.win32.win32.x86_64" % V.swt intransitive ())
-    case OS.MacOS =>
-      OSArch.current match {
-        case OSArch.AArch64 =>
-          Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.aarch64" % V.swt intransitive ())
-
-        case OSArch.Other(_) =>
-          Seq("org.eclipse.platform" % "org.eclipse.swt.cocoa.macosx.x86_64" % V.swt intransitive ())
-      }
-
-    case OS.Linux =>
-      Seq("org.eclipse.platform" % "org.eclipse.swt.gtk.linux.x86_64" % V.swt intransitive ())
-    case OS.Other(name) =>
-      println(s"SWT does not support OS '$name'")
-      Seq.empty
-  }
 
 lazy val installCC = taskKey[Unit]("install Command Center uberjar")
 
