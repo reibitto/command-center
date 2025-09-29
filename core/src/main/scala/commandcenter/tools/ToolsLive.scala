@@ -1,11 +1,10 @@
 package commandcenter.tools
 
-import commandcenter.util.AppleScript
-import commandcenter.util.OS
+import commandcenter.util.{AppleScript, OS}
 import zio.*
 import zio.process.Command as PCommand
 
-import java.awt.datatransfer.{DataFlavor, StringSelection}
+import java.awt.datatransfer.{Clipboard, DataFlavor, StringSelection}
 import java.awt.Toolkit
 import java.io.{BufferedInputStream, File, InputStream}
 import javax.sound.sampled.{AudioSystem, FloatControl, LineEvent}
@@ -13,6 +12,16 @@ import scala.util.Try
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
 final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
+
+  // Headless environments don't have a clipboard and throw `HeadlessException`
+  private val clipboard: Option[Clipboard] =
+    Try(Toolkit.getDefaultToolkit.getSystemClipboard).toOption
+
+  // `Clipboard` is not thread-safe so we need to ensure it's only accessed one at a time.
+  private val clipboardSemaphore: Semaphore = Unsafe.unsafe { implicit u =>
+    Semaphore.unsafe.make(1)
+  }
+
   def processId: Long = pid
 
   def activate: Task[Unit] =
@@ -36,21 +45,33 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
     }
 
   def getClipboard: Task[String] =
-    ZIO.attemptBlocking {
-      // Not using `isDataFlavorAvailable` here because technically it's a race condition unless we resort to locking.
-      Try {
-        Toolkit.getDefaultToolkit.getSystemClipboard.getData(DataFlavor.stringFlavor).asInstanceOf[String]
-      }.getOrElse("")
-    }
+    ZIO
+      .foreach(clipboard) { c =>
+        clipboardSemaphore.withPermit {
+          ZIO.attemptBlocking {
+            // Not using `isDataFlavorAvailable` here because technically it's a race condition unless we resort to locking.
+            c.getData(DataFlavor.stringFlavor).asInstanceOf[String]
+          }
+        }
+      }
+      .someOrElse("")
+      .catchAll(_ => ZIO.succeed(""))
 
   def setClipboard(text: String): Task[Unit] =
     toolsPath match {
       case Some(ccTools) =>
         PCommand(ccTools.getAbsolutePath, "set-clipboard", text).exitCode.unit
+
       case None =>
-        ZIO.attemptBlocking {
-          Toolkit.getDefaultToolkit.getSystemClipboard.setContents(new StringSelection(text), null)
-        }
+        ZIO
+          .foreach(clipboard) { c =>
+            clipboardSemaphore.withPermit {
+              ZIO.attemptBlocking {
+                c.setContents(new StringSelection(text), null)
+              }
+            }
+          }
+          .unit
     }
 
   def beep: Task[Unit] = ZIO.attempt(Toolkit.getDefaultToolkit.beep())

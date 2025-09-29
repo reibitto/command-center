@@ -22,8 +22,7 @@ final case class UnitConversionCommand() extends Command[Double] {
 
   private def groupingSeparator: Char = DecimalFormatSymbols.getInstance.getGroupingSeparator
 
-  val unitRegex: Regex =
-    s"""^[+-]?([0-9]{1,3}(?:$groupingSeparator[0-9]{3})*(?:\\$decimalSeparator[0-9]+)?|\\d*\\.\\d+|\\d+)\\s*(.+)$$""".r
+  val unitRegex: Regex = s"""^([+-]?[\\d$groupingSeparator]+(?:$decimalSeparator\\d+)?)\\s*(.+)$$""".r
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Double]] =
     for {

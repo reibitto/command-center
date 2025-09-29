@@ -19,7 +19,7 @@ object V {
 
   val jkeymaster = "1.3"
 
-  val jna = "5.17.0"
+  val jna = "5.18.0"
 
   val lanterna = "3.2.0-alpha1"
 
@@ -41,7 +41,7 @@ object V {
   // TODO: Might be an issue with sbt-assembly config. Try to fix later.
   val swt = "3.131.0"
 
-  val zio = "2.1.20"
+  val zio = "2.1.21"
 
   val zioLogging = "2.5.1"
 
