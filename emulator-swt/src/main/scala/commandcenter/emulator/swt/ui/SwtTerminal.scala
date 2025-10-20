@@ -366,10 +366,11 @@ final case class SwtTerminal(
 
   def open: URIO[Env, Unit] =
     for {
-      _ <- invoke {
+      conf <- Conf.config
+      _    <- invoke {
              val bounds = terminal.display.getPrimaryMonitor.getClientArea
              val x = (bounds.width - terminal.shell.getSize.x) / 2
-             terminal.shell.setLocation(x, 0)
+             terminal.shell.setLocation(x + conf.display.offsetX, conf.display.offsetY)
              terminal.shell.open()
            }
     } yield ()

@@ -112,6 +112,8 @@ object GeneralConfig {
 final case class DisplayConfig(
     width: Int,
     maxHeight: Int,
+    offsetX: Int,
+    offsetY: Int,
     opacity: Float,
     alternateOpacity: Option[Float],
     fonts: List[Font]
@@ -119,8 +121,25 @@ final case class DisplayConfig(
 
 object DisplayConfig {
 
-  implicit val decoder: Decoder[DisplayConfig] =
-    Decoder.forProduct5("width", "maxHeight", "opacity", "alternateOpacity", "fonts")(DisplayConfig.apply)
+  implicit val decoder: Decoder[DisplayConfig] = Decoder.instance { c =>
+    for {
+      width            <- c.get[Int]("width")
+      maxHeight        <- c.get[Int]("maxHeight")
+      offsetX          <- c.get[Option[Int]]("offsetX")
+      offsetY          <- c.get[Option[Int]]("offsetY")
+      opacity          <- c.get[Float]("opacity")
+      alternateOpacity <- c.get[Option[Float]]("alternateOpacity")
+      fonts            <- c.get[List[Font]]("fonts")
+    } yield DisplayConfig(
+      width,
+      maxHeight,
+      offsetX.getOrElse(0),
+      offsetY.getOrElse(0),
+      opacity,
+      alternateOpacity,
+      fonts
+    )
+  }
 }
 
 final case class KeyboardConfig(
