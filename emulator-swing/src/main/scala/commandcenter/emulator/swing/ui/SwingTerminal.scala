@@ -319,17 +319,19 @@ final case class SwingTerminal(
   )
   frame.pack()
 
-  def open: Task[Unit] =
-    ZIO.attempt {
-      val bounds =
-        GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
+  def open: RIO[Env, Unit] =
+    for {
+      conf <- Conf.config
+      _    <- ZIO.attempt {
+             val bounds =
+               GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
 
-      val x = (bounds.width - frame.getWidth) / 2
+             val x = (bounds.width - frame.getWidth) / 2
 
-      frame.setLocation(x, 0)
-      frame.setVisible(true)
-
-    }
+             frame.setLocation(x + conf.display.offsetX, conf.display.offsetY)
+             frame.setVisible(true)
+           }
+    } yield ()
 
   def hide: URIO[Conf, Unit] =
     for {
