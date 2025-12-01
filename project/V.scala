@@ -27,8 +27,6 @@ object V {
 
   val prettytime = "5.0.9.Final"
 
-  val scalaReflect = "2.13.18"
-
   val scalaScraper = "3.2.0"
 
   val slf4j = "1.7.30"
