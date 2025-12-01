@@ -82,7 +82,7 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                             ZIO.unit
                         }
                  } yield ()).tapErrorCause { t =>
-                   ZIO.logWarningCause("Error running SuspendShortcut command", t)
+                   ZIO.logWarningCause("Error running SuspendProcess command", t)
                  }.ignore
                )
              }
