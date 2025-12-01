@@ -7,7 +7,7 @@ object V {
 
   val enumeratum = "1.9.1"
 
-  val enumeratumCirce = "1.9.0"
+  val enumeratumCirce = "1.9.1"
 
   val fansi = "0.5.1"
 
@@ -37,7 +37,7 @@ object V {
 
   val swt = "3.131.0"
 
-  val zio = "2.1.22"
+  val zio = "2.1.23"
 
   val zioLogging = "2.5.1"
 
