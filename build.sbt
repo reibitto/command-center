@@ -72,7 +72,7 @@ lazy val core = module("core")
       "dev.zio" %% "zio-prelude" % V.zioPrelude,
       "dev.zio" %% "zio-process" % V.zioProcess,
       "com.github.ben-manes.caffeine" % "caffeine" % "3.2.3",
-      "org.scala-lang" % "scala-reflect" % V.scalaReflect,
+      "org.scala-lang" % "scala-reflect" % Build.ScalaVersion,
       "io.circe" %% "circe-core" % V.circe,
       "io.circe" %% "circe-parser" % V.circe,
       "io.circe" %% "circe-config" % V.circeConfig,
