@@ -69,6 +69,9 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
 
     object Fen {
 
+      // The initial starting state of all the pieces on the board
+      val initialValue: String = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
       def parse(text: String): Option[Fen] =
         fenRegex
           .findFirstMatchIn(text)
@@ -81,15 +84,17 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
     }
 
     final case class Pgn(value: String) extends ChessState {
-      lazy val hasFen: Boolean = value.contains("[FEN ")
 
       lazy val tags: Map[String, String] =
         Pgn.tagRegex
           .findAllMatchIn(value)
           .map { m =>
-            m.group(1) -> m.group(2)
+            m.group(1) -> m.group(2).trim
           }
           .toMap
+
+      def startedFromSetupPosition: Boolean =
+        tags.get("SetUp").contains("1") && !tags.get("FEN").contains(Fen.initialValue)
 
       /** Tries to determine whether the player is from the white perspective or
         * not. This isn't necessarily an absolute thing, but we try to make the
@@ -167,7 +172,7 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
         // PGNs from the very first move, which is why we filter these types of PGNs out.
         ChessState.Pgn
           .parse(text)
-          .filter(!_.hasFen)
+          .filter(!_.startedFromSetupPosition)
           .orElse(ChessState.Fen.parse(text))
 
       def url(state: Option[ChessState]): String =
@@ -176,9 +181,10 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
             val encodedQuery = fen.replace(' ', '_')
             s"https://lichess.org/analysis/$encodedQuery"
 
-          case Some(pgn @ ChessState.Pgn(_)) if !pgn.hasFen =>
+          case Some(pgn @ ChessState.Pgn(_)) if !pgn.startedFromSetupPosition =>
             val encodedQuery = encodeQuery(pgn.moves)
-            s"https://lichess.org/analysis/pgn/$encodedQuery"
+            val color = if (pgn.isPlayerBlack) "black" else "white"
+            s"https://lichess.org/analysis/pgn/$encodedQuery?color=$color"
 
           case Some(ChessState.Pgn(_)) | None =>
             "https://lichess.org/analysis"
