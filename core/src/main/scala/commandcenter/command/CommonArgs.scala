@@ -2,6 +2,7 @@ package commandcenter.command
 
 import cats.data.{Validated, ValidatedNel}
 import com.monovore.decline.Argument
+import enumeratum.*
 import zio.Duration
 
 object CommonArgs {
@@ -14,4 +15,23 @@ object CommonArgs {
 
     override def defaultMetavar: String = "duration"
   }
+
+  def enumArgument[A <: EnumEntry: Enum](varName: String): Argument[A] =
+    new Argument[A] {
+
+      override def read(string: String): ValidatedNel[String, A] = {
+        val enumEv = implicitly[Enum[A]]
+
+        enumEv.withNameInsensitiveOption(string) match {
+          case Some(v) => Validated.valid(v)
+
+          case None =>
+            Validated.invalidNel(
+              s"Invalid $defaultMetavar. Must be: ${enumEv.values.map(_.entryName).mkString(" | ")}"
+            )
+        }
+      }
+
+      override def defaultMetavar: String = varName
+    }
 }
