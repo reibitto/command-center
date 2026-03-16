@@ -3,7 +3,7 @@ object V {
 
   val circeConfig = "0.10.2"
 
-  val decline = "2.5.0"
+  val decline = "2.6.1"
 
   val enumeratum = "1.9.4"
 
