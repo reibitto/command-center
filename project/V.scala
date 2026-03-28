@@ -5,9 +5,9 @@ object V {
 
   val decline = "2.5.0"
 
-  val enumeratum = "1.9.4"
+  val enumeratum = "1.9.7"
 
-  val enumeratumCirce = "1.9.4"
+  val enumeratumCirce = "1.9.7"
 
   val fansi = "0.5.1"
 
