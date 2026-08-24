@@ -4,12 +4,10 @@ import cats.syntax.apply.*
 import com.monovore.decline
 import com.monovore.decline.Opts
 import com.typesafe.config.Config
-import commandcenter.cache.ZCache
 import commandcenter.command.CommonArgs.*
 import commandcenter.command.TimerCommand.ActiveTimer
-import commandcenter.util.AppleScript
+import commandcenter.tools.Tools
 import commandcenter.util.OS
-import commandcenter.util.PowerShellScript
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.Color
@@ -17,12 +15,10 @@ import fansi.Str
 import zio.*
 
 import java.time.Instant
-import scala.io.Source
 
 final case class TimerCommand(
     commandNames: List[String],
-    activeTimersRef: Ref[Set[ActiveTimer]],
-    cache: ZCache[String, String]
+    activeTimersRef: Ref[Set[ActiveTimer]]
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.TimerCommand
   val title: String = "Timer"
@@ -31,12 +27,6 @@ final case class TimerCommand(
   val durationArg = Opts.argument[Duration]("duration")
 
   val timerCommand = decline.Command("timer", title)((durationArg, messageOpt).tupled)
-
-  val notifyFn =
-    if (OS.os == OS.MacOS)
-      AppleScript.loadFunction2[String, String](cache)("system/notify.applescript")
-    else
-      PowerShellScript.loadFunction2[String, String](cache)("system/notify.ps1")
 
   // TODO: Support all OSes
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
@@ -72,7 +62,7 @@ final case class TimerCommand(
         _ <- activeTimersRef.update(_ + activeTimer)
         timerDoneMessage = timerMessageOpt.getOrElse(s"Timer completed after ${delay.render}")
         // Note: Can't use JOptionPane here for message dialogs until Graal native-image supports Swing
-        _ <- notifyFn(timerDoneMessage, "Command Center Timer Event").delay(delay)
+        _ <- Tools.notify(timerDoneMessage, "Command Center Timer Event").delay(delay)
         _ <- activeTimersRef.update(_ - activeTimer)
       } yield ()
 
@@ -92,13 +82,8 @@ object TimerCommand extends CommandPlugin[TimerCommand] {
 
   def make(config: Config): IO[CommandPluginError, TimerCommand] =
     for {
-      runtime         <- ZIO.runtime[Any]
       activeTimersRef <- Ref.make(Set.empty[ActiveTimer])
-      cache = ZCache
-                .memoizeZIO(1024, None)((resource: String) =>
-                  ZIO.succeed(Some(Source.fromResource(resource)).map(_.mkString))
-                )(runtime)
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), activeTimersRef, cache)
+      commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
+    } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), activeTimersRef)
 
 }

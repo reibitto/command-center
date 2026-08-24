@@ -7,12 +7,11 @@ import com.monovore.decline.Opts
 import com.typesafe.config.Config
 import commandcenter.command.LoremIpsumCommand.ChunkType
 import commandcenter.tools.Tools
+import commandcenter.util.ClasspathResource
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import fansi.Str
 import zio.*
-
-import scala.io.Source
 
 final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) extends Command[Unit] {
   val commandType: CommandType = CommandType.LoremIpsumCommand
@@ -76,12 +75,7 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
   def make(config: Config): IO[CommandPluginError, LoremIpsumCommand] =
     for {
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-      lipsum       <- ZIO.scoped {
-                  ZIO
-                    .fromAutoCloseable(ZIO.attempt(Source.fromResource("lipsum")))
-                    .mapAttempt(_.getLines().mkString("\n"))
-                    .mapError(CommandPluginError.UnexpectedException.apply)
-                }
+      lipsum       <- ClasspathResource.loadText("lipsum").mapError(CommandPluginError.UnexpectedException.apply)
     } yield LoremIpsumCommand(commandNames.getOrElse(List("lipsum", "lorem", "ipsum")), lipsum)
 
 }

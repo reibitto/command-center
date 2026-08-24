@@ -38,7 +38,7 @@ final case class HttpCommand(
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
       } yield PreviewResults.one(
         Preview.unit
-          .score(Scores.veryHigh * localeBoost)
+          .score(Scores.veryHigh(input.context) * localeBoost)
           .onRun(executeHttpRequest(input.rest))
           .rendered(Renderer.renderDefault(title, Str("Execute ") ++ Color.Magenta(input.rest)))
       )
@@ -50,7 +50,7 @@ final case class HttpCommand(
         ZIO.succeed(
           PreviewResults.one(
             Preview.unit
-              .score(Scores.high * 0.35)
+              .score(Scores.high(searchInput.context) * 0.35)
               .onRun(executeHttpRequest(searchInput.input))
               .rendered(
                 Renderer.renderDefault(title, Str("Execute ") ++ Color.Magenta(searchInput.input))

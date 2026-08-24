@@ -22,17 +22,23 @@ final case class UnitConversionCommand() extends Command[Double] {
 
   private def groupingSeparator: Char = DecimalFormatSymbols.getInstance.getGroupingSeparator
 
-  val unitRegex: Regex = s"""^([+-]?[\\d$groupingSeparator]+(?:$decimalSeparator\\d+)?)\\s*(.+)$$""".r
+  // Backslash-escape these since they are interpolated directly into the regex below and, depending on the locale,
+  // may otherwise be interpreted as regex metacharacters (e.g. "." matching any character instead of a literal dot).
+  private def escapedGroupingSeparator: String = s"\\$groupingSeparator"
+  private def escapedDecimalSeparator: String = s"\\$decimalSeparator"
+
+  val unitRegex: Regex =
+    s"""^([+-]?[\\d$escapedGroupingSeparator]+(?:$escapedDecimalSeparator\\d+)?)\\s*(.+)$$""".r
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Double]] =
     for {
       conversionResults <- ZIO.fromOption {
                              unitRegex.unapplySeq(searchInput.input.trim).flatMap {
                                case List(value, sourceUnit) =>
-                                 val number = value.replace(groupingSeparator.toString, "").toDouble
-
-                                 UnitOfMeasure.parse(sourceUnit).map { unit =>
-                                   UnitOfMeasure.convert(number, unit)
+                                 value.replace(groupingSeparator.toString, "").toDoubleOption.flatMap { number =>
+                                   UnitOfMeasure.parse(sourceUnit).map { unit =>
+                                     UnitOfMeasure.convert(number, unit)
+                                   }
                                  }
 
                                case _ => None

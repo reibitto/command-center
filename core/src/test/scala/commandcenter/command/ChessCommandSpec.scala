@@ -41,6 +41,22 @@ object ChessCommandSpec extends CommandBaseSpec {
           pgn.get.moves.startsWith("1.e4 ")
         )
       },
+      test("extract FEN from a PGN's [FEN] tag") {
+        val pgn =
+          """|[Event "Test"]
+             |[SetUp "1"]
+             |[FEN "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"]
+             |
+             |1.Nf3 Nc6""".stripMargin
+
+        assertTrue(
+          ChessCommand
+            .extractFenFromPgn(pgn)
+            .contains(
+              "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2"
+            )
+        )
+      },
       test("extract moves from a raw move list") {
         val pgn = ChessCommand.ChessState.Pgn.parse(
           """|1. e4 c6 2. d4 d6 3. Nc3 Nf6 4. f4 Qb6 5. Nf3 Bg4 6. Be2 Nbd7 7. e5 Nd5 8. O-O Nc3 9. bc3 e6

@@ -1,11 +1,12 @@
 package commandcenter.cache
 
+import commandcenter.CommandBaseSpec
 import zio.*
 import zio.test.*
 
 import java.util.concurrent.atomic.AtomicInteger
 
-object CacheSpec extends ZIOSpecDefault {
+object CacheSpec extends CommandBaseSpec {
 
   def spec: Spec[TestEnvironment, Any] =
     suite("CacheSpec")(
@@ -85,5 +86,5 @@ object CacheSpec extends ZIOSpecDefault {
                )
         } yield assertCompletes
       }
-    ) @@ TestAspect.withLiveClock
+    )
 }

@@ -11,8 +11,6 @@ import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
 import zio.*
 
-import scala.io.Source
-
 final case class ITunesCommand(commandNames: List[String], cache: ZCache[String, String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.ITunesCommand
   val title: String = "iTunes"
@@ -128,10 +126,7 @@ object ITunesCommand extends CommandPlugin[ITunesCommand] {
   def make(config: Config): IO[CommandPluginError, ITunesCommand] =
     for {
       runtime <- ZIO.runtime[Any]
-      cache = ZCache
-                .memoizeZIO(1024, None)((resource: String) =>
-                  ZIO.succeed(Some(Source.fromResource(resource)).map(_.mkString))
-                )(runtime)
+      cache = ZCache.ofClasspathResources()(runtime)
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
     } yield ITunesCommand(commandNames.getOrElse(List("itunes")), cache)
 

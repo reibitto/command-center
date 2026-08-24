@@ -11,7 +11,6 @@ import zio.*
 import zio.process.Command as PCommand
 
 import java.util.Locale
-import scala.io.Source
 
 final case class SpeakCommand(
     commandNames: List[String],
@@ -77,10 +76,7 @@ object SpeakCommand extends CommandPlugin[SpeakCommand] {
   def make(config: Config): IO[CommandPluginError, SpeakCommand] =
     for {
       runtime <- ZIO.runtime[Any]
-      cache = ZCache
-                .memoizeZIO(1024, None)((resource: String) =>
-                  ZIO.succeed(Some(Source.fromResource(resource)).map(_.mkString))
-                )(runtime)
+      cache = ZCache.ofClasspathResources()(runtime)
       commandNames <- config.getZIO[Option[List[String]]]("commandNames")
       shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
       voice        <- config.getZIO[Option[String]]("voice")

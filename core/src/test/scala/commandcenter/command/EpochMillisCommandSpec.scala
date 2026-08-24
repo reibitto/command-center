@@ -19,7 +19,7 @@ object EpochMillisCommandSpec extends CommandBaseSpec {
           results <- Command.search(Vector(command), Map.empty, "epochmillis", defaultCommandContext)
           previews = results.previews
         } yield assertTrue(previews.head.asInstanceOf[PreviewResult.Some[Any]].result == time.toEpochMilli.toString)
-      },
+      } @@ useTestClock,
       test("return nothing for non-matching search") {
         for {
           results <- Command.search(Vector(command), Map.empty, "not matching", defaultCommandContext)

@@ -12,6 +12,7 @@ trait Tools {
   def setClipboard(text: String): Task[Unit]
   def beep: Task[Unit]
   def playSound(inputStream: InputStream): Task[Unit]
+  def notify(message: String, title: String): Task[Unit]
 }
 
 object Tools {
@@ -36,4 +37,7 @@ object Tools {
 
   def playSound(inputStream: InputStream): RIO[Tools, Unit] =
     ZIO.serviceWithZIO[Tools](_.playSound(inputStream))
+
+  def notify(message: String, title: String): RIO[Tools, Unit] =
+    ZIO.serviceWithZIO[Tools](_.notify(message, title))
 }

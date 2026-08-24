@@ -1,6 +1,7 @@
 package commandcenter.tools
 
-import commandcenter.util.{AppleScript, OS}
+import commandcenter.cache.ZCache
+import commandcenter.util.{AppleScript, OS, PowerShellScript}
 import zio.*
 import zio.process.Command as PCommand
 
@@ -11,7 +12,13 @@ import javax.sound.sampled.{AudioSystem, FloatControl, LineEvent}
 import scala.util.Try
 
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
-final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
+final case class ToolsLive(pid: Long, toolsPath: Option[File], scriptCache: ZCache[String, String]) extends Tools {
+
+  private val notifyFn =
+    if (OS.os == OS.MacOS)
+      AppleScript.loadFunction2[String, String](scriptCache)("system/notify.applescript")
+    else
+      PowerShellScript.loadFunction2[String, String](scriptCache)("system/notify.ps1")
 
   // Headless environments don't have a clipboard and throw `HeadlessException`
   private val clipboard: Option[Clipboard] =
@@ -76,6 +83,8 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File]) extends Tools {
 
   def beep: Task[Unit] = ZIO.attempt(Toolkit.getDefaultToolkit.beep())
 
+  def notify(message: String, title: String): Task[Unit] = notifyFn(message, title).unit
+
   def playSound(inputStream: InputStream): Task[Unit] =
     ZIO.scoped {
       for {
@@ -124,6 +133,8 @@ object ToolsLive {
                .when(
                  toolsPath.isEmpty && OS.os == OS.MacOS
                )
-      } yield new ToolsLive(pid, toolsPath)
+        runtime <- ZIO.runtime[Any]
+        scriptCache = ZCache.ofClasspathResources()(runtime)
+      } yield new ToolsLive(pid, toolsPath, scriptCache)
     }
 }

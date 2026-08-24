@@ -112,11 +112,8 @@ object WindowManager {
     for {
       cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))
       newIndex = if (cycleWindowState.lastAction.contains(name)) {
-                   if (step > 0) {
-                     (cycleWindowState.index + step) % boundsList.length
-                   } else {
-                     (boundsList.length - cycleWindowState.index - step) % boundsList.length
-                   }
+                   val raw = (cycleWindowState.index + step) % boundsList.length
+                   if (raw < 0) raw + boundsList.length else raw
                  } else {
                    0
                  }
