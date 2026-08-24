@@ -3,7 +3,7 @@ import sbt.*
 final case class SwtInfo(ws: String, os: String, arch: String) {
 
   def dependencies: Seq[ModuleID] =
-    Seq("org.eclipse.platform" % s"org.eclipse.swt.$ws.$os.$arch" % V.swt intransitive ())
+    Seq(("org.eclipse.platform" % s"org.eclipse.swt.$ws.$os.$arch" % V.swt).intransitive())
 }
 
 object SwtInfo {
