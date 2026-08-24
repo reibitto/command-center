@@ -7,8 +7,7 @@ import java.nio.charset.Charset
 import scala.util.Try
 
 object CommonOpts {
-  // TODO: Remove this or make it a def with metavar for better usage details
-  val stringArg: Opts[String] = Opts.argument[String]()
+  def stringArg(metavar: String = "text"): Opts[String] = Opts.argument[String](metavar)
 
   val encodingOpt: Opts[Charset] = Opts
     .option[String]("charset", "charset (e.g. utf8)", "c")

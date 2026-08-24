@@ -1,6 +1,6 @@
 package commandcenter.config
 
-import io.circe.Decoder
+import io.circe.{Decoder, DecodingFailure}
 
 import java.awt.Font
 import java.io.File
@@ -13,9 +13,18 @@ object Decoders {
   implicit val fontDecoder: Decoder[Font] =
     Decoder.instance { c =>
       for {
-        name <- c.get[String]("name")
-        size <- c.get[Int]("size")
-      } yield new Font(name, Font.PLAIN, size) // TODO: Also support style
+        name      <- c.get[String]("name")
+        size      <- c.get[Int]("size")
+        style     <- c.get[Option[String]]("style")
+        fontStyle <- style.map(_.trim.toLowerCase) match {
+                       case None | Some("plain")                => Right(Font.PLAIN)
+                       case Some("bold")                        => Right(Font.BOLD)
+                       case Some("italic")                      => Right(Font.ITALIC)
+                       case Some("bold italic" | "italic bold") => Right(Font.BOLD | Font.ITALIC)
+                       case Some(other)                         =>
+                         Left(DecodingFailure(s"Unknown font style: $other", c.history))
+                     }
+      } yield new Font(name, fontStyle, size)
     }
 
   implicit val pathDecoder: Decoder[Path] = Decoder.decodeString.emap { s =>

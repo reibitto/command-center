@@ -50,17 +50,14 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
 
   val fenRegex: Regex = """(?i)([1-8PNBRQK]+/){7}[1-8PNBRQK]+( [WB])?( [KQ\-]+)?( [A-H1-8\-]+)?( \d+ \d+)?""".r
 
-  val extractFenRegex: Regex = """[FEN "(.+?)"]""".r
+  val extractFenRegex: Regex = """\[FEN "(.+?)"\]""".r
 
   // TODO: Properly detect a PGN string. This is an extremely lazy "good enough" filter.
   def isPgn(text: String): Boolean =
     text.startsWith("1.") || text.contains("[Result")
 
   def extractFenFromPgn(pgnText: String): Option[String] =
-    extractFenRegex.unapplySeq(pgnText).flatMap {
-      case List(fen) => Some(fen)
-      case _         => None
-    }
+    extractFenRegex.findFirstMatchIn(pgnText).map(_.group(1))
 
   sealed trait ChessState
 

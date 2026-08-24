@@ -155,11 +155,13 @@ object KeyboardConfig {
       openShortcut <-
         c.get[KeyboardShortcut](s"openShortcut_${OS.os.entryName}").orElse(c.get[KeyboardShortcut]("openShortcut"))
       suspendShortcut      <- c.get[Option[String]]("suspendShortcut")
-      outputLookupShortcut <- c.get[Option[KeyboardShortcut]]("outputLookupShortcut").flatMap { _ =>
-                                KeyboardShortcut
-                                  .fromString("alt+e")
-                                  .toOption
-                                  .toRight(DecodingFailure("outputLookupShortcut is not valid", Nil))
+      outputLookupShortcut <- c.get[Option[KeyboardShortcut]]("outputLookupShortcut").flatMap {
+                                case Some(shortcut) => Right(shortcut)
+                                case None           =>
+                                  KeyboardShortcut
+                                    .fromString("alt+e")
+                                    .toOption
+                                    .toRight(DecodingFailure("outputLookupShortcut is not valid", Nil))
                               }
     } yield KeyboardConfig(
       openShortcut,

@@ -40,7 +40,7 @@ final case class SearchUrlCommand(
         localeBoost = if (locales.contains(input.context.locale)) 2 else 1
       } yield PreviewResults.one(
         Preview.unit
-          .score(Scores.veryHigh * localeBoost)
+          .score(Scores.veryHigh(input.context) * localeBoost)
           .onRun(openBrowser(input.rest))
           .rendered(Renderer.renderDefault(title, Str("Search for ") ++ Color.Magenta(input.rest)))
       )
@@ -52,7 +52,7 @@ final case class SearchUrlCommand(
         ZIO.succeed(
           PreviewResults.one(
             Preview.unit
-              .score(Scores.high * 0.35)
+              .score(Scores.high(searchInput.context) * 0.35)
               .onRun(openBrowser(searchInput.input))
               .rendered(
                 Renderer.renderDefault(title, Str("Search for ") ++ Color.Magenta(searchInput.input))

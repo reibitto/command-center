@@ -171,7 +171,7 @@ final case class SwingTerminal(
                     case Style.Underline              => StyleConstants.setUnderline(style, true)
                     case Style.Italic                 => StyleConstants.setItalic(style, true)
                     case Style.ForegroundColor(color) => StyleConstants.setForeground(style, color)
-                    case Style.BackgroundColor(color) => StyleConstants.setForeground(style, color)
+                    case Style.BackgroundColor(color) => StyleConstants.setBackground(style, color)
                     case Style.FontFamily(fontFamily) => StyleConstants.setFontFamily(style, fontFamily)
                     case Style.FontSize(fontSize)     => StyleConstants.setFontSize(style, fontSize)
                   }
