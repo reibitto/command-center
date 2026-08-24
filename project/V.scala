@@ -1,13 +1,13 @@
 object V {
-  val circe = "0.14.15"
+  val circe = "0.14.16"
 
   val circeConfig = "0.10.2"
 
-  val decline = "2.5.0"
+  val decline = "2.6.2"
 
-  val enumeratum = "1.9.4"
+  val enumeratum = "1.9.8"
 
-  val enumeratumCirce = "1.9.4"
+  val enumeratumCirce = "1.9.8"
 
   val fansi = "0.5.1"
 
@@ -19,7 +19,7 @@ object V {
 
   val jkeymaster = "1.3"
 
-  val jna = "5.18.1"
+  val jna = "5.19.1"
 
   val lanterna = "3.2.0-alpha1"
 
@@ -35,13 +35,13 @@ object V {
 
   val sttp = "3.11.0"
 
-  val swt = "3.132.0"
+  val swt = "3.134.0"
 
-  val zio = "2.1.24"
+  val zio = "2.1.26"
 
   val zioLogging = "2.5.3"
 
-  val zioPrelude = "1.0.0-RC45"
+  val zioPrelude = "1.0.0-RC48"
 
   val zioProcess = "0.8.0"
 }
