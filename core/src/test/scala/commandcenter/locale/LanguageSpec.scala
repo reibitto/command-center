@@ -1,11 +1,12 @@
 package commandcenter.locale
 
+import commandcenter.CommandBaseSpec
 import zio.test.*
 import zio.test.Assertion.*
 
 import java.util.Locale
 
-object LanguageSpec extends ZIOSpecDefault {
+object LanguageSpec extends CommandBaseSpec {
 
   def spec: Spec[TestEnvironment, Any] =
     suite("LanguageSpec")(

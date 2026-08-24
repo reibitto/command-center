@@ -1,6 +1,7 @@
 package commandcenter.cache
 
 import com.github.benmanes.caffeine.cache.{AsyncCacheLoader, AsyncLoadingCache, Caffeine, Expiry}
+import commandcenter.util.ClasspathResource
 import zio.*
 
 import java.util.concurrent
@@ -149,4 +150,12 @@ object ZCache {
 
     new ZCache(builder.buildAsync[K, V](cacheLoader))
   }
+
+  /** A cache of classpath resources (keyed by resource path), read via
+    * `ClasspathResource.loadText`.
+    */
+  def ofClasspathResources(capacity: Int = 1024)(implicit runtime: Runtime[Any]): ZCache[String, String] =
+    memoizeZIO[String, String, Any, Throwable](capacity, None) { resource =>
+      ClasspathResource.loadText(resource).map(Some(_))
+    }
 }

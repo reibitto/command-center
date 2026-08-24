@@ -31,6 +31,6 @@ object SearchSpec extends CommandBaseSpec {
           _        <- TestClock.setTime(time)
           previews <- results.map(_.previews)
         } yield assertTrue(previews.head.asInstanceOf[PreviewResult.Some[Any]].result == time.toEpochMilli.toString)
-      }
+      } @@ useTestClock
     )
 }

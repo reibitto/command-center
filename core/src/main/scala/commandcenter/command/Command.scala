@@ -206,6 +206,7 @@ object Command {
                    case CommandType.SearchCratesCommand       => SearchCratesCommand.make(config)
                    case CommandType.SearchMavenCommand        => SearchMavenCommand.make(config)
                    case CommandType.SearchUrlCommand          => SearchUrlCommand.make(config)
+                   case CommandType.ShellCommand              => ShellCommand.make(config)
                    case CommandType.SnippetsCommand           => SnippetsCommand.make(config)
                    case CommandType.SpeakCommand              => SpeakCommand.make(config)
                    case CommandType.SuspendProcessCommand     => SuspendProcessCommand.make(config)
