@@ -6,3 +6,6 @@ $notification.BalloonTipText = '{0}'
 $notification.BalloonTipTitle = '{1}'
 $notification.Visible = $True
 $notification.ShowBalloonTip(1000)
+
+# Keep the process alive long enough for Windows to render the balloon tip
+Start-Sleep -Seconds 3

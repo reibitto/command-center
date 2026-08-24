@@ -1,0 +1,9 @@
+import sbt.*
+
+object CompilerPlugins {
+
+  lazy val BaseCompilerPlugins = Seq(
+    compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+    compilerPlugin(("org.typelevel" %% "kind-projector" % "0.13.4").cross(CrossVersion.full))
+  )
+}
