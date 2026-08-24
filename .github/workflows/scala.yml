@@ -23,4 +23,4 @@ jobs:
       - uses: sbt/setup-sbt@v1
 
       - name: Run tests
-        run: sbt -Dscalac.lenientDev.enabled=false fmtCheck test
+        run: sbt -Dscalac.lenientDev.enabled=false "fmtCheck; test"
