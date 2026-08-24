@@ -2,7 +2,6 @@ package commandcenter.command
 
 import com.sun.jna.platform.win32.{Shell32, WinUser}
 import com.typesafe.config.Config
-import commandcenter.command.CommandError.*
 import commandcenter.event.KeyboardShortcut
 import commandcenter.tools.Tools
 import commandcenter.util.{AppleScript, OS}
