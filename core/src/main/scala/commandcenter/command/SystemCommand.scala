@@ -1,16 +1,12 @@
 package commandcenter.command
 
 import com.monovore.decline
-import com.monovore.decline.Help
-import com.monovore.decline.Opts
-import com.sun.jna.platform.win32.User32
-import com.sun.jna.platform.win32.WinDef.LPARAM
-import com.sun.jna.platform.win32.WinDef.WPARAM
-import com.sun.jna.platform.win32.WinUser
+import com.monovore.decline.{Help, Opts}
+import com.sun.jna.platform.win32.{User32, WinUser}
+import com.sun.jna.platform.win32.WinDef.{LPARAM, WPARAM}
 import com.typesafe.config.Config
 import commandcenter.command.native.win.PowrProf
 import commandcenter.command.SystemCommand.SystemSubcommand
-import commandcenter.config.Decoders.*
 import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
