@@ -70,8 +70,8 @@ object Debouncer {
                                               }
                                             case None => op
                                           }
-                                _ <- completionPromise.succeed(())
                               } yield result).forkDaemon
+                   _ <- (opFiber.await *> completionPromise.succeed(())).forkDaemon
                    updatedDebounceState = DebounceState(opFiber, delayPromise, completionPromise, triggered = false)
                  } yield (opFiber, Some(updatedDebounceState))
                }
