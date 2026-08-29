@@ -117,6 +117,75 @@ object SearchInputSpec extends ZIOSpecDefault {
               List("""echo "a\"; echo b"""", "echo c")
           )
         }
+      ),
+      suite("splitCommandAndRest")(
+        test("matches the original regex-based split, including its edge cases") {
+          def reference(input: String): (String, String) =
+            input.split("[ ]+", 2) match {
+              case Array(prefix, rest) => (prefix, s" $rest")
+              case Array(prefix)       => (prefix, "")
+            }
+
+          val examples = List(
+            "",
+            "cmd",
+            "cmd arg",
+            "cmd  arg1  arg2",
+            "cmd   ",
+            "   cmd arg",
+            "cmd\targ", // a tab isn't an ASCII space, so it doesn't split
+            "cmd\t arg", // ...but a space right after a tab still does, keeping the tab with the command part
+            "a b c d e"
+          )
+
+          assertTrue(examples.forall(s => SearchInput.splitCommandAndRest(s) == reference(s)))
+        },
+        test("matches the original regex-based split for many random inputs") {
+          check(Gen.listOfBounded(0, 16)(Gen.elements('a', 'b', ' ', '\t')).map(_.mkString)) { s =>
+            def reference(input: String): (String, String) =
+              input.split("[ ]+", 2) match {
+                case Array(prefix, rest) => (prefix, s" $rest")
+                case Array(prefix)       => (prefix, "")
+              }
+
+            assertTrue(SearchInput.splitCommandAndRest(s) == reference(s))
+          }
+        }
+      ),
+      suite("splitOnWhitespace")(
+        test("matches the original regex-based split, including its edge cases") {
+          def reference(input: String): (String, String) =
+            input.split("\\p{javaWhitespace}+", 2) match {
+              case Array(prefix, rest) => (prefix, rest)
+              case Array(prefix)       => (prefix, "")
+            }
+
+          val examples = List(
+            "",
+            "cmd",
+            "cmd arg",
+            "cmd  arg1  arg2",
+            "cmd   ",
+            "   cmd arg",
+            "cmd\targ",
+            "cmd\t arg",
+            "cmd\narg",
+            "a b c d e"
+          )
+
+          assertTrue(examples.forall(s => SearchInput.splitOnWhitespace(s) == reference(s)))
+        },
+        test("matches the original regex-based split for many random inputs") {
+          check(Gen.listOfBounded(0, 16)(Gen.elements('a', 'b', ' ', '\t', '\n')).map(_.mkString)) { s =>
+            def reference(input: String): (String, String) =
+              input.split("\\p{javaWhitespace}+", 2) match {
+                case Array(prefix, rest) => (prefix, rest)
+                case Array(prefix)       => (prefix, "")
+              }
+
+            assertTrue(SearchInput.splitOnWhitespace(s) == reference(s))
+          }
+        }
       )
     )
 }

@@ -9,7 +9,7 @@ import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import fansi.{Color, Str}
 import zio.*
-import zio.stream.{ZSink, ZStream}
+import zio.stream.ZSink
 
 import java.util.Locale
 
@@ -83,10 +83,7 @@ object Command {
     if (input.isEmpty)
       ZIO.succeed(SearchResults(input, Chunk.empty))
     else {
-      val (commandPart, rest) = input.split("[ ]+", 2) match {
-        case Array(prefix, rest) => (prefix, s" $rest")
-        case Array(prefix)       => (prefix, "")
-      }
+      val (commandPart, rest) = SearchInput.splitCommandAndRest(input)
 
       // The user's input, plus every matching alias resolved (expanded) to its full text value.
       val candidates = (input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)).distinct
@@ -172,9 +169,8 @@ object Command {
       resultChunks <- if (input.isEmpty)
                         ZIO.succeed(Chunk.empty)
                       else
-                        ZStream
-                          .fromIterable(commands)
-                          .mapZIOPar(previewParallelism) { command =>
+                        ZIO
+                          .foreachPar(Chunk.fromIterable(commands)) { command =>
                             command
                               .preview(SearchInput(input, List(input), command.commandNames, context))
                               .flatMap {
@@ -224,7 +220,7 @@ object Command {
                               .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
                               .either
                           }
-                          .runCollect
+                          .withParallelism(previewParallelism)
                           .timed
                           .flatMap { case (timeTaken, r) =>
                             ZIO

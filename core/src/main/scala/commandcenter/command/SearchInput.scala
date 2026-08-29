@@ -20,12 +20,8 @@ final case class SearchInput(
     * account custom aliases), otherwise None.
     */
   def asArgs: Option[CommandInput.Args] =
-    // TODO: Optimize this. Possibly with collectFirst + an extractor
-    (input :: aliasedInputs).flatMap { input =>
-      val (commandName, rest) = input.split("[ ]+", 2) match {
-        case Array(prefix, rest) => (prefix, s" $rest")
-        case Array(prefix)       => (prefix, "")
-      }
+    (input :: aliasedInputs).distinct.flatMap { input =>
+      val (commandName, rest) = SearchInput.splitCommandAndRest(input)
 
       if (commandNames.exists(_.equalsIgnoreCase(commandName)))
         Some(CommandInput.Args(commandName, SearchInput.tokenizeArgs(rest), context))
@@ -41,12 +37,8 @@ final case class SearchInput(
     * account custom aliases), otherwise None.
     */
   def asPrefixed: Option[CommandInput.Prefixed] =
-    // TODO: Optimize this. Possibly with collectFirst + an extractor
-    (input :: aliasedInputs).flatMap { input =>
-      val (prefix, rest) = input.split("\\p{javaWhitespace}+", 2) match {
-        case Array(prefix, rest) => (prefix, rest)
-        case Array(prefix)       => (prefix, "")
-      }
+    (input :: aliasedInputs).distinct.flatMap { input =>
+      val (prefix, rest) = SearchInput.splitOnWhitespace(input)
 
       commandNames.map { name =>
         LengthScorer.scorePrefix(name, prefix)
@@ -95,6 +87,43 @@ final case class SearchInput(
 }
 
 object SearchInput {
+
+  /** Splits text on its first run of one-or-more ASCII spaces into a
+    * (commandPart, rest) pair, without paying for regex compilation the way
+    * `input.split("[ ]+", 2)` would on every call.
+    */
+  private[command] def splitCommandAndRest(input: String): (String, String) = {
+    val spaceIndex = input.indexOf(' ')
+
+    if (spaceIndex < 0) (input, "")
+    else {
+      var restStart = spaceIndex
+      while (restStart < input.length && input.charAt(restStart) == ' ')
+        restStart += 1
+
+      (input.substring(0, spaceIndex), " " + input.substring(restStart))
+    }
+  }
+
+  /** Same idea as [[splitCommandAndRest]], but for general (not just ASCII
+    * space) whitespace (regex-free equivalent of
+    * `input.split("\\p{javaWhitespace}+", 2)`).
+    */
+  private[command] def splitOnWhitespace(input: String): (String, String) = {
+    val n = input.length
+    var i = 0
+    while (i < n && !Character.isWhitespace(input.charAt(i)))
+      i += 1
+
+    if (i >= n) (input, "")
+    else {
+      var restStart = i
+      while (restStart < n && Character.isWhitespace(input.charAt(restStart)))
+        restStart += 1
+
+      (input.substring(0, i), input.substring(restStart))
+    }
+  }
 
   /** Splits a full line of user input into separate command statements,
     * mirroring nushell semantics (`;` is the statement separator).

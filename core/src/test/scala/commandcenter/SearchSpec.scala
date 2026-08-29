@@ -181,6 +181,21 @@ object SearchSpec extends CommandBaseSpec {
                        )
           } yield assertTrue(results.previews.headOption.exists(_.score > Scores.low))
         }
+      ),
+      suite("stable sort on score ties")(
+        test("a command defined earlier in the config keeps ranking above a same-scoring one defined later") {
+          // `search` runs commands in parallel (for speed) but must still break score ties by config/definition
+          // order, not by whichever fiber happens to finish first, otherwise results would jitter around
+          // nondeterministically between identical searches.
+          val names = (0 until 20).map(i => f"cmd$i%02d")
+          val commands = names.map(noiseCommand).toVector
+
+          for {
+            results <- Command.search(commands, Map.empty, "anything", defaultCommandContext)
+          } yield assertTrue(
+            results.previews.map(_.asInstanceOf[PreviewResult.Some[String]].result) == Chunk.fromIterable(names)
+          )
+        }
       )
     )
 }
