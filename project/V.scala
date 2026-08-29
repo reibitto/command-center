@@ -33,8 +33,6 @@ object V {
 
   val slf4j = "1.7.30"
 
-  val spire = "0.18.0"
-
   val sttp = "3.11.0"
 
   val swt = "3.134.0"
