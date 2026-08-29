@@ -1,6 +1,6 @@
 package commandcenter.command
 
-import commandcenter.command.CalculatorCommand.{FunctionsList, Parameters, ParametersList}
+import commandcenter.command.CalculatorCommand.Parameters
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandBaseSpec
@@ -51,8 +51,6 @@ object CalculatorCommandSpec extends CommandBaseSpec {
     */
   private def textOf(cmd: CalculatorCommand, input: String): ZIO[Env, CommandError, String] =
     preview(cmd, input).map(r => plainText(singleResult(r)))
-
-  private def text(input: String): ZIO[Env, CommandError, String] = textOf(command, input)
 
   private def isNotApplicable(cmd: CalculatorCommand, input: String): ZIO[Env, Nothing, Boolean] =
     preview(cmd, input).exit.map(_.isFailure)
