@@ -2,20 +2,20 @@ package commandcenter.command.util
 
 import commandcenter.command.CalculatorCommand.Parameters
 import fastparse.*
+import fastparse.MultiLineWhitespace.*
 import fastparse.Parsed.Success
-import fastparse.ScalaWhitespace.*
-import spire.random.{Random, Uniform}
-import spire.std.any.{BigDecimalAlgebra, BigDecimalIsTrig}
 
+import java.math.{MathContext, RoundingMode}
 import scala.annotation.tailrec
+import scala.util.control.NonFatal
 
 /*
  * Operator precedence (from highest to lowest):
  * <ul>
  *   <li>()</li>
  *   <li>functions</li>
- *   <li>&#94; (power)</li>
- *   <li>* / %</li>
+ *   <li>&#94; ** (power)</li>
+ *   <li>* / // %</li>
  *   <li>unary + -</li>
  *   <li>+ - *</li>
  * </ul>
@@ -23,12 +23,16 @@ import scala.annotation.tailrec
 final class CalculatorUtil(parameters: Parameters) {
   import CalculatorUtil.*
 
-  private val randomGenerator = Random.initGenerator
+  private val rng = new scala.util.Random()
 
   def evaluate(input: String): Option[BigDecimal] =
-    parse(input, expression(_)) match {
-      case Success(value, _) => Some(value)
-      case _                 => None
+    try
+      parse(input, expression(_)) match {
+        case Success(value, _) => Some(value)
+        case _                 => None
+      }
+    catch {
+      case NonFatal(_) => None
     }
 
   private def expression[T: P]: P[BigDecimal] = P(addSub ~ End)
@@ -43,20 +47,21 @@ final class CalculatorUtil(parameters: Parameters) {
     }
 
   private def mulDivMod[T: P]: P[BigDecimal] =
-    P(power ~ (CharIn("*/%").! ~/ power).rep).map(evaluateOperatorSequence)
+    P(power ~ (("//" | "*" | "/" | "%").! ~/ power).rep).map(evaluateOperatorSequence)
 
-  // FIXME evaluating over double, because with pow(BigDecimal, BigDecimal) spire can go into infinite loop
   private def power[T: P]: P[BigDecimal] =
-    P((function ~ ("^" ~/ function).?).map {
-      case (base, Some(exp)) => math.pow(base.doubleValue, exp.doubleValue)
+    P((function ~ (("**" | "^") ~/ function).?).map {
+      case (base, Some(exp)) => BigDecimal(math.pow(base.doubleValue, exp.doubleValue))
       case (base, _)         => base
     })
 
   private def function[T: P]: P[BigDecimal] =
     P(
-      startsWithTerm | acos | asin | atan2 | atan | ceil | choosePrefixed | cosh | cos | exp | floor | gcd | hypot |
-        ln | log | max | min | random | round | sinh | sin | sqrt | tanh | tan | toDeg | toRad
+      startsWithTerm | abs | acos | asin | atan2 | atan | ceil | choosePrefixed | cosh | cos | exp | floor | gcd |
+        hypot | ln | log2 | log | max | min | random | round | sinh | sin | sqrt | tanh | tan | toDeg | toRad
     )
+
+  private def abs[T: P]: P[BigDecimal] = P("abs" ~/ term).map(_.abs)
 
   private def startsWithTerm[T: P]: P[BigDecimal] =
     P(for {
@@ -68,18 +73,18 @@ final class CalculatorUtil(parameters: Parameters) {
                   P(Pass).map(_ => value1)
     } yield value2)
 
-  private def acos[T: P]: P[BigDecimal] = P("acos" ~/ term).map(spire.math.acos(_))
+  private def acos[T: P]: P[BigDecimal] = P("acos" ~/ term).map(viaDouble(math.acos))
 
-  private def asin[T: P]: P[BigDecimal] = P("asin" ~/ term).map(spire.math.asin(_))
+  private def asin[T: P]: P[BigDecimal] = P("asin" ~/ term).map(viaDouble(math.asin))
 
-  private def atan[T: P]: P[BigDecimal] = P("atan" ~/ term).map(spire.math.atan(_))
+  private def atan[T: P]: P[BigDecimal] = P("atan" ~/ term).map(viaDouble(math.atan))
 
   private def atan2[T: P]: P[BigDecimal] =
     P("atan2" ~/ multipleParametersParser(2)).map { case Seq(y, x) =>
-      spire.math.atan2(y, x)
+      BigDecimal(math.atan2(y.doubleValue, x.doubleValue))
     }
 
-  private def ceil[T: P]: P[BigDecimal] = P("ceil" ~/ term).map(spire.math.ceil)
+  private def ceil[T: P]: P[BigDecimal] = P("ceil" ~/ term).map(bigDecimalCeil)
 
   private def choosePrefixed[T: P]: P[BigDecimal] =
     P("choose" ~/ multipleParametersParser(2)).filter { case Seq(n, r) =>
@@ -88,13 +93,13 @@ final class CalculatorUtil(parameters: Parameters) {
       binomial(n, r)
     }
 
-  private def cos[T: P]: P[BigDecimal] = P("cos" ~/ term).map(spire.math.cos(_))
+  private def cos[T: P]: P[BigDecimal] = P("cos" ~/ term).map(viaDouble(math.cos))
 
-  private def cosh[T: P]: P[BigDecimal] = P("cosh" ~/ term).map(spire.math.cosh(_))
+  private def cosh[T: P]: P[BigDecimal] = P("cosh" ~/ term).map(viaDouble(math.cosh))
 
-  private def exp[T: P]: P[BigDecimal] = P("exp" ~/ term).map(spire.math.exp)
+  private def exp[T: P]: P[BigDecimal] = P("exp" ~/ term).map(viaDouble(math.exp))
 
-  private def floor[T: P]: P[BigDecimal] = P("floor" ~/ term).map(spire.math.floor)
+  private def floor[T: P]: P[BigDecimal] = P("floor" ~/ term).map(bigDecimalFloor)
 
   private def gcd[T: P]: P[BigDecimal] =
     P("gcd" ~/ multipleParametersParser(2)).filter { case Seq(a, b) =>
@@ -105,15 +110,16 @@ final class CalculatorUtil(parameters: Parameters) {
 
   private def hypot[T: P]: P[BigDecimal] =
     P("hypot" ~/ multipleParametersParser(2)).map { case Seq(x, y) =>
-      spire.math.hypot(x, y)
+      bigDecimalSqrt(x * x + y * y)
     }
 
-  // FIXME evaluating over double, because with log(BigDecimal) spire can go into infinite loop
-  private def ln[T: P]: P[BigDecimal] = P("ln" ~/ term).map(d => math.log(d.doubleValue))
+  private def ln[T: P]: P[BigDecimal] = P("ln" ~/ term).map(viaDouble(math.log))
+
+  private def log2[T: P]: P[BigDecimal] = P("log2" ~/ term).map(viaDouble(d => math.log(d) / math.log(2)))
 
   private def log[T: P]: P[BigDecimal] =
     P("log" ~/ multipleParametersParser(2)).map { case Seq(base, number) =>
-      math.log(number.doubleValue) / math.log(base.doubleValue)
+      BigDecimal(math.log(number.doubleValue) / math.log(base.doubleValue))
     }
 
   private def max[T: P]: P[BigDecimal] = P("max" ~/ multipleParametersParser(1)).map(_.max)
@@ -122,27 +128,27 @@ final class CalculatorUtil(parameters: Parameters) {
 
   private def random[T: P]: P[BigDecimal] =
     P("random" ~ "int".!.? ~ multipleParametersParser(2)).map {
-      case (Some(_), Seq(a, b)) => BigDecimal(Uniform(a.toBigInt, b.toBigInt).apply(randomGenerator))
-      case (_, Seq(a, b))       => Uniform(a, b).apply(randomGenerator)
-      case _                    => BigDecimal(0) // TODO: Handle this case properly
+      case (Some(_), Seq(a, b)) => BigDecimal(randomBigInt(a.toBigInt, b.toBigInt, rng))
+      case (_, Seq(a, b))       => a + BigDecimal(rng.nextDouble()) * (b - a)
+      case _                    => BigDecimal(0) // unreachable: multipleParametersParser(2) always yields 2 elements
     } |
-      P("random").map(_ => Uniform(BigDecimal(0.0), BigDecimal(1.0)).apply(randomGenerator))
+      P("random").map(_ => BigDecimal(rng.nextDouble()))
 
-  private def round[T: P]: P[BigDecimal] = P("round" ~/ term).map(spire.math.round)
+  private def round[T: P]: P[BigDecimal] = P("round" ~/ term).map(bigDecimalRound)
 
-  private def sin[T: P]: P[BigDecimal] = P("sin" ~/ term).map(spire.math.sin(_))
+  private def sin[T: P]: P[BigDecimal] = P("sin" ~/ term).map(viaDouble(math.sin))
 
-  private def sinh[T: P]: P[BigDecimal] = P("sinh" ~/ term).map(spire.math.sinh(_))
+  private def sinh[T: P]: P[BigDecimal] = P("sinh" ~/ term).map(viaDouble(math.sinh))
 
-  private def sqrt[T: P]: P[BigDecimal] = P("sqrt" ~/ term).map(spire.math.sqrt(_))
+  private def sqrt[T: P]: P[BigDecimal] = P("sqrt" ~/ term).map(bigDecimalSqrt)
 
-  private def tan[T: P]: P[BigDecimal] = P("tan" ~/ term).map(spire.math.tan(_))
+  private def tan[T: P]: P[BigDecimal] = P("tan" ~/ term).map(viaDouble(math.tan))
 
-  private def tanh[T: P]: P[BigDecimal] = P("tanh" ~/ term).map(spire.math.tanh(_))
+  private def tanh[T: P]: P[BigDecimal] = P("tanh" ~/ term).map(viaDouble(math.tanh))
 
-  private def toDeg[T: P]: P[BigDecimal] = P("toDeg" ~/ term).map(_ / spire.math.pi * 180.0)
+  private def toDeg[T: P]: P[BigDecimal] = P("toDeg" ~/ term).map(_ / Pi * 180)
 
-  private def toRad[T: P]: P[BigDecimal] = P("toRad" ~/ term).map(_ * spire.math.pi / 180.0)
+  private def toRad[T: P]: P[BigDecimal] = P("toRad" ~/ term).map(_ * Pi / 180)
 
   private def term[T: P]: P[BigDecimal] = P(number | const | NoCut(parens))
 
@@ -155,7 +161,8 @@ final class CalculatorUtil(parameters: Parameters) {
       case number: java.math.BigDecimal => BigDecimal(number)
     })
 
-  private def const[T: P]: P[BigDecimal] = P(IgnoreCase("pi").map(_ => spire.math.pi))
+  private def const[T: P]: P[BigDecimal] =
+    P(IgnoreCase("pi").map(_ => Pi) | (IgnoreCase("e") ~ !CharIn("a-zA-Z")).map(_ => E))
 
   private def parens[T: P]: P[BigDecimal] = P("(" ~/ addSub ~ ")")
 
@@ -167,15 +174,52 @@ final class CalculatorUtil(parameters: Parameters) {
 
 object CalculatorUtil {
 
+  private val Pi: BigDecimal = BigDecimal("3.14159265358979323846264338327950288419716939937510")
+
+  private val E: BigDecimal = BigDecimal("2.71828182845904523536028747135266249775724709369995")
+
+  private val mc128 = new MathContext(34)
+
+  private def viaDouble(f: Double => Double)(b: BigDecimal): BigDecimal = BigDecimal(f(b.doubleValue))
+
+  private def bigDecimalCeil(b: BigDecimal): BigDecimal =
+    BigDecimal(b.bigDecimal.setScale(0, RoundingMode.CEILING))
+
+  private def bigDecimalFloor(b: BigDecimal): BigDecimal =
+    BigDecimal(b.bigDecimal.setScale(0, RoundingMode.FLOOR))
+
+  private def bigDecimalRound(b: BigDecimal): BigDecimal =
+    BigDecimal(b.bigDecimal.setScale(0, RoundingMode.HALF_UP))
+
+  private def bigDecimalSqrt(b: BigDecimal): BigDecimal =
+    BigDecimal(b.bigDecimal.sqrt(mc128))
+
+  /** Uniform, unbiased random BigInt in the inclusive range [lo, hi], via
+    * rejection sampling.
+    */
+  private def randomBigInt(lo: BigInt, hi: BigInt, rng: scala.util.Random): BigInt = {
+    val range = hi - lo + 1
+    val bitLength = range.bitLength
+
+    @tailrec
+    def loop(): BigInt = {
+      val candidate = BigInt(bitLength, rng)
+      if (candidate < range) candidate else loop()
+    }
+
+    lo + loop()
+  }
+
   def helpMessageFunctionsList: String =
     List(
       "",
-      "+ - * / % ^",
+      "+ - * / // % ^ **",
       "!, choose",
       "acos, asin, atan, atan2, cos, sin, tan, cosh, sinh, tanh, toDeg, toRad",
-      "exp, log, ln, sqrt, hypot",
+      "abs, exp, log, log2, ln, sqrt, hypot",
       "ceil, floor, round, gcd, max, min",
-      "random"
+      "random",
+      "constants: pi, e"
     ).mkString("\n")
 
   def helpMessageParametersList: String =
@@ -193,11 +237,12 @@ object CalculatorUtil {
     val (base, ops) = tree
     ops.foldLeft(base) { case (left, (op, right)) =>
       op match {
-        case "+" => left + right
-        case "-" => left - right
-        case "*" => left * right
-        case "/" => left / right
-        case "%" => left % right
+        case "+"  => left + right
+        case "-"  => left - right
+        case "*"  => left * right
+        case "/"  => left / right
+        case "//" => BigDecimal(left.bigDecimal.divideToIntegralValue(right.bigDecimal))
+        case "%"  => left % right
       }
     }
   }
