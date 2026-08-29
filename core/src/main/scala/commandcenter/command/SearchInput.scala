@@ -4,8 +4,6 @@ import commandcenter.scorers.LengthScorer
 import commandcenter.util.StringExtensions.StringExtension
 import commandcenter.CommandContext
 
-import scala.collection.mutable.ArrayBuffer
-
 final case class SearchInput(
     input: String,
     aliasedInputs: List[String],
@@ -22,12 +20,8 @@ final case class SearchInput(
     * account custom aliases), otherwise None.
     */
   def asArgs: Option[CommandInput.Args] =
-    // TODO: Optimize this. Possibly with collectFirst + an extractor
-    (input :: aliasedInputs).flatMap { input =>
-      val (commandName, rest) = input.split("[ ]+", 2) match {
-        case Array(prefix, rest) => (prefix, s" $rest")
-        case Array(prefix)       => (prefix, "")
-      }
+    (input :: aliasedInputs).distinct.flatMap { input =>
+      val (commandName, rest) = SearchInput.splitCommandAndRest(input)
 
       if (commandNames.exists(_.equalsIgnoreCase(commandName)))
         Some(CommandInput.Args(commandName, SearchInput.tokenizeArgs(rest), context))
@@ -43,12 +37,8 @@ final case class SearchInput(
     * account custom aliases), otherwise None.
     */
   def asPrefixed: Option[CommandInput.Prefixed] =
-    // TODO: Optimize this. Possibly with collectFirst + an extractor
-    (input :: aliasedInputs).flatMap { input =>
-      val (prefix, rest) = input.split("\\p{javaWhitespace}+", 2) match {
-        case Array(prefix, rest) => (prefix, rest)
-        case Array(prefix)       => (prefix, "")
-      }
+    (input :: aliasedInputs).distinct.flatMap { input =>
+      val (prefix, rest) = SearchInput.splitOnWhitespace(input)
 
       commandNames.map { name =>
         LengthScorer.scorePrefix(name, prefix)
@@ -98,39 +88,145 @@ final case class SearchInput(
 
 object SearchInput {
 
-  // TODO: This is a naive algorithm that probably doesn't handle all the same cases that something like Bash does. It
-  // needs to be improved eventually. For now it just handles tokenizing on spaces while also considering everything
-  // in quotes a single token.
-  def tokenizeArgs(input: String): List[String] = {
-    val tokens = ArrayBuffer[String]()
-    var i = 0
-    var start = -1
-    var quote = false
+  /** Splits text on its first run of one-or-more ASCII spaces into a
+    * (commandPart, rest) pair, without paying for regex compilation the way
+    * `input.split("[ ]+", 2)` would on every call.
+    */
+  private[command] def splitCommandAndRest(input: String): (String, String) = {
+    val spaceIndex = input.indexOf(' ')
 
-    while (i < input.length) {
+    if (spaceIndex < 0) (input, "")
+    else {
+      var restStart = spaceIndex
+      while (restStart < input.length && input.charAt(restStart) == ' ')
+        restStart += 1
+
+      (input.substring(0, spaceIndex), " " + input.substring(restStart))
+    }
+  }
+
+  /** Same idea as [[splitCommandAndRest]], but for general (not just ASCII
+    * space) whitespace (regex-free equivalent of
+    * `input.split("\\p{javaWhitespace}+", 2)`).
+    */
+  private[command] def splitOnWhitespace(input: String): (String, String) = {
+    val n = input.length
+    var i = 0
+    while (i < n && !Character.isWhitespace(input.charAt(i)))
+      i += 1
+
+    if (i >= n) (input, "")
+    else {
+      var restStart = i
+      while (restStart < n && Character.isWhitespace(input.charAt(restStart)))
+        restStart += 1
+
+      (input.substring(0, i), input.substring(restStart))
+    }
+  }
+
+  /** Splits a full line of user input into separate command statements,
+    * mirroring nushell semantics (`;` is the statement separator).
+    *
+    * For example, `md5 a; md5 b` is split into `List("md5 a", "md5 b")`, while
+    * `echo "a;b"` is left as a single statement since the semicolon is inside
+    * quotes.
+    */
+  def splitStatements(input: String): List[String] = {
+    val statements = List.newBuilder[String]
+    val current = new StringBuilder
+    var quoteChar: Char = 0
+    var i = 0
+    val n = input.length
+
+    while (i < n) {
       val c = input.charAt(i)
 
-      if (c == ' ' && start >= 0 && !quote) {
-        tokens += input.substring(start, i)
-        start = -1
-      } else if (c == '"')
-        if (quote) {
-          tokens += input.substring(start, i)
-          quote = false
-          start = -1
+      if (quoteChar != 0)
+        if (quoteChar == '"' && c == '\\' && i + 1 < n) {
+          current.append(c).append(input.charAt(i + 1))
+          i += 2
         } else {
-          start = i + 1
-          quote = true
+          current.append(c)
+          if (c == quoteChar)
+            quoteChar = 0
+          i += 1
         }
-      else if (start < 0 && c != ' ')
-        start = i
-
-      i += 1
+      else if (c == '"' || c == '\'') {
+        quoteChar = c
+        current.append(c)
+        i += 1
+      } else if (c == ';') {
+        statements += current.toString
+        current.clear()
+        i += 1
+      } else {
+        current.append(c)
+        i += 1
+      }
     }
 
-    if (start != -1)
-      tokens += input.substring(start)
+    statements += current.toString
 
-    tokens.toList
+    statements.result().map(_.trim).filter(_.nonEmpty)
+  }
+
+  /** Tokenizes a string of arguments, honoring quoting so that whitespace
+    * inside a quoted span doesn't split it into multiple tokens. Both double
+    * quotes and single quotes are supported.
+    *
+    * For example, `-a 1 "some subcommand"` is tokenized as
+    * `List("-a", "1", "some subcommand")`.
+    */
+  def tokenizeArgs(input: String): List[String] = {
+    val tokens = List.newBuilder[String]
+    val current = new StringBuilder
+    var inToken = false
+    var i = 0
+    val n = input.length
+
+    def flush(): Unit =
+      if (inToken) {
+        tokens += current.toString
+        current.clear()
+        inToken = false
+      }
+
+    while (i < n) {
+      val c = input.charAt(i)
+
+      if (Character.isWhitespace(c)) {
+        flush()
+        i += 1
+      } else if (c == '"' || c == '\'') {
+        val quoteChar = c
+        inToken = true
+        i += 1
+
+        var closed = false
+        while (i < n && !closed) {
+          val qc = input.charAt(i)
+
+          if (qc == quoteChar) {
+            closed = true
+            i += 1
+          } else if (quoteChar == '"' && qc == '\\' && i + 1 < n) {
+            current.append(input.charAt(i + 1))
+            i += 2
+          } else {
+            current.append(qc)
+            i += 1
+          }
+        }
+      } else {
+        inToken = true
+        current.append(c)
+        i += 1
+      }
+    }
+
+    flush()
+
+    tokens.result()
   }
 }

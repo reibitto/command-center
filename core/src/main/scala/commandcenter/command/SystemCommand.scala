@@ -1,33 +1,32 @@
 package commandcenter.command
 
 import com.monovore.decline
-import com.monovore.decline.Help
-import com.monovore.decline.Opts
-import com.sun.jna.platform.win32.User32
-import com.sun.jna.platform.win32.WinDef.LPARAM
-import com.sun.jna.platform.win32.WinDef.WPARAM
-import com.sun.jna.platform.win32.WinUser
+import com.monovore.decline.{Help, Opts}
+import com.sun.jna.platform.win32.{User32, WinUser}
+import com.sun.jna.platform.win32.WinDef.{LPARAM, WPARAM}
 import com.typesafe.config.Config
 import commandcenter.command.native.win.PowrProf
 import commandcenter.command.SystemCommand.SystemSubcommand
-import commandcenter.config.Decoders.*
 import commandcenter.util.{AppleScript, OS}
 import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
 import zio.process.Command as PCommand
 
-import scala.concurrent.duration.Duration as ScalaDuration
-
-final case class SystemCommand(commandNames: List[String], screensaverDelay: Option[Duration]) extends Command[Unit] {
+final case class SystemCommand(commandNames: List[String]) extends Command[Unit] {
   val commandType: CommandType = CommandType.SystemCommand
   val title: String = "System Command"
 
   val sleepCommand = decline.Command("sleep", "Put computer in sleep mode")(Opts(SystemSubcommand.Sleep))
   val monitorOffCommand = decline.Command("monitoroff", "Turn all monitors off")(Opts(SystemSubcommand.MonitorOff))
 
+  val screensaverDelayOpt: Opts[Option[Long]] =
+    Opts.option[Long]("delay", "Delay (in milliseconds) before activating the screensaver", "d").orNone
+
   val screensaverCommand =
-    decline.Command("screensaver", "Activate the screensaver")(Opts(SystemSubcommand.Screensaver))
+    decline.Command("screensaver", "Activate the screensaver")(
+      screensaverDelayOpt.map(delay => SystemSubcommand.Screensaver(delay.map(Duration.fromMillis)))
+    )
 
   val shutdownCommand =
     decline.Command("shutdown", "Shut down the computer")(Opts(SystemSubcommand.Shutdown))
@@ -70,10 +69,10 @@ final case class SystemCommand(commandNames: List[String], screensaverDelay: Opt
                              turnMonitorOff
                            )
 
-                         case SystemSubcommand.Screensaver =>
+                         case SystemSubcommand.Screensaver(delay) =>
                            Tuple2(
                              Renderer.renderDefault("Activate screensaver", ""),
-                             enableScreenSaver.delay(screensaverDelay.getOrElse(0.seconds))
+                             enableScreenSaver.delay(delay.getOrElse(Duration.Zero))
                            )
 
                          case SystemSubcommand.Shutdown =>
@@ -160,16 +159,15 @@ object SystemCommand extends CommandPlugin[SystemCommand] {
 
   def make(config: Config): IO[CommandPluginError, SystemCommand] =
     for {
-      commandNames     <- config.getZIO[Option[List[String]]]("commandNames")
-      screensaverDelay <- config.getZIO[Option[ScalaDuration]]("screensaverDelay")
-    } yield SystemCommand(commandNames.getOrElse(List("system")), screensaverDelay.map(Duration.fromScala))
+      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+    } yield SystemCommand(commandNames.getOrElse(List("system")))
 
   sealed trait SystemSubcommand
 
   object SystemSubcommand {
     case object Sleep extends SystemSubcommand
     case object MonitorOff extends SystemSubcommand
-    case object Screensaver extends SystemSubcommand
+    final case class Screensaver(delay: Option[Duration]) extends SystemSubcommand
     case object Shutdown extends SystemSubcommand
     case object Help extends SystemSubcommand
   }

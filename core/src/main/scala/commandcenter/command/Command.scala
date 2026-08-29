@@ -7,9 +7,9 @@ import commandcenter.util.{JavaVM, OS}
 import commandcenter.view.{Rendered, Renderer}
 import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
-import fansi.Color
+import fansi.{Color, Str}
 import zio.*
-import zio.stream.{ZSink, ZStream}
+import zio.stream.ZSink
 
 import java.util.Locale
 
@@ -66,30 +66,113 @@ object Command {
 
   private val previewParallelism: Int = 8
 
+  /** Searches for commands matching the given input.
+    *
+    * The user's raw input, plus every alias are each expanded and searched
+    * independently, then merged. A single alias name can map to multiple
+    * targets (e.g. `"hex" = ["radix --to 16", "radix --from 16"]`), and each
+    * target is searched independently so that all of them can surface their own
+    * result, instead of only the first match winning.
+    */
   def search[A](
       commands: Vector[Command[A]],
       aliases: Map[String, List[String]],
       input: String,
       context: CommandContext
-  ): URIO[Env, SearchResults[A]] = {
-    val (commandPart, rest) = input.split("[ ]+", 2) match {
-      case Array(prefix, rest) => (prefix, s" $rest")
-      case Array(prefix)       => (prefix, "")
+  ): URIO[Env, SearchResults[A]] =
+    if (input.isEmpty)
+      ZIO.succeed(SearchResults(input, Chunk.empty))
+    else {
+      val (commandPart, rest) = SearchInput.splitCommandAndRest(input)
+
+      // The user's input, plus every matching alias resolved (expanded) to its full text value.
+      val candidates = (input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)).distinct
+
+      for {
+        candidateResults <- ZIO.foreach(Chunk.fromIterable(candidates))(searchExpandedInput(commands, _, context))
+      } yield SearchResults(
+        input,
+        candidateResults.flatMap(_.previews).sortBy(_.score)(Ordering.Double.TotalOrdering.reverse),
+        candidateResults.flatMap(_.errors)
+      )
     }
 
-    // The user's input + all the matching aliases which have been resolved (expanded) to its full text value
-    val aliasedInputs = input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)
+  /** Searches for commands matching a single already alias-expanded input
+    * string, splitting it into semicolon-separated statements first if it
+    * contains any.
+    */
+  private def searchExpandedInput[A](
+      commands: Vector[Command[A]],
+      input: String,
+      context: CommandContext
+  ): URIO[Env, SearchResults[A]] =
+    if (!input.contains(';'))
+      searchStatement(commands, input, context)
+    else
+      SearchInput.splitStatements(input) match {
+        case Nil              => ZIO.succeed(SearchResults(input, Chunk.empty))
+        case statement :: Nil => searchStatement(commands, statement, context).map(_.copy(searchTerm = input))
+        case statements       =>
+          for {
+            statementResults <- ZIO.foreach(Chunk.fromIterable(statements))(searchStatement(commands, _, context))
+          } yield SearchResults(
+            input,
+            combinedRunAllPreview(statementResults).fold(Chunk.empty[PreviewResult[A]])(Chunk.single) ++
+              statementResults.flatMap(_.previews),
+            statementResults.flatMap(_.errors)
+          )
+      }
 
+  /** Synthesizes a single combined entry that, when run, sequentially runs the
+    * top (highest-scored) match of every statement, in the order they were
+    * typed.
+    *
+    * Returns None if any statement failed to match anything.
+    */
+  private def combinedRunAllPreview[A](statementResults: Chunk[SearchResults[A]]): Option[PreviewResult[A]] = {
+    // Each statement's own previews aren't sorted (only the fully merged list is, once, in `search`), so the
+    // top match has to be found with `maxByOption` here rather than assumed to be the head.
+    val topPerStatement = statementResults.map(_.previews.maxByOption(_.score))
+
+    Option.when(topPerStatement.nonEmpty && topPerStatement.forall(_.isDefined)) {
+      val topResults = topPerStatement.flatten
+
+      val runAll = ZIO.foreachDiscard(topResults)(_.onRunSandboxedLogged)
+
+      val runOption =
+        if (topResults.exists(_.runOption == RunOption.Exit)) RunOption.Exit
+        else topResults.last.runOption
+
+      val combinedScore = topResults.map(_.score).max + 1
+      val description = statementResults.map(_.searchTerm.trim).mkString("; ")
+
+      PreviewResult
+        .nothing(Renderer.renderDefault(s"Run ${topResults.length} commands", Str(description)))
+        .onRun(runAll)
+        .runOption(runOption)
+        .score(combinedScore)
+    }
+  }
+
+  /** Runs a search for a single command statement (i.e. with no
+    * semicolon-separated statements, and no further alias expansion - both of
+    * those are already resolved by the time this is called from [[search]] /
+    * [[searchExpandedInput]]).
+    */
+  private def searchStatement[A](
+      commands: Vector[Command[A]],
+      input: String,
+      context: CommandContext
+  ): URIO[Env, SearchResults[A]] =
     (for {
       _            <- ZIO.logTrace(s"Searching on input `$input` for ${commands.length} commands")
       resultChunks <- if (input.isEmpty)
                         ZIO.succeed(Chunk.empty)
                       else
-                        ZStream
-                          .fromIterable(commands)
-                          .mapZIOPar(previewParallelism) { command =>
+                        ZIO
+                          .foreachPar(Chunk.fromIterable(commands)) { command =>
                             command
-                              .preview(SearchInput(input, aliasedInputs, command.commandNames, context))
+                              .preview(SearchInput(input, List(input), command.commandNames, context))
                               .flatMap {
                                 case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
                                 case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
@@ -137,7 +220,7 @@ object Command {
                               .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
                               .either
                           }
-                          .runCollect
+                          .withParallelism(previewParallelism)
                           .timed
                           .flatMap { case (timeTaken, r) =>
                             ZIO
@@ -153,9 +236,7 @@ object Command {
           e.previewResult
         }
 
-        val results = (successes ++ errorsWithMessages).sortBy(_.score)(Ordering.Double.TotalOrdering.reverse)
-
-        SearchResults(input, results, errors)
+        SearchResults(input, successes ++ errorsWithMessages, errors)
     }).tap { r =>
       ZIO.foreachDiscard(r.errors) {
         case CommandError.UnexpectedError(t, source) =>
@@ -167,7 +248,6 @@ object Command {
         case _ => ZIO.unit
       }
     }
-  }
 
   def parse(config: Config): ZIO[Scope & Env, CommandPluginError, Command[?]] =
     for {
