@@ -258,6 +258,7 @@ object Command {
                    case CommandType.ConfigCommand             => ConfigCommand.make(config)
                    case CommandType.DecodeBase64Command       => DecodeBase64Command.make(config)
                    case CommandType.DecodeUrlCommand          => DecodeUrlCommand.make(config)
+                   case CommandType.DisplaySwitchCommand      => DisplaySwitchCommand.make(config)
                    case CommandType.EncodeBase64Command       => EncodeBase64Command.make(config)
                    case CommandType.EncodeUrlCommand          => EncodeUrlCommand.make(config)
                    case CommandType.EpochMillisCommand        => EpochMillisCommand.make(config)

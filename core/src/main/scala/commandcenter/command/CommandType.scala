@@ -10,6 +10,7 @@ object CommandType extends Enum[CommandType] {
   case object ConfigCommand extends CommandType
   case object DecodeBase64Command extends CommandType
   case object DecodeUrlCommand extends CommandType
+  case object DisplaySwitchCommand extends CommandType
   case object EncodeBase64Command extends CommandType
   case object EncodeUrlCommand extends CommandType
   case object EpochMillisCommand extends CommandType
