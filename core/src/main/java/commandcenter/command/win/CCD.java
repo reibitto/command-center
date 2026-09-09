@@ -22,9 +22,12 @@ import java.util.List;
  * fails a consistency check at construction time.
  *
  * <p>Struct layouts are hand-transcribed from the Windows SDK (wingdi.h) since JNA doesn't ship them. The
- * {@code DISPLAYCONFIG_MODE_INFO} union (targetMode/sourceMode/desktopImageInfo) is intentionally left undecoded
- * as a raw 48-byte blob - callers only need to round-trip it unmodified from {@code QueryDisplayConfig} back
- * into {@code SetDisplayConfig}, never to construct or interpret one.
+ * {@code DISPLAYCONFIG_MODE_INFO} union (targetMode/sourceMode/desktopImageInfo) is left as a raw 48-byte blob
+ * rather than modeled as separate typed structs - most callers just round-trip it unmodified from
+ * {@code QueryDisplayConfig} back into {@code SetDisplayConfig}. The one exception is the leading 20 bytes of a
+ * {@code DISPLAYCONFIG_SOURCE_MODE} entry (width, height, pixelFormat, position - see
+ * {@code DisplayOutputs.readSourceWidth}/{@code setSourcePosition}), which callers may read/write directly via
+ * {@code ByteBuffer} for repositioning which source is "primary" (occupies desktop position (0,0)).
  */
 public final class CCD {
 

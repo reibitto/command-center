@@ -37,6 +37,9 @@ public final class GdiDisplay {
 
     public static final int DISP_CHANGE_SUCCESSFUL = 0;
 
+    public static final int DISPLAY_DEVICE_ATTACHED_TO_DESKTOP = 0x00000001;
+    public static final int DISPLAY_DEVICE_PRIMARY_DEVICE = 0x00000004;
+
     public static class DISPLAY_DEVICE extends Structure {
         public int cb;
         public char[] DeviceName = new char[32];

@@ -5,6 +5,7 @@ import com.monovore.decline
 import com.monovore.decline.{Help, Opts}
 import com.typesafe.config.Config
 import commandcenter.command.win.DisplayOutputs
+import commandcenter.command.win.DisplayOutputs.SwitchStrategy
 import commandcenter.command.DisplaySwitchCommand.{DisplayEntry, DisplaySubcommand}
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
@@ -30,9 +31,17 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
       .flag("next", "Force rotating to the next GPU output pipeline for this display, bypassing the remembered one")
       .orFalse
 
-  val switchCommand: decline.Command[(String, Boolean)] =
+  val extendOpt: Opts[Boolean] =
+    Opts
+      .flag(
+        "extend",
+        "Use the extend/set-primary/narrow sequence instead of the default single direct SetDisplayConfig call"
+      )
+      .orFalse
+
+  val switchCommand: decline.Command[(String, Boolean, Boolean)] =
     decline.Command("switch", "Activate only the named display, deactivating the others")(
-      (Opts.argument[String]("name"), nextOpt).tupled
+      (Opts.argument[String]("name"), nextOpt, extendOpt).tupled
     )
 
   val listCommand: decline.Command[DisplaySubcommand] =
@@ -42,7 +51,9 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
     decline.Command("help", "Display usage help")(Opts(DisplaySubcommand.Help))
 
   val opts: Opts[DisplaySubcommand] =
-    Opts.subcommand(switchCommand).map { case (name, next) => DisplaySubcommand.Switch(name, next) } orElse
+    Opts.subcommand(switchCommand).map { case (name, next, extend) =>
+      DisplaySubcommand.Switch(name, next, extend)
+    } orElse
       Opts.subcommand(listCommand) orElse
       Opts.subcommand(helpCommand) withDefault DisplaySubcommand.Help
 
@@ -115,7 +126,7 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
                             }
                           )
 
-                      case DisplaySubcommand.Switch(name, next) =>
+                      case DisplaySubcommand.Switch(name, next, extend) =>
                         displays.find(_.name.equalsIgnoreCase(name)) match {
                           case None =>
                             ZIO.succeed(
@@ -132,21 +143,24 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
                             )
 
                           case Some(entry) =>
+                            val strategy = if (extend) SwitchStrategy.ExtendSetPrimaryNarrow else SwitchStrategy.Direct
+                            val suffix =
+                              (if (next) " (next pipeline)" else "") + (if (extend) " (extend)" else "")
+
                             ZIO.succeed(
                               PreviewResults.one(
                                 Preview.unit
                                   .onRun(
                                     DisplayOutputs
-                                      .activateOnly(entry.matches, next = next, refreshRateHz = entry.refreshRateHz)
+                                      .activateOnly(
+                                        entry.matches,
+                                        next = next,
+                                        refreshRateHz = entry.refreshRateHz,
+                                        strategy = strategy
+                                      )
                                       .orDie
                                   )
-                                  .rendered(
-                                    Renderer.renderDefault(
-                                      title,
-                                      if (next) s"Switch to ${entry.name} (next pipeline)"
-                                      else s"Switch to ${entry.name}"
-                                    )
-                                  )
+                                  .rendered(Renderer.renderDefault(title, s"Switch to ${entry.name}$suffix"))
                                   .score(Scores.veryHigh(input.context))
                               )
                             )
@@ -180,7 +194,7 @@ object DisplaySwitchCommand extends CommandPlugin[DisplaySwitchCommand] {
   sealed trait DisplaySubcommand
 
   object DisplaySubcommand {
-    final case class Switch(name: String, next: Boolean) extends DisplaySubcommand
+    final case class Switch(name: String, next: Boolean, extend: Boolean) extends DisplaySubcommand
     case object List extends DisplaySubcommand
     case object Help extends DisplaySubcommand
   }

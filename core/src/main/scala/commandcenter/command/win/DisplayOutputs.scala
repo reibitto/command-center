@@ -6,11 +6,59 @@ import com.sun.jna.ptr.IntByReference
 import commandcenter.command.win.CCD.*
 import zio.*
 
+import java.nio.{ByteBuffer, ByteOrder}
+
 /** High-level wrapper around [[CCD]] for enumerating and switching between GPU
   * display outputs (e.g. HDMI1, DisplayPort2, DisplayPort3), independent of
   * which monitor happens to be plugged into each one.
   */
 object DisplayOutputs {
+
+  /** How [[activateOnly]] applies a switch. */
+  sealed trait SwitchStrategy
+
+  object SwitchStrategy {
+
+    /** A single `SetDisplayConfig` call: activate the target, deactivate
+      * everything else, all at once. Simple, but observed to sometimes report
+      * success without ever producing a real picture when the target's GPU
+      * pipeline was fully cold (nothing else active) beforehand.
+      */
+    case object Direct extends SwitchStrategy
+
+    /** Three separate `SetDisplayConfig` calls, mirroring a workaround from
+      * other display-switcher tools:
+      *
+      *   1. '''Extend''': activate the target ''alongside'' whatever's
+      *      currently active, without deactivating anything - gives the
+      *      target's pipeline a chance to link-train while at least one other
+      *      pipeline is already warm, rather than going from fully cold
+      *      straight to solely active.
+      *   1. '''Set primary''': reposition the target's source to desktop
+      *      coordinate (0,0) - the CCD-level equivalent of making it the
+      *      Windows-primary display - and move whatever else is active out of
+      *      the way so the arrangement stays non-overlapping.
+      *   1. '''Narrow''': the real, persisted activation - deactivate
+      *      everything except the target.
+      *
+      * Each step best-effort logs and moves on to the next even if it fails,
+      * since the point is to give the driver every opportunity to warm up the
+      * link before the step that actually matters (narrow) runs.
+      */
+    case object ExtendSetPrimaryNarrow extends SwitchStrategy
+  }
+
+  // Byte offsets within DISPLAYCONFIG_MODE_INFO.union when infoType is DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE (a
+  // DISPLAYCONFIG_SOURCE_MODE: UINT32 width, UINT32 height, DISPLAYCONFIG_PIXELFORMAT pixelFormat, POINTL
+  // position). Only a path's *source* modeInfoIdx entry is valid to interpret this way.
+  private def readSourceWidth(mode: DISPLAYCONFIG_MODE_INFO): Int =
+    ByteBuffer.wrap(mode.union).order(ByteOrder.LITTLE_ENDIAN).getInt(0)
+
+  private def setSourcePosition(mode: DISPLAYCONFIG_MODE_INFO, x: Int, y: Int): Unit = {
+    val buf = ByteBuffer.wrap(mode.union).order(ByteOrder.LITTLE_ENDIAN)
+    buf.putInt(12, x)
+    buf.putInt(16, y)
+  }
 
   final case class DisplayPath(
       adapterId: LUID,
@@ -147,6 +195,131 @@ object DisplayOutputs {
   private val nextSourceByTarget: java.util.concurrent.ConcurrentHashMap[Int, Int] =
     new java.util.concurrent.ConcurrentHashMap[Int, Int]()
 
+  // Sets exactly `keepIdx` active and deactivates every other path (invalidating their mode indices too, so a
+  // stale mode from a previous activation can't confuse a later SetDisplayConfig call). This is both the whole
+  // of SwitchStrategy.Direct and the final "narrow" step of SwitchStrategy.ExtendSetPrimaryNarrow.
+  private def activateOnlyPath(paths: Array[DISPLAYCONFIG_PATH_INFO], keepIdx: Int): Unit =
+    paths.zipWithIndex.foreach { case (path, idx) =>
+      if (idx == keepIdx) path.flags |= DISPLAYCONFIG_PATH_ACTIVE
+      else {
+        path.flags &= ~DISPLAYCONFIG_PATH_ACTIVE
+        path.sourceInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID
+        path.targetInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID
+      }
+    }
+
+  private def directSwitch(
+      paths: Array[DISPLAYCONFIG_PATH_INFO],
+      modes: Array[DISPLAYCONFIG_MODE_INFO],
+      targetIdx: Int
+  ): Task[Int] =
+    ZIO.attempt {
+      activateOnlyPath(paths, targetIdx)
+      INSTANCE.SetDisplayConfig(
+        paths.length,
+        paths,
+        modes.length,
+        modes,
+        SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES | SDC_SAVE_TO_DATABASE
+      )
+    }
+
+  private def extendSetPrimaryNarrowSwitch(
+      chosenSource: Int,
+      chosenTarget: Int,
+      initialPaths: Array[DISPLAYCONFIG_PATH_INFO],
+      initialModes: Array[DISPLAYCONFIG_MODE_INFO],
+      initialTargetIdx: Int
+  ): Task[Int] = {
+    def findPathIdx(paths: Array[DISPLAYCONFIG_PATH_INFO]): Option[Int] =
+      paths.zipWithIndex.find { case (p, _) =>
+        p.targetInfo.id == chosenTarget && p.sourceInfo.id == chosenSource
+      }.map(_._2)
+
+    for {
+      // Step 1 (extend): activate the target alongside whatever's already active, touching nothing else.
+      extendRc <- ZIO.attempt {
+                    initialPaths.zipWithIndex.foreach { case (path, idx) =>
+                      val keep = idx == initialTargetIdx || (path.flags & DISPLAYCONFIG_PATH_ACTIVE) != 0
+                      if (keep) path.flags |= DISPLAYCONFIG_PATH_ACTIVE
+                      else {
+                        path.flags &= ~DISPLAYCONFIG_PATH_ACTIVE
+                        path.sourceInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID
+                        path.targetInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID
+                      }
+                    }
+
+                    INSTANCE.SetDisplayConfig(
+                      initialPaths.length,
+                      initialPaths,
+                      initialModes.length,
+                      initialModes,
+                      SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES
+                    )
+                  }
+      _ <- ZIO.logDebug(s"Extend step (source=$chosenSource, target=$chosenTarget) returned $extendRc")
+      _ <- ZIO.sleep(500.millis)
+
+      // Step 2 (set primary): reposition the target's source to (0,0) and move whatever else is active out of
+      // the way, so the target becomes the Windows-primary display. Best-effort - if the target's path or a
+      // usable source mode can't be found (e.g. it disappeared, or extend above failed), skip straight to the
+      // narrow step below rather than aborting the whole switch over a cosmetic step.
+      (paths2, modes2) <- query(onlyActivePaths = false)
+      primaryRc        <- ZIO.attempt {
+                     findPathIdx(paths2) match {
+                       case None       => ERROR_SUCCESS
+                       case Some(idx2) =>
+                         val targetModeIdx = paths2(idx2).sourceInfo.modeInfoIdx
+                         if (targetModeIdx < 0 || targetModeIdx >= modes2.length) ERROR_SUCCESS
+                         else {
+                           val targetWidth = readSourceWidth(modes2(targetModeIdx))
+                           setSourcePosition(modes2(targetModeIdx), 0, 0)
+
+                           paths2.zipWithIndex.foreach { case (p, i) =>
+                             if (i != idx2 && (p.flags & DISPLAYCONFIG_PATH_ACTIVE) != 0) {
+                               val otherModeIdx = p.sourceInfo.modeInfoIdx
+                               if (otherModeIdx >= 0 && otherModeIdx < modes2.length)
+                                 setSourcePosition(modes2(otherModeIdx), targetWidth, 0)
+                             }
+                           }
+
+                           INSTANCE.SetDisplayConfig(
+                             paths2.length,
+                             paths2,
+                             modes2.length,
+                             modes2,
+                             SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES
+                           )
+                         }
+                     }
+                   }
+      _ <- ZIO.logDebug(s"Set-primary step (source=$chosenSource, target=$chosenTarget) returned $primaryRc")
+      _ <- ZIO.sleep(300.millis)
+
+      // Step 3 (narrow): the real, persisted activation - only the target active, everything else off. This
+      // step's return code is what the caller actually treats as success/failure.
+      (paths3, modes3) <- query(onlyActivePaths = false)
+      targetIdx3       <-
+        ZIO
+          .fromOption(findPathIdx(paths3))
+          .orElseFail(
+            new RuntimeException(
+              s"(source=$chosenSource, target=$chosenTarget) disappeared during the extend/set-primary steps"
+            )
+          )
+      rc <- ZIO.attempt {
+              activateOnlyPath(paths3, targetIdx3)
+              INSTANCE.SetDisplayConfig(
+                paths3.length,
+                paths3,
+                modes3.length,
+                modes3,
+                SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES | SDC_SAVE_TO_DATABASE
+              )
+            }
+    } yield rc
+  }
+
   /** Activates only the display whose friendly name contains `nameMatch`
     * (case-insensitive), deactivating every other currently-known path in the
     * same call. The target doesn't need to be powered on right now - only to
@@ -186,6 +359,7 @@ object DisplayOutputs {
       nameMatch: String,
       next: Boolean = false,
       refreshRateHz: Option[Int] = None,
+      strategy: SwitchStrategy = SwitchStrategy.Direct,
       maxAttempts: Int = 4,
       retryDelay: Duration = 400.millis
   ): Task[Unit] = {
@@ -210,26 +384,11 @@ object DisplayOutputs {
         chosenSource = paths(targetIdx).sourceInfo.id
         chosenTarget = paths(targetIdx).targetInfo.id
         chosenDevicePath = targets(targetIdx).devicePath
-        rc <- ZIO.attempt {
-                paths.zipWithIndex.foreach { case (path, idx) =>
-                  if (idx == targetIdx) path.flags |= DISPLAYCONFIG_PATH_ACTIVE
-                  else {
-                    path.flags &= ~DISPLAYCONFIG_PATH_ACTIVE
-                    // Also drop any mode this path previously resolved to - otherwise a path that was
-                    // activated earlier (even briefly, against a target with no real signal) keeps a
-                    // stale mode index that can make a later SetDisplayConfig call misbehave.
-                    path.sourceInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID
-                    path.targetInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID
-                  }
-                }
-
-                INSTANCE.SetDisplayConfig(
-                  paths.length,
-                  paths,
-                  modes.length,
-                  modes,
-                  SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_ALLOW_CHANGES | SDC_SAVE_TO_DATABASE
-                )
+        rc <- strategy match {
+                case SwitchStrategy.Direct =>
+                  directSwitch(paths, modes, targetIdx)
+                case SwitchStrategy.ExtendSetPrimaryNarrow =>
+                  extendSetPrimaryNarrowSwitch(chosenSource, chosenTarget, paths, modes, targetIdx)
               }
         _ <- ZIO.logInfo(
                s"SetDisplayConfig attempt $attemptNum/$maxAttempts for `$nameMatch` " +

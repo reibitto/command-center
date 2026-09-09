@@ -23,13 +23,13 @@ lazy val root = project
       "scalafixEnable; scalafix RemoveUnused; Test/scalafix RemoveUnused; fmt"
     ),
     logo :=
-      s"""
-         |,---.                           .   ,---.         .
-         ||     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
-         ||     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
-         |`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '
-         |
-         |""".stripMargin,
+      """
+        #,---.                           .   ,---.         .
+        #|     ,-. ,-,-. ,-,-. ,-. ,-. ,-|   |     ,-. ,-. |- ,-. ,-.
+        #|     | | | | | | | | ,-| | | | |   |     |-' | | |  |-' |
+        #`---' `-' ' ' ' ' ' ' `-^ ' ' `-'   `---' `-' ' ' `' `-' '
+        #
+        #""".stripMargin('#'),
     usefulTasks := Seq(
       UsefulTask("~compile", "Compile all modules with file-watch enabled"),
       UsefulTask("fmt", "Run scalafmt on the entire project"),
@@ -39,12 +39,28 @@ lazy val root = project
         "cli/graalvm-native-image:packageBin",
         s"Create a native executable of the CLI client ${scala.Console.RED}(Windows not yet supported)"
       ),
+      UsefulTask(
+        "cli/installCC",
+        "Build and install the CLI uberjar to $COMMAND_CENTER_INSTALL_DIR"
+      ),
       UsefulTask("emulator-swt/run", "Run the Command Center emulated terminal (SWT)"),
       UsefulTask("emulator-swt/assembly", "Create an executable JAR for running in terminal emulator mode (SWT)"),
+      UsefulTask(
+        "emulator-swt/installCC",
+        "Build and install the SWT emulator uberjar to $COMMAND_CENTER_INSTALL_DIR"
+      ),
       UsefulTask("emulator-swing/run", "Run the Command Center emulated terminal (Swing)"),
       UsefulTask(
         "emulator-swing/assembly",
         "Create an executable JAR for running in terminal emulator mode (Swing)"
+      ),
+      UsefulTask(
+        "emulator-swing/installCC",
+        "Build and install the Swing emulator uberjar to $COMMAND_CENTER_INSTALL_DIR"
+      ),
+      UsefulTask(
+        "installCC",
+        "Build and install the CLI, SWT, and Swing uberjars all at once (aggregates the three above)"
       )
     ),
     onLoad := {

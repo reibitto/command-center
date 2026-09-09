@@ -5,12 +5,28 @@ import commandcenter.command.win.GdiDisplay.*
 import zio.*
 
 /** Sets a display's refresh rate via the older GDI display-settings API (see
-  * [[GdiDisplay]]), matched to a CCD target by its `monitorDevicePath` (as
-  * returned by [[DisplayOutputs]]).
+  * [[GdiDisplay]]).
+  *
+  * Matching a CCD target to a GDI adapter by comparing `monitorDevicePath`
+  * (CCD) against the device interface name from
+  * `EnumDisplayDevices(..., EDD_GET_DEVICE_INTERFACE_NAME)` turned out to be
+  * unreliable: that specific sub-query kept reporting the previously-active
+  * monitor for several hundred ms (observed, reproducibly) after a CCD switch
+  * had already succeeded and even after the adapter's own
+  * `DISPLAY_DEVICE_ATTACHED_TO_DESKTOP` flag had correctly updated to the new
+  * one. So instead, this matches on whichever GDI adapter is currently marked
+  * attached - which updates immediately and correctly - and only falls back to
+  * the (stale-prone) device path comparison if that's ambiguous (zero or more
+  * than one attached adapter, e.g. a multi-monitor arrangement).
   */
 object RefreshRate {
 
-  private def enumAdapterDeviceNames: Task[List[String]] =
+  final private case class AdapterInfo(name: String, stateFlags: Int) {
+    def attached: Boolean = (stateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) != 0
+    def primary: Boolean = (stateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE) != 0
+  }
+
+  private def enumAdapters: Task[List[AdapterInfo]] =
     ZIO.attempt {
       Iterator
         .from(0)
@@ -19,7 +35,7 @@ object RefreshRate {
           (INSTANCE.EnumDisplayDevicesW(null, i, dd, 0), dd)
         }
         .takeWhile(_._1)
-        .map { case (_, dd) => Native.toString(dd.DeviceName) }
+        .map { case (_, dd) => AdapterInfo(Native.toString(dd.DeviceName), dd.StateFlags) }
         .toList
     }
 
@@ -32,21 +48,41 @@ object RefreshRate {
 
   private def findAdapterDeviceName(targetDevicePath: String): Task[Option[String]] =
     for {
-      adapterNames <- enumAdapterDeviceNames
-      withPaths    <- ZIO.foreach(adapterNames)(name => monitorDevicePath(name).map(name -> _))
-    } yield withPaths.collectFirst { case (name, Some(path)) if path.equalsIgnoreCase(targetDevicePath) => name }
+      adapters  <- enumAdapters
+      withPaths <- ZIO.foreach(adapters)(a => monitorDevicePath(a.name).map(path => (a, path)))
+      _         <- ZIO.logDebug(
+             s"Looking for GDI device matching `$targetDevicePath` among: " +
+               withPaths.map { case (a, path) =>
+                 s"${a.name} (attached=${a.attached}, primary=${a.primary}, stateFlags=0x${Integer
+                     .toHexString(a.stateFlags)}) -> ${path.getOrElse("(no monitor)")}"
+               }
+                 .mkString(", ")
+           )
+      attachedAdapters = withPaths.collect { case (a, _) if a.attached => a }
+      result <- attachedAdapters match {
+                  case List(only) => ZIO.succeed(Some(only.name))
+                  case other      =>
+                    ZIO
+                      .logDebug(
+                        s"${other.length} adapters currently attached (expected exactly 1) - " +
+                          "falling back to matching by (possibly stale) monitor device path"
+                      )
+                      .as(withPaths.collectFirst {
+                        case (a, Some(path)) if path.equalsIgnoreCase(targetDevicePath) => a.name
+                      })
+                }
+    } yield result
 
   /** Sets the refresh rate (in Hz) for the display identified by
-    * `targetDevicePath` - the CCD target's `monitorDevicePath`, matched here
-    * against the legacy GDI device interface name (obtained via
-    * `EnumDisplayDevices` with `EDD_GET_DEVICE_INTERFACE_NAME`, which reports
-    * the same device path string CCD does). Only the refresh rate is changed -
-    * whatever resolution and color depth is currently active is preserved
-    * as-is.
+    * `targetDevicePath` (the CCD target's `monitorDevicePath`) - see
+    * [[findAdapterDeviceName]] for how that's resolved to a GDI adapter. Only
+    * the refresh rate is changed - whatever resolution and color depth is
+    * currently active is preserved as-is.
     *
-    * Requires the display to already be active - it won't show up in this GDI
-    * enumeration otherwise - so this is meant to be called as a follow-up right
-    * after [[DisplayOutputs.activateOnly]] succeeds, not standalone.
+    * Requires the display to already be active - it won't show up as an
+    * attached GDI adapter otherwise - so this is meant to be called as a
+    * follow-up right after [[DisplayOutputs.activateOnly]] succeeds, not
+    * standalone.
     */
   def setRefreshRate(targetDevicePath: String, hz: Int): Task[Unit] =
     for {
