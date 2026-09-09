@@ -97,6 +97,17 @@ object Command {
       )
     }
 
+  /** Runs a single command directly by its own canonical name, bypassing
+    * whatever is actually typed in the input box. Used so a command's
+    * configured `shortcuts` can still trigger it even if not in the preview
+    * results.
+    */
+  def searchByCommandName[A](command: Command[A], context: CommandContext): URIO[Env, Option[PreviewResult[A]]] =
+    command.commandNames.headOption match {
+      case Some(name) => search(Vector(command), Map.empty, name, context).map(_.previews.maxByOption(_.score))
+      case None       => ZIO.succeed(None)
+    }
+
   /** Searches for commands matching a single already alias-expanded input
     * string, splitting it into semicolon-separated statements first if it
     * contains any.
