@@ -46,7 +46,13 @@ object CommandPlugin {
                               .as(None)
 
                           case error: CommandPluginError.UnexpectedException =>
-                            ZIO.fail(error)
+                            for {
+                              typeName <- ZIO.attempt(c.getString("type")).catchAll(_ => ZIO.succeed("<unknown>"))
+                              _        <- ZIO.logWarningCause(
+                                     s"Skipping loading `$typeName` plugin because it failed to load",
+                                     Cause.fail(error.cause)
+                                   )
+                            } yield None
 
                         },
                         c => ZIO.succeed(Some(c))
