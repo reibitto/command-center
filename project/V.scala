@@ -35,7 +35,7 @@ object V {
 
   val sttp = "3.11.0"
 
-  val swt = "3.134.0"
+  val swt = "3.135.0"
 
   val zio = "2.1.26"
 
@@ -43,5 +43,5 @@ object V {
 
   val zioPrelude = "1.0.0-RC48"
 
-  val zioProcess = "0.8.0"
+  val zioProcess = "0.8.1"
 }

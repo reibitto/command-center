@@ -8,7 +8,7 @@ import scala.util.Try
 object TimeZones {
 
   def get(zone: String): Option[ZoneId] = {
-    val zoneNormalized = zone.toLowerCase(Locale.ENGLISH)
+    val zoneNormalized = zone.trim.toLowerCase(Locale.ENGLISH)
 
     all.get(zoneNormalized).orElse {
       // java.time needs these uppercase in order for it to work
@@ -30,15 +30,21 @@ object TimeZones {
     }.toMap ++ aliases
 
   private lazy val aliases: Map[String, ZoneId] = {
-    // TODO: Find a way to handle duplicate values here. For example, there are 3 `CST`. This is tricky to handle,
-    // but at the very least if the user's locale is China, we should interpret it as China Standard Time.
-    // The better solution might be to show all 3 values. In that case, perhaps we should add a `TimeZones.getAll`
-    Map(
+    // Abbreviations are inherently ambiguous in the real world -- e.g. "CDT" can mean either Central Daylight
+    // Time (North America) or Cuba Daylight Time. Where a key below has more than one common real-world meaning,
+    // we resolve it to whichever is most likely meant in English-language usage, and the entry's comment names
+    // the alternative(s). To target an alternative explicitly, type its raw UTC offset instead of the
+    // abbreviation (e.g. "UTC-04") -- `TimeZones.get` already understands that syntax unambiguously, no special
+    // syntax needed.
+    //
+    // Every key here must be unique: a duplicate key would silently shadow an earlier entry if this were a `Map`
+    // literal, so this is a plain list instead, and `require` below fails loudly if one sneaks in. If you're
+    // adding an abbreviation that collides with an existing one, resolve it the same way: pick the more common
+    // meaning and note the alternative in a comment, rather than adding a second entry for the same key.
+    val entries = List(
       "ACDT" -> "UTC+10:30",
       "ACST" -> "UTC+09:30",
-//      "ACT"   -> "UTC-05",
-//      "ACT"   -> "UTC+09",
-      "ACT" -> "Australia/Darwin",
+      "ACT" -> "Australia/Darwin", // Australian Central Time. Also used for Acre Time (Brazil, UTC-05).
       "ACWST" -> "UTC+08:45",
       "ADT" -> "UTC-03",
       "AEDT" -> "UTC+11",
@@ -50,13 +56,11 @@ object TimeZones {
       "AKST" -> "UTC-09",
       "ALMT" -> "UTC+06",
       "AMST" -> "UTC-03",
-      "AMT" -> "UTC-04",
-      "AMT" -> "UTC+04",
+      "AMT" -> "UTC-04", // Amazon Time (Brazil). Alternative: Armenia Time is UTC+04.
       "ANAT" -> "UTC+12",
       "AQTT" -> "UTC+05",
       "ART" -> "Africa/Cairo",
-      "AST" -> "UTC+03",
-      "AST" -> "UTC-04",
+      "AST" -> "UTC-04", // Atlantic Standard Time. Alternative: Arabia Standard Time is UTC+03.
       "AWST" -> "UTC+08",
       "AZOST" -> "UTC+0",
       "AZOT" -> "UTC-01",
@@ -68,14 +72,13 @@ object TimeZones {
       "BOT" -> "UTC-04",
       "BRST" -> "UTC-02",
       "BRT" -> "UTC-03",
-      "BST" -> "UTC+06",
-      "BST" -> "UTC+11",
+      // British Summer Time. Alternatives: Bangladesh Standard Time is UTC+06, Bougainville Standard Time is
+      // UTC+11.
       "BST" -> "UTC+01",
       "BTT" -> "UTC+06",
       "CAT" -> "Africa/Harare",
       "CCT" -> "UTC+06:30",
-      "CDT" -> "UTC-05",
-      "CDT" -> "UTC-04",
+      "CDT" -> "UTC-05", // Central Daylight Time (North America). Alternative: Cuba Daylight Time is UTC-04.
       "CEST" -> "UTC+02",
       "CET" -> "UTC+01",
       "CHADT" -> "UTC+13:45",
@@ -90,9 +93,8 @@ object TimeZones {
       "CLT" -> "UTC-04",
       "COST" -> "UTC-04",
       "COT" -> "UTC-05",
-//      "CST"   -> "UTC-06",
-//      "CST"   -> "UTC+08",
-//      "CST"   -> "UTC-05",
+      // China Standard Time. Alternatives: Central Standard Time (North America) is UTC-06, Cuba Standard Time is
+      // UTC-05.
       "CST" -> "Asia/Shanghai",
       "CT" -> "UTC-06",
       "CVT" -> "UTC-01",
@@ -104,8 +106,8 @@ object TimeZones {
       "EASST" -> "UTC-05",
       "EAST" -> "UTC-06",
       "EAT" -> "UTC+03",
-//      "ECT"   -> "UTC-04",
-//      "ECT"   -> "UTC-05",
+      // Central European Time (as "ECT" = European Central Time). Alternatives: Eastern Caribbean Time is UTC-04,
+      // Ecuador Time is UTC-05.
       "ECT" -> "Europe/Paris",
       "EDT" -> "UTC-04",
       "EEST" -> "UTC+03",
@@ -125,8 +127,7 @@ object TimeZones {
       "GILT" -> "UTC+12",
       "GIT" -> "UTC-09",
       "GMT" -> "UTC+0",
-      "GST" -> "UTC-02",
-      "GST" -> "UTC+04",
+      "GST" -> "UTC+04", // Gulf Standard Time. Alternative: South Georgia Time is UTC-02.
       "GYT" -> "UTC-04",
       "HDT" -> "UTC-09",
       "HAEC" -> "UTC+02",
@@ -142,9 +143,7 @@ object TimeZones {
       "IRDT" -> "UTC+04:30",
       "IRKT" -> "UTC+08",
       "IRST" -> "UTC+03:30",
-//      "IST"   -> "UTC+05:30",
-//      "IST"   -> "UTC+01",
-//      "IST"   -> "UTC+02",
+      // India Standard Time. Alternatives: Irish Standard Time is UTC+01, Israel Standard Time is UTC+02.
       "IST" -> "Asia/Kolkata",
       "JST" -> "Asia/Tokyo",
       "KALT" -> "UTC+02",
@@ -152,8 +151,7 @@ object TimeZones {
       "KOST" -> "UTC+11",
       "KRAT" -> "UTC+07",
       "KST" -> "UTC+09",
-      "LHST" -> "UTC+10:30",
-      "LHST" -> "UTC+11",
+      "LHST" -> "UTC+10:30", // Lord Howe Standard Time. Alternative (its own daylight saving variant): UTC+11.
       "LINT" -> "UTC+14",
       "MAGT" -> "UTC+12",
       "MART" -> "UTC-09:30",
@@ -166,8 +164,7 @@ object TimeZones {
       "MIT" -> "Pacific/Apia",
       "MMT" -> "UTC+06:30",
       "MSK" -> "UTC+03",
-      "MST" -> "UTC+08",
-      "MST" -> "UTC-07",
+      "MST" -> "UTC-07", // Mountain Standard Time (North America). Alternative: UTC+08.
       "MUT" -> "UTC+04",
       "MVT" -> "UTC+05",
       "MYT" -> "UTC+08",
@@ -195,10 +192,8 @@ object TimeZones {
       "PMST" -> "UTC-03",
       "PNT" -> "America/Phoenix",
       "PONT" -> "UTC+11",
-//      "PST"   -> "UTC-08",
-//      "PST"   -> "UTC+08",
       "PRT" -> "America/Puerto_Rico",
-      "PST" -> "America/Los_Angeles",
+      "PST" -> "America/Los_Angeles", // Pacific Standard Time (North America). Alternative: UTC+08.
       "PWT" -> "UTC+09",
       "PYST" -> "UTC-03",
       "PYT" -> "UTC-04",
@@ -214,8 +209,9 @@ object TimeZones {
       "SLST" -> "UTC+05:30",
       "SRET" -> "UTC+11",
       "SRT" -> "UTC-03",
+      // Samoa Standard Time. Alternative: Singapore Standard Time is UTC+08 (prefer the unambiguous "SGT" alias
+      // for that).
       "SST" -> "UTC-11",
-      "SST" -> "UTC+08",
       "SYOT" -> "UTC+03",
       "TAHT" -> "UTC-10",
       "THA" -> "UTC+07",
@@ -252,10 +248,18 @@ object TimeZones {
       "WST" -> "UTC+08",
       "YAKT" -> "UTC+09",
       "YEKT" -> "UTC+05"
-    ).flatMap { case (k, v) =>
+    )
+
+    val duplicateKeys = entries.groupBy(_._1).collect { case (k, vs) if vs.size > 1 => k }
+    require(
+      duplicateKeys.isEmpty,
+      s"TimeZones.aliases has duplicate keys, which would silently shadow earlier entries: ${duplicateKeys.mkString(", ")}"
+    )
+
+    entries.flatMap { case (k, v) =>
       Try(ZoneId.of(v)).toOption.map { zone =>
         k.toLowerCase(Locale.ENGLISH) -> zone
       }.toMap
-    }
+    }.toMap
   }
 }
