@@ -4,6 +4,7 @@ import commandcenter.*
 import commandcenter.command.*
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
 import commandcenter.emulator.util.Lists
+import commandcenter.event.KeyboardShortcut
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
@@ -296,16 +297,33 @@ final case class SwingTerminal(
                                 p.shortcuts.contains(shortcutPressed)
                               }
             bestMatch = eligibleResults.maxByOption(_.score)
-            _ <- ZIO.foreachDiscard(bestMatch) { preview =>
-                   for {
-                     _ <- hide.when(preview.runOption != RunOption.RemainOpen)
-                     _ <- preview.onRunSandboxedLogged.forkDaemon
-                     _ <- reset.when(preview.runOption != RunOption.RemainOpen)
-                   } yield ()
+            _ <- bestMatch match {
+                   case Some(preview) => runPreview(preview)
+                   case None          => runGlobalShortcut(shortcutPressed)
                  }
           } yield ()
       }
   })
+
+  // Falls back to a command's own configured `shortcuts` even when the input textbox is empty.
+  private def runGlobalShortcut(shortcutPressed: KeyboardShortcut): URIO[Env, Unit] =
+    if (shortcutPressed.isEmpty)
+      ZIO.unit
+    else
+      for {
+        config <- Conf.config
+        commandOpt = config.commands.find(_.shortcuts.contains(shortcutPressed))
+        cmdContext = CommandContext(Language.default, SwingTerminal.this, 1.0)
+        previewOpt <- ZIO.foreach(commandOpt)(Command.searchByCommandName(_, cmdContext)).map(_.flatten)
+        _          <- ZIO.foreachDiscard(previewOpt)(runPreview)
+      } yield ()
+
+  private def runPreview(preview: PreviewResult[Any]): URIO[Env, Unit] =
+    for {
+      _ <- hide.when(preview.runOption != RunOption.RemainOpen)
+      _ <- preview.onRunSandboxedLogged.forkDaemon
+      _ <- reset.when(preview.runOption != RunOption.RemainOpen)
+    } yield ()
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 
