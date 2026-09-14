@@ -47,6 +47,11 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
   val listCommand: decline.Command[DisplaySubcommand] =
     decline.Command("list", "List every display Windows currently knows about")(Opts(DisplaySubcommand.List))
 
+  val infoCommand: decline.Command[DisplaySubcommand] =
+    decline.Command("info", "Show current resolution, refresh rate and display scale for each active display")(
+      Opts(DisplaySubcommand.Info)
+    )
+
   val helpCommand: decline.Command[DisplaySubcommand] =
     decline.Command("help", "Display usage help")(Opts(DisplaySubcommand.Help))
 
@@ -55,6 +60,7 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
       DisplaySubcommand.Switch(name, next, extend)
     } orElse
       Opts.subcommand(listCommand) orElse
+      Opts.subcommand(infoCommand) orElse
       Opts.subcommand(helpCommand) withDefault DisplaySubcommand.Help
 
   val displaySwitchCommand: decline.Command[DisplaySubcommand] = decline.Command("display", title)(opts)
@@ -109,6 +115,7 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
                                   val matchingEntry =
                                     displays.find(e => p.friendlyName.toLowerCase.contains(e.matches.toLowerCase))
                                   val label = matchingEntry.map(_.name).getOrElse(p.friendlyName)
+                                  val resolution = matchingEntry.flatMap(_.resolution)
                                   val refreshRateHz = matchingEntry.flatMap(_.refreshRateHz)
                                   val indicator =
                                     if (p.active) Back.Green(" ")
@@ -118,13 +125,75 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
 
                                   Preview.unit
                                     .onRun(
-                                      DisplayOutputs.activateOnly(p.friendlyName, refreshRateHz = refreshRateHz).orDie
+                                      DisplayOutputs
+                                        .activateOnly(
+                                          p.friendlyName,
+                                          resolution = resolution,
+                                          refreshRateHz = refreshRateHz
+                                        )
+                                        .orDie
                                     )
                                     .rendered(Renderer.renderDefault(title, rendered))
                                     .score(Scores.veryHigh(input.context) - i * 1e-6)
                                 })
                             }
                           )
+
+                      case DisplaySubcommand.Info =>
+                        DisplayOutputs
+                          .listPaths()
+                          .mapError(CommandError.UnexpectedError(this))
+                          .flatMap { paths =>
+                            val displaysByTarget = paths
+                              .filter(_.friendlyName.nonEmpty)
+                              .groupBy(_.targetId)
+                              .values
+                              .map(group => group.find(_.active).orElse(group.find(_.available)).getOrElse(group.head))
+                              .toList
+                              .sortBy(_.friendlyName)
+
+                            if (displaysByTarget.isEmpty)
+                              ZIO.succeed(
+                                PreviewResults.one(
+                                  Preview.unit
+                                    .rendered(Renderer.renderDefault(title, "No displays found."))
+                                    .score(Scores.veryHigh(input.context))
+                                )
+                              )
+                            else
+                              ZIO
+                                .foreach(displaysByTarget.zipWithIndex) { case (p, i) =>
+                                  val matchingEntry =
+                                    displays.find(e => p.friendlyName.toLowerCase.contains(e.matches.toLowerCase))
+                                  val label = matchingEntry.map(_.name).getOrElse(p.friendlyName)
+
+                                  val statusZIO =
+                                    if (!p.active)
+                                      ZIO.succeed(if (p.available) "off" else "unavailable")
+                                    else
+                                      DisplayOutputs
+                                        .currentModeInfo(p.devicePath)
+                                        .map {
+                                          case Some(m) =>
+                                            s"${m.width}x${m.height} @ ${m.refreshRateHz}Hz, ${m.scalePercent}% scale"
+                                          case None => "active (mode unknown)"
+                                        }
+                                        .catchAll(t => ZIO.succeed(s"active (could not read mode: ${t.getMessage})"))
+
+                                  statusZIO.map { status =>
+                                    val indicator =
+                                      if (p.active) Back.Green(" ")
+                                      else if (p.available) Back.Red(" ")
+                                      else Back.DarkGray(" ")
+                                    val rendered = indicator ++ Str(s" $label ($status)")
+
+                                    Preview.unit
+                                      .rendered(Renderer.renderDefault(title, rendered))
+                                      .score(Scores.veryHigh(input.context) - i * 1e-6)
+                                  }
+                                }
+                                .map(PreviewResults.fromIterable)
+                          }
 
                       case DisplaySubcommand.Switch(name, next, extend) =>
                         displays.find(_.name.equalsIgnoreCase(name)) match {
@@ -155,6 +224,7 @@ final case class DisplaySwitchCommand(commandNames: List[String], displays: List
                                       .activateOnly(
                                         entry.matches,
                                         next = next,
+                                        resolution = entry.resolution,
                                         refreshRateHz = entry.refreshRateHz,
                                         strategy = strategy
                                       )
@@ -176,18 +246,33 @@ object DisplaySwitchCommand extends CommandPlugin[DisplaySwitchCommand] {
       name: String,
       matches: String,
       shortcut: Option[KeyboardShortcut],
+      resolution: Option[(Int, Int)],
       refreshRateHz: Option[Int]
   )
 
   object DisplayEntry {
+
+    private val ResolutionPattern = """(\d+)\s*[xX]\s*(\d+)""".r
 
     implicit val decoder: Decoder[DisplayEntry] = Decoder.instance { c =>
       for {
         name          <- c.get[String]("name")
         matches       <- c.get[String]("match")
         shortcut      <- c.get[Option[KeyboardShortcut]]("shortcut")
+        resolutionStr <- c.get[Option[String]]("resolution")
+        resolution    <- resolutionStr match {
+                        case None                          => Right(None)
+                        case Some(ResolutionPattern(w, h)) => Right(Some((w.toInt, h.toInt)))
+                        case Some(other)                   =>
+                          Left(
+                            io.circe.DecodingFailure(
+                              s"Invalid `resolution` value `$other`, expected e.g. `3840x2160`",
+                              c.history
+                            )
+                          )
+                      }
         refreshRateHz <- c.get[Option[Int]]("refreshRateHz")
-      } yield DisplayEntry(name, matches, shortcut, refreshRateHz)
+      } yield DisplayEntry(name, matches, shortcut, resolution, refreshRateHz)
     }
   }
 
@@ -196,6 +281,7 @@ object DisplaySwitchCommand extends CommandPlugin[DisplaySwitchCommand] {
   object DisplaySubcommand {
     final case class Switch(name: String, next: Boolean, extend: Boolean) extends DisplaySubcommand
     case object List extends DisplaySubcommand
+    case object Info extends DisplaySubcommand
     case object Help extends DisplaySubcommand
   }
 
@@ -207,7 +293,7 @@ object DisplaySwitchCommand extends CommandPlugin[DisplaySwitchCommand] {
              .foreach(displays.flatMap(entry => entry.shortcut.map(entry -> _))) { case (entry, shortcut) =>
                Shortcuts.addGlobalShortcut(shortcut)(_ =>
                  DisplayOutputs
-                   .activateOnly(entry.matches, refreshRateHz = entry.refreshRateHz)
+                   .activateOnly(entry.matches, resolution = entry.resolution, refreshRateHz = entry.refreshRateHz)
                    .tapErrorCause(t => ZIO.logWarningCause(s"Error switching to display `${entry.name}`", t))
                    .ignore
                )

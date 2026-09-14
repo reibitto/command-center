@@ -31,9 +31,15 @@ public final class GdiDisplay {
     // DWORD -1, meaning "the mode currently in use" for EnumDisplaySettingsEx's iModeNum parameter.
     public static final int ENUM_CURRENT_SETTINGS = -1;
 
+    public static final int DM_PELSWIDTH = 0x00080000;
+    public static final int DM_PELSHEIGHT = 0x00100000;
     public static final int DM_DISPLAYFREQUENCY = 0x00400000;
 
     public static final int CDS_UPDATEREGISTRY = 0x00000001;
+
+    // GetDeviceCaps index for the device's horizontal DPI - used to derive Windows display-scale percentage
+    // (dpi / 96 * 100) for a specific adapter's device context, independent of this process's own DPI awareness.
+    public static final int LOGPIXELSX = 88;
 
     public static final int DISP_CHANGE_SUCCESSFUL = 0;
 
@@ -135,4 +141,15 @@ public final class GdiDisplay {
     }
 
     public static final User32Gdi INSTANCE = Native.load("user32", User32Gdi.class, W32APIOptions.DEFAULT_OPTIONS);
+
+    public interface Gdi32 extends Library {
+
+        Pointer CreateDCW(WString lpszDriver, WString lpszDevice, WString lpszOutput, Pointer lpInitData);
+
+        boolean DeleteDC(Pointer hdc);
+
+        int GetDeviceCaps(Pointer hdc, int index);
+    }
+
+    public static final Gdi32 GDI32 = Native.load("gdi32", Gdi32.class, W32APIOptions.DEFAULT_OPTIONS);
 }

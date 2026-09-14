@@ -175,6 +175,12 @@ object DisplayOutputs {
                 }
     } yield result
 
+  /** Current resolution, refresh rate and display scale for `devicePath` - see
+    * [[DisplayMode.currentMode]]. `None` if the display isn't currently active.
+    */
+  def currentModeInfo(devicePath: String): Task[Option[DisplayMode.CurrentMode]] =
+    DisplayMode.currentMode(devicePath)
+
   // All of the below is process-lifetime state only (plain in-memory fields, not written to disk) - it resets
   // on restart, at which point every target starts fresh from the "available" heuristic again.
 
@@ -349,15 +355,17 @@ object DisplayOutputs {
     * logged at INFO so failures are visible without needing to bump the log
     * level.
     *
-    * If `refreshRateHz` is set, once activation succeeds this also sets that
-    * refresh rate via [[RefreshRate.setRefreshRate]] - best-effort, logged but
-    * not fatal to the overall switch, since `SetDisplayConfig`'s own mode
-    * negotiation can silently drop back to the display's EDID-preferred refresh
-    * rate (often 60Hz) rather than whatever was previously selected.
+    * If `resolution` and/or `refreshRateHz` are set, once activation succeeds
+    * this also restores those via [[DisplayMode.setMode]] - best-effort, logged
+    * but not fatal to the overall switch, since `SetDisplayConfig`'s own mode
+    * negotiation can silently drop back to the display's EDID-preferred mode
+    * (often 60Hz at a lower resolution) rather than whatever was previously
+    * selected.
     */
   def activateOnly(
       nameMatch: String,
       next: Boolean = false,
+      resolution: Option[(Int, Int)] = None,
       refreshRateHz: Option[Int] = None,
       strategy: SwitchStrategy = SwitchStrategy.Direct,
       maxAttempts: Int = 4,
@@ -400,17 +408,17 @@ object DisplayOutputs {
         _ <-
           if (rc == ERROR_SUCCESS)
             ZIO.succeed(preferredSourceByTarget.put(chosenTarget, chosenSource)) *>
-              ZIO.foreachDiscard(refreshRateHz) { hz =>
-                // Give Windows a moment to propagate the CCD change to the legacy GDI device list that
-                // RefreshRate reads from, before trying to read/set a mode on it.
-                ZIO.sleep(300.millis) *>
-                  RefreshRate
-                    .setRefreshRate(chosenDevicePath, hz)
-                    .tapErrorCause(c =>
-                      ZIO.logWarningCause(s"Could not set refresh rate to ${hz}Hz for `$nameMatch`", c)
-                    )
-                    .ignore
-              }
+              ZIO
+                .when(resolution.nonEmpty || refreshRateHz.nonEmpty) {
+                  // Give Windows a moment to propagate the CCD change to the legacy GDI device list that
+                  // DisplayMode reads from, before trying to read/set a mode on it.
+                  ZIO.sleep(300.millis) *>
+                    DisplayMode
+                      .setMode(chosenDevicePath, resolution, refreshRateHz)
+                      .tapErrorCause(c => ZIO.logWarningCause(s"Could not restore display mode for `$nameMatch`", c))
+                      .ignore
+                }
+                .unit
           else if (attemptNum < maxAttempts) ZIO.sleep(retryDelay) *> attempt(attemptNum + 1, rotationOrder)
           else
             ZIO.fail(
