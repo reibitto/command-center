@@ -1,5 +1,5 @@
 object V {
-  val caffeine = "3.2.4"
+  val caffeine = "3.3.0"
 
   val circe = "0.14.16"
 
