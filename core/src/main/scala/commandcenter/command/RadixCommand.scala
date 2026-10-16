@@ -71,9 +71,8 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
       toRadix: Int,
       context: CommandContext
   ): PreviewResult[Unit] = {
-    val n = java.lang.Long.valueOf(numberAsString, fromRadix)
-    val formatted = java.lang.Long.toString(n, toRadix)
-    val message = Str(s"$formatted")
+    // BigInt so values beyond the Long range (e.g. 0xFFFFFFFFFFFFFFFF) convert instead of throwing
+    val message = Str(BigInt(numberAsString, fromRadix).toString(toRadix))
 
     Preview.unit
       .score(Scores.veryHigh(context))

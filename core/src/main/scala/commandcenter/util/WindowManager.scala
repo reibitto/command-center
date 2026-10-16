@@ -69,7 +69,7 @@ object WindowManager {
     val windowRatio = (windowRect.right - windowRect.left) / (windowRect.bottom - windowRect.top).toDouble
     val windowWidth = Math.round(monitorHeight * windowRatio).toInt min monitorWidth
 
-    val x = (monitorWidth - windowWidth) / 2
+    val x = monitorInfo.rcWork.left + (monitorWidth - windowWidth) / 2
     val y = monitorInfo.rcWork.top
 
     User32.INSTANCE.SetWindowPos(window, null, x, y, windowWidth, monitorHeight, WinUser.SWP_NOZORDER)
@@ -110,15 +110,15 @@ object WindowManager {
       boundsList: Vector[WindowBounds]
   ): Task[Unit] =
     for {
-      cycleWindowState <- cycleWindowStateRef.get.map(_.getOrElse(CycleWindowState(-step, None)))
-      newIndex = if (cycleWindowState.lastAction.contains(name)) {
-                   val raw = (cycleWindowState.index + step) % boundsList.length
-                   if (raw < 0) raw + boundsList.length else raw
-                 } else {
-                   0
-                 }
+      // `modify` so that rapid repeated presses can't read the same index
+      newIndex <- cycleWindowStateRef.modify { state =>
+                    val index = state.collect { case CycleWindowState(i, Some(`name`)) =>
+                      Math.floorMod(i + step, boundsList.length)
+                    }.getOrElse(0)
+
+                    (index, Some(CycleWindowState(index, Some(name))))
+                  }
       _ <- transform(boundsList(newIndex))
-      _ <- cycleWindowStateRef.set(Some(CycleWindowState(newIndex, Some(name))))
     } yield ()
 
   def transform(bounds: WindowBounds): Task[Unit] = ZIO.attempt {

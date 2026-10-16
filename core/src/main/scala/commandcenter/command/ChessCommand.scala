@@ -131,18 +131,11 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
 
     case object Default extends ChessInterface {
 
+      // Chess.com for PGNs since Lichess can't load PGNs that start from a setup position. Lichess otherwise.
       def url(state: Option[ChessState]): String =
         state match {
-          case Some(p @ ChessState.Pgn(pgn)) =>
-            val encodedQuery = encodeQuery(pgn)
-            s"https://www.chess.com/analysis?flip=${p.isPlayerBlack}&pgn=$encodedQuery"
-
-          case Some(ChessState.Fen(fen)) =>
-            val encodedQuery = fen.replace(' ', '_')
-            s"https://lichess.org/analysis/$encodedQuery"
-
-          case None =>
-            "https://lichess.org/analysis"
+          case Some(_: ChessState.Pgn) => ChessCom.url(state)
+          case _                       => Lichess.url(state)
         }
     }
 
@@ -155,7 +148,7 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
             s"https://www.chess.com/analysis?flip=${p.isPlayerBlack}&pgn=$encodedQuery"
 
           case Some(ChessState.Fen(fen)) =>
-            s"https://www.chess.com/analysis?flip=false&fen=$fen"
+            s"https://www.chess.com/analysis?flip=false&fen=${encodeQuery(fen)}"
 
           case None =>
             "https://www.chess.com/analysis"

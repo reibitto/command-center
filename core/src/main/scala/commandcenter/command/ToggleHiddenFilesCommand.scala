@@ -44,7 +44,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
         PCommand(
           "powershell",
           "(Get-ItemProperty Registry::HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced -Name Hidden).Hidden"
-        ).string.map(_.trim.toInt)
+        ).string.map(_.trim.toIntOption.getOrElse(2))
       _ <- PCommand(
              "reg",
              "add",
@@ -54,7 +54,8 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
              "/t",
              "REG_DWORD",
              "/d",
-             (1 - showingAllFlag).toString,
+             // Explorer uses 1 for "show hidden files" and 2 for "don't show".
+             (if (showingAllFlag == 1) 2 else 1).toString,
              "/f"
            ).exitCode
     } yield ()

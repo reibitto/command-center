@@ -1,7 +1,7 @@
 object V {
-  val caffeine = "3.2.4"
+  val caffeine = "3.3.1"
 
-  val circe = "0.14.16"
+  val circe = "0.14.17"
 
   val circeConfig = "0.10.2"
 
@@ -37,7 +37,7 @@ object V {
 
   val swt = "3.135.0"
 
-  val zio = "2.1.26"
+  val zio = "2.1.27"
 
   val zioLogging = "2.5.3"
 
