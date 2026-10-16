@@ -1,7 +1,7 @@
 object V {
   val caffeine = "3.2.4"
 
-  val circe = "0.14.16"
+  val circe = "0.14.17"
 
   val circeConfig = "0.10.2"
 
