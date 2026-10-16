@@ -37,7 +37,7 @@ object V {
 
   val swt = "3.135.0"
 
-  val zio = "2.1.26"
+  val zio = "2.1.27"
 
   val zioLogging = "2.5.3"
 
