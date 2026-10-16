@@ -17,7 +17,7 @@ final case class ConfigCommand(commandNames: List[String]) extends Command[Unit]
       input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
       file  <- CCConfig.defaultConfigFile
     } yield {
-      val run = ZIO.attempt(Desktop.getDesktop.open(file))
+      val run = ZIO.attemptBlocking(Desktop.getDesktop.open(file))
 
       PreviewResults.one(
         Preview.unit

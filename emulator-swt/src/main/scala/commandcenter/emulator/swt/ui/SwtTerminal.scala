@@ -17,6 +17,7 @@ import zio.*
 
 import java.awt.Dimension
 import scala.collection.mutable
+import scala.util.Try
 
 final case class SwtTerminal(
     terminal: RawSwtTerminal,
@@ -69,31 +70,24 @@ final case class SwtTerminal(
       override def keyPressed(e: KeyEvent): Unit =
         e.keyCode match {
           case SWT.ESC =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                invoke {
-                  terminal.inputBox.setSelection(terminal.inputBox.getText.length)
-                  terminal.inputBox.setFocus()
-                }
+            fork {
+              invoke {
+                terminal.inputBox.setSelection(terminal.inputBox.getText.length)
+                terminal.inputBox.setFocus()
               }
             }
 
           case _ =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                for {
-                  config <- Conf.config
-                  shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
-                  _ <- invoke {
-                         val text = terminal.outputBox.getSelectionText
-                         terminal.inputBox.setText(text)
-                         terminal.inputBox.setSelection(text.length)
-                         terminal.inputBox.setFocus()
-                       }.when(config.keyboard.outputLookupShortcut == shortcutPressed)
-                } yield ()
-              }
-            }
+            val shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
 
+            fork {
+              invoke {
+                val text = terminal.outputBox.getSelectionText
+                terminal.inputBox.setText(text)
+                terminal.inputBox.setSelection(text.length)
+                terminal.inputBox.setFocus()
+              }.whenZIO(Conf.get(_.keyboard.outputLookupShortcut == shortcutPressed))
+            }
         }
     })
 
@@ -101,103 +95,61 @@ final case class SwtTerminal(
 
       override def keyReleased(e: KeyEvent): Unit =
         e.keyCode match {
-          case SWT.CR | SWT.KEYPAD_CR =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease))
-              }
-            }
-
-          case SWT.ESC =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease))
-              }
-            }
-
-          case _ => ()
+          case SWT.CR | SWT.KEYPAD_CR => fork(runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.ESC                => fork(resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case _                      => ()
         }
 
       override def keyPressed(e: KeyEvent): Unit =
         e.keyCode match {
           // We also check the `character` field to that hitting `Enter` in IME composition mode doesn't immediately
           // run the command.
-          case SWT.CR if e.character == SWT.CR =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
-              }
-            }
-
-          case SWT.KEYPAD_CR =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
-              }
-            }
-
-          case SWT.ESC =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease))
-              }
-            }
-
-          case SWT.ARROW_DOWN if e.isAltDown =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                invoke {
-                  terminal.outputBox.setFocus()
-                }
-              }
-            }
+          case SWT.CR if e.character == SWT.CR => fork(runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.KEYPAD_CR                   => fork(runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.ESC                         => fork(resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.ARROW_DOWN if e.isAltDown   => fork(invoke(terminal.outputBox.setFocus()))
 
           case SWT.ARROW_DOWN =>
-            e.doit = false // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
+            e.doit = false // Must be set synchronously in the SWT callback, so it can't be part of the effect
 
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                for {
-                  previousResults <- searchResultsRef.get
-                  previousCursor  <-
-                    commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-                  _ <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
-                } yield ()
-              }
+            fork {
+              for {
+                previousResults <- searchResultsRef.get
+                previousCursor  <-
+                  commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
+                _ <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
+              } yield ()
             }
 
           case SWT.ARROW_UP =>
-            e.doit = false // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
+            e.doit = false // Must be set synchronously in the SWT callback, so it can't be part of the effect
 
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                for {
-                  previousCursor <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
-                  _              <- renderSelectionCursor(1).when(previousCursor > 0)
-                } yield ()
-              }
+            fork {
+              for {
+                previousCursor <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
+                _              <- renderSelectionCursor(1).when(previousCursor > 0)
+              } yield ()
             }
 
           case _ =>
-            Unsafe.unsafe { implicit u =>
-              runtime.unsafe.fork {
-                for {
-                  previousResults <- searchResultsRef.get
-                  shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
-                  eligibleResults = previousResults.previews.filter { p =>
-                                      p.shortcuts.contains(shortcutPressed)
-                                    }
-                  bestMatch = eligibleResults.maxByOption(_.score)
-                  _ <- bestMatch match {
-                         case Some(preview) => runPreview(preview)
-                         case None          => runGlobalShortcut(shortcutPressed)
-                       }
-                } yield ()
+            val shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
+
+            fork {
+              searchResultsRef.get.flatMap { previousResults =>
+                previousResults.previews.filter(_.shortcuts.contains(shortcutPressed)).maxByOption(_.score) match {
+                  case Some(preview) => runPreview(preview)
+                  case None          => runGlobalShortcut(shortcutPressed)
+                }
               }
             }
         }
     })
   }
+
+  private def fork(effect: URIO[Env, Any]): Unit =
+    Unsafe.unsafe { implicit u =>
+      runtime.unsafe.fork(effect)
+    }
 
   // Falls back to a command's own configured `shortcuts` even when the input textbox is empty.
   private def runGlobalShortcut(shortcutPressed: KeyboardShortcut): URIO[Env, Unit] =
@@ -282,9 +234,10 @@ final case class SwtTerminal(
               smartBuffer.lineStartIndices.addOne(lineStart)
               lineStart += renderStr.length + 2
 
+              val plainText = renderStr.plainText
               var i: Int = 0
               Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
-                val s = renderStr.plainText.substring(i, i + c.length)
+                val s = plainText.substring(i, i + c.length)
 
                 i += c.length
 
@@ -344,12 +297,10 @@ final case class SwtTerminal(
   def invoke(effect: => Unit): UIO[Unit] =
     ZIO.succeed(terminal.display.asyncExec(() => effect))
 
+  // Evaluated on the UI thread. Exceptions are passed to the callback so the fiber can't hang.
   def invokeReturn[A](effect: => A): Task[A] =
-    ZIO.asyncZIO { cb =>
-      invoke {
-        val evaluatedEffect = effect
-        cb(ZIO.succeed(evaluatedEffect))
-      }
+    ZIO.async { cb =>
+      terminal.display.asyncExec(() => cb(ZIO.fromTry(Try(effect))))
     }
 
   def reset: URIO[Env, Unit] =
@@ -397,7 +348,7 @@ final case class SwtTerminal(
     for {
       keepOpen <- Conf.get(_.general.keepOpen)
       _        <- if (keepOpen)
-             WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
+             WindowManager.switchFocusToPreviousActiveWindow.ignore
            else
              invoke(terminal.shell.setVisible(false))
       _ <- consecutiveOpenCountRef.set(0)
@@ -427,9 +378,12 @@ final case class SwtTerminal(
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
       _      <- invoke {
+             val previousFont = terminal.inputBox.getFont
              val preferredFont = terminal.getPreferredFont(config.display.fonts)
              terminal.inputBox.setFont(preferredFont)
              terminal.outputBox.setFont(preferredFont)
+             // SWT fonts are native resources and must be disposed explicitly.
+             if (previousFont != preferredFont) previousFont.dispose()
            }
     } yield ()
 }

@@ -25,7 +25,7 @@ final case class ITunesCommand(commandNames: List[String], cache: ZCache[String,
   val stopCommand = decline.Command("stop", "Stop the current track")(Opts(Opt.Stop))
   val nextTrackCommand = decline.Command("next", "Switch to next track")(Opts(Opt.NextTrack))
   val previousTrackCommand = decline.Command("previous", "Switch to previous track")(Opts(Opt.PreviousTrack))
-  val rewindCommand = decline.Command("rewind", "Stop the current track")(Opts(Opt.Rewind))
+  val rewindCommand = decline.Command("rewind", "Rewind current track to the beginning")(Opts(Opt.Rewind))
 
   // TODO: Make this word with negative numbers too
   val seekCommand = decline
@@ -97,7 +97,7 @@ final case class ITunesCommand(commandNames: List[String], cache: ZCache[String,
     } yield {
       val run = for {
         opt <-
-          ZIO.fromEither(parsed).orElseFail(RunError.Ignore).someOrFail(RunError.InternalError("No subcommand"))
+          ZIO.fromEither(parsed).orElseFail(RunError.Ignore).someOrFail(RunError.Ignore)
         _ <- opt match {
                case Opt.Play          => playFn
                case Opt.Pause         => pauseFn

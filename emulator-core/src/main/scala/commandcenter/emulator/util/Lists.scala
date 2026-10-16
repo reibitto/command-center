@@ -4,12 +4,16 @@ import scala.annotation.tailrec
 
 object Lists {
 
-  @tailrec
-  def groupConsecutive[A](list: List[A], acc: List[List[A]] = Nil): List[List[A]] =
-    list match {
-      case head :: tail =>
-        val (t1, t2) = tail.span(_ == head)
-        groupConsecutive(t2, acc :+ (head :: t1))
-      case _ => acc
-    }
+  def groupConsecutive[A](list: List[A]): List[List[A]] = {
+    @tailrec
+    def loop(rest: List[A], acc: List[List[A]]): List[List[A]] =
+      rest match {
+        case head :: tail =>
+          val (same, next) = tail.span(_ == head)
+          loop(next, (head :: same) :: acc)
+        case Nil => acc.reverse
+      }
+
+    loop(list, Nil)
+  }
 }

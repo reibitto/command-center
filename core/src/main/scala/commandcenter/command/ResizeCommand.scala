@@ -27,7 +27,7 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
                    .fold(
                      HelpMessage.formatted,
                      { case (w, h) =>
-                       Str(s"Set window size to width: $w, maxHeight: $h)")
+                       Str(s"Set window size to width: $w, height: $h")
                      }
                    )
     } yield {

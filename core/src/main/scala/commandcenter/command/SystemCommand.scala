@@ -97,7 +97,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
   def systemSleep: Task[Unit] =
     OS.os match {
       case OS.Windows =>
-        ZIO.attempt {
+        ZIO.attemptBlocking {
           PowrProf.SetSuspendState(bHibernate = false, bForce = false, bWakeupEventsDisabled = false)
         }.unit
 
@@ -110,7 +110,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
   def turnMonitorOff: Task[Unit] =
     OS.os match {
       case OS.Windows =>
-        ZIO.attempt {
+        ZIO.attemptBlocking {
           User32.INSTANCE.SendMessage(
             WinUser.HWND_BROADCAST,
             WinUser.WM_SYSCOMMAND,
@@ -128,7 +128,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
   def enableScreenSaver: Task[Unit] =
     OS.os match {
       case OS.Windows =>
-        ZIO.attempt {
+        ZIO.attemptBlocking {
           User32.INSTANCE.SendMessage(
             WinUser.HWND_BROADCAST,
             WinUser.WM_SYSCOMMAND,

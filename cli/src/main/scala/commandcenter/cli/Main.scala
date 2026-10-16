@@ -37,8 +37,8 @@ object Main extends ZIOApp {
       _        <- terminal.render(SearchResults.empty)
       _        <- ZStream
              .fromQueue(terminal.renderQueue)
-             .foreach(terminal.render)
-             .forkDaemon
+             .foreach(terminal.render(_).ignore) // One failed render must not stop all future renders
+             .forkScoped
       _ <- terminal
              .processEvent(config.commands, config.aliases)
              .repeatWhile {

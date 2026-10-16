@@ -4,6 +4,7 @@ import com.tulskiy.keymaster.common.{HotKey, HotKeyListener, Provider}
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
 import commandcenter.event.KeyboardShortcut
 import commandcenter.shortcuts.Shortcuts
+import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
 import zio.*
 
@@ -36,22 +37,20 @@ final case class ShortcutsLive(provider: Provider) extends Shortcuts {
 
 object ShortcutsLive {
 
-  def layer: ZLayer[Scope, Throwable, Shortcuts] =
-    ZLayer {
-      for {
-        shortcuts <- ZIO.acquireRelease(ZIO.attempt {
-                       // This is a hack for macOS to get the separate `java` Application started (it shows up as an icon in the Dock).
-                       // Otherwise the hot key provider won't be fully started up yet.
-                       Try(Toolkit.getDefaultToolkit)
+  def layer: ZLayer[Any, Throwable, Shortcuts] =
+    ZLayer.scoped {
+      ZIO.acquireRelease(ZIO.attempt {
+        // This is a hack for macOS to get the separate `java` Application started (it shows up as an icon in the Dock).
+        // Otherwise the hot key provider won't be fully started up yet. Elsewhere it would needlessly start AWT.
+        if (OS.os == OS.MacOS) Try(Toolkit.getDefaultToolkit)
 
-                       new ShortcutsLive(Provider.getCurrentProvider(false))
-                     })(shortcuts =>
-                       ZIO.succeed {
-                         shortcuts.provider.reset()
-                         shortcuts.provider.stop()
-                       }
-                     )
-      } yield shortcuts
+        ShortcutsLive(Provider.getCurrentProvider(false))
+      })(shortcuts =>
+        ZIO.succeed {
+          shortcuts.provider.reset()
+          shortcuts.provider.stop()
+        }
+      )
     }
 
 }

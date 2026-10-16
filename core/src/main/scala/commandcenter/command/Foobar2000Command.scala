@@ -29,7 +29,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
   val stopCommand = decline.Command("stop", "Stop the current track")(Opts(Opt.Stop))
   val nextTrackCommand = decline.Command("next", "Switch to next track")(Opts(Opt.NextTrack))
   val previousTrackCommand = decline.Command("previous", "Switch to previous track")(Opts(Opt.PreviousTrack))
-  val rewindCommand = decline.Command("rewind", "Stop the current track")(Opts(Opt.Rewind))
+  val rewindCommand = decline.Command("rewind", "Rewind current track to the beginning")(Opts(Opt.Rewind))
   val deleteTrackCommand = decline.Command("delete", "Delete the current track")(Opts(Opt.DeleteTrack))
   val helpCommand = decline.Command("help", "Display command usage")(Opts(Opt.Help))
 
@@ -100,13 +100,15 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
     )
 
   private def trackInfoFromWindow: Task[Option[String]] =
-    ZIO.async { cb =>
+    ZIO.attemptBlocking {
+      var trackInfo: Option[String] = None
+
       User32.INSTANCE.EnumWindows(
         (window: HWND, _: Pointer) => {
           val windowTitle = fromCString(256)(a => User32.INSTANCE.GetWindowText(window, a, a.length))
 
           if (windowTitle.contains("[foobar2000]")) {
-            cb(ZIO.some(windowTitle.replace("[foobar2000]", "").trim))
+            trackInfo = Some(windowTitle.replace("[foobar2000]", "").trim)
             false
           } else {
             true
@@ -115,8 +117,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
         Pointer.NULL
       )
 
-      cb(ZIO.none)
-
+      trackInfo
     }
 }
 

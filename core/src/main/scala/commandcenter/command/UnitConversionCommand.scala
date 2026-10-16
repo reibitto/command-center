@@ -204,28 +204,28 @@ object UnitOfMeasure {
         convertFromBytes(number).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Kilobyte =>
-        convertFromBytes((number * 1000).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1000).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Kibibyte =>
-        convertFromBytes((number * 1024).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1024).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Megabyte =>
-        convertFromBytes((number * 1000 * 1000).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1000 * 1000).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Mebibyte =>
-        convertFromBytes((number * 1024 * 1024).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1024 * 1024).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Gigabyte =>
-        convertFromBytes((number * 1000 * 1000 * 1000).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1000 * 1000 * 1000).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Gibibyte =>
-        convertFromBytes((number * 1024 * 1024 * 1024).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1024 * 1024 * 1024).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Terabyte =>
-        convertFromBytes((number * 1000 * 1000 * 1000 * 1000).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1000 * 1000 * 1000 * 1000).filter(_.unitOfMeasure != u)
 
       case u @ UnitOfMeasure.Tebibyte =>
-        convertFromBytes((number * 1024 * 1024 * 1024 * 1024).toInt).filter(_.unitOfMeasure != u)
+        convertFromBytes(number * 1024 * 1024 * 1024 * 1024).filter(_.unitOfMeasure != u)
 
       case UnitOfMeasure.Pound =>
         Seq(ConversionResult(number * 0.453592, UnitOfMeasure.Kilogram))

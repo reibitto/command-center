@@ -47,7 +47,7 @@ object CommandPlugin {
 
                           case error: CommandPluginError.UnexpectedException =>
                             for {
-                              typeName <- ZIO.attempt(c.getString("type")).catchAll(_ => ZIO.succeed("<unknown>"))
+                              typeName <- ZIO.attempt(c.getString("type")).orElseSucceed("<unknown>")
                               _        <- ZIO.logWarningCause(
                                      s"Skipping loading `$typeName` plugin because it failed to load",
                                      Cause.fail(error.cause)
@@ -79,7 +79,10 @@ object CommandPlugin {
                       .asInstanceOf[CommandPlugin[Command[?]]]
                   )
                   .mapError(CommandPluginError.UnexpectedException.apply)
-      command <- plugin.make(c).mapError(CommandPluginError.UnexpectedException.apply)
+      command <- plugin.make(c).mapError {
+                   case e: CommandPluginError => e
+                   case t                     => CommandPluginError.UnexpectedException(t)
+                 }
     } yield command
   }
 }

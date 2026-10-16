@@ -56,6 +56,8 @@ public class WindowsProvider extends Provider {
             public void run() {
                 LOGGER.info("Starting Windows global hotkey provider");
                 WinUser.MSG msg = new WinUser.MSG();
+                // Create this thread's message queue so that PostThreadMessage from other threads can't fail.
+                User32.INSTANCE.PeekMessage(msg, null, WinUser.WM_USER, WinUser.WM_USER, 0);
                 synchronized (lock) {
                     threadId = Kernel32.INSTANCE.GetCurrentThreadId();
                     // Run once in this thread to start message queue

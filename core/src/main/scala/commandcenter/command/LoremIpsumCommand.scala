@@ -14,6 +14,9 @@ import fansi.Str
 import zio.*
 
 final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) extends Command[Unit] {
+  private val words = lipsum.split("\\s+").filter(_.nonEmpty)
+  private val sentences = lipsum.split("\\.").map(_.trim).filter(_.nonEmpty)
+
   val commandType: CommandType = CommandType.LoremIpsumCommand
   val title: String = "Lorem Ipsum"
 
@@ -47,9 +50,9 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
       val run = for {
         (i, chunkType) <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
         text = chunkType match {
-                 case ChunkType.Word     => Iterator.continually(lipsum.split("\\s")).flatten.take(i).mkString(" ")
+                 case ChunkType.Word     => Iterator.continually(words).flatten.take(i).mkString(" ")
                  case ChunkType.Sentence =>
-                   Iterator.continually(lipsum.split("\\.")).flatten.take(i).mkString(". ") ++ "."
+                   Iterator.continually(sentences).flatten.take(i).mkString("", ". ", ".")
                  case ChunkType.Paragraph => Iterator.continually(lipsum).take(i).mkString("\n")
                }
         _ <- Tools.setClipboard(text)

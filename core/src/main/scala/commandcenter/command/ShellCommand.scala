@@ -93,7 +93,7 @@ final case class ShellCommand(
     }
 
   private def shellExecute(operation: String, file: String, parameters: String, showCmd: Int): Task[Unit] =
-    ZIO.attempt {
+    ZIO.attemptBlocking {
       val result = Shell32.INSTANCE.ShellExecute(null, operation, file, parameters, null, showCmd).intValue()
 
       // values > 32 indicate success per the Win32 docs

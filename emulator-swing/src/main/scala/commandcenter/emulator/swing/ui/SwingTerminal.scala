@@ -164,6 +164,9 @@ final case class SwingTerminal(
               case Rendered.Styled(segments) =>
                 renderBar(row)
 
+                if (row < commandCursor)
+                  scrollToPosition += segments.map(_.text.length).sum + 3
+
                 segments.foreach { styledText =>
                   val style = new SimpleAttributeSet()
 
@@ -176,9 +179,6 @@ final case class SwingTerminal(
                     case Style.FontFamily(fontFamily) => StyleConstants.setFontFamily(style, fontFamily)
                     case Style.FontSize(fontSize)     => StyleConstants.setFontSize(style, fontSize)
                   }
-
-                  if (row < commandCursor)
-                    scrollToPosition += styledText.text.length + 3
 
                   document.insertString(document.getLength, styledText.text, style)
                 }
@@ -194,9 +194,10 @@ final case class SwingTerminal(
 
                 val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
+                val plainText = renderStr.plainText
                 var i: Int = 0
                 Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
-                  val s = renderStr.plainText.substring(i, i + c.length)
+                  val s = plainText.substring(i, i + c.length)
 
                   i += c.length
 
@@ -392,9 +393,12 @@ final case class SwingTerminal(
     for {
       config <- Conf.reload
       _      <- setOpacity(config.display.opacity)
-      _      <- ZIO.attempt {
-             inputTextField.setFont(preferredFont)
-             outputTextPane.setFont(preferredFont)
+      font   <- getPreferredFont
+      _      <- ZIO.succeed {
+             SwingUtilities.invokeLater { () =>
+               inputTextField.setFont(font)
+               outputTextPane.setFont(font)
+             }
            }
     } yield ()
 
@@ -408,7 +412,7 @@ final case class SwingTerminal(
           GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.map(_.toLowerCase).toSet
         )
       font = fonts.find(f => installedFontNames.contains(f.getName.toLowerCase)).getOrElse(fallbackFont)
-    } yield font).orElse(ZIO.succeed(fallbackFont))
+    } yield font).orElseSucceed(fallbackFont)
   }
 
   def getPreferredFrameWidth: URIO[Conf, Int] =
