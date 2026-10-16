@@ -25,6 +25,7 @@ object CommandType extends Enum[CommandType] {
   case object HoogleCommand extends CommandType
   case object HttpCommand extends CommandType
   case object ITunesCommand extends CommandType
+  case object KeepSoundCommand extends CommandType
   case object LocalIPCommand extends CommandType
   case object LockCommand extends CommandType
   case object LoremIpsumCommand extends CommandType

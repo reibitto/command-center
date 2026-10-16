@@ -284,6 +284,7 @@ object Command {
                    case CommandType.HoogleCommand             => HoogleCommand.make(config)
                    case CommandType.HttpCommand               => HttpCommand.make(config)
                    case CommandType.ITunesCommand             => ITunesCommand.make(config)
+                   case CommandType.KeepSoundCommand          => KeepSoundCommand.make(config)
                    case CommandType.LocalIPCommand            => LocalIPCommand.make(config)
                    case CommandType.LockCommand               => LockCommand.make(config)
                    case CommandType.LoremIpsumCommand         => LoremIpsumCommand.make(config)
