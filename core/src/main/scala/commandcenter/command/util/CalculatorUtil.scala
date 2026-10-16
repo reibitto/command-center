@@ -128,7 +128,7 @@ final class CalculatorUtil(parameters: Parameters) {
 
   private def random[T: P]: P[BigDecimal] =
     P("random" ~ "int".!.? ~ multipleParametersParser(2)).map {
-      case (Some(_), Seq(a, b)) => BigDecimal(randomBigInt(a.toBigInt, b.toBigInt, rng))
+      case (Some(_), Seq(a, b)) => BigDecimal(randomBigInt(a.min(b).toBigInt, a.max(b).toBigInt, rng))
       case (_, Seq(a, b))       => a + BigDecimal(rng.nextDouble()) * (b - a)
       case _                    => BigDecimal(0) // unreachable: multipleParametersParser(2) always yields 2 elements
     } |

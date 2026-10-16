@@ -62,8 +62,10 @@ final case class TimerCommand(
         _ <- activeTimersRef.update(_ + activeTimer)
         timerDoneMessage = timerMessageOpt.getOrElse(s"Timer completed after ${delay.render}")
         // Note: Can't use JOptionPane here for message dialogs until Graal native-image supports Swing
-        _ <- Tools.notify(timerDoneMessage, "Command Center Timer Event").delay(delay)
-        _ <- activeTimersRef.update(_ - activeTimer)
+        _ <- Tools
+               .notify(timerDoneMessage, "Command Center Timer Event")
+               .delay(delay)
+               .ensuring(activeTimersRef.update(_ - activeTimer))
       } yield ()
 
       PreviewResults.one(

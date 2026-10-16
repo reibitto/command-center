@@ -177,67 +177,69 @@ object Command {
   ): URIO[Env, SearchResults[A]] =
     (for {
       _            <- ZIO.logTrace(s"Searching on input `$input` for ${commands.length} commands")
-      resultChunks <- if (input.isEmpty)
-                        ZIO.succeed(Chunk.empty)
-                      else
-                        ZIO
-                          .foreachPar(Chunk.fromIterable(commands)) { command =>
-                            command
-                              .preview(SearchInput(input, List(input), command.commandNames, context))
-                              .flatMap {
-                                case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
-                                case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
-                                case p @ PreviewResults.Paginated(
-                                      rs,
-                                      initialPageSize,
-                                      _,
-                                      totalRemaining
-                                    ) =>
-                                  for {
-                                    (results, restStream) <- Scope.global.use {
-                                                               rs.peel(ZSink.take[PreviewResult[A]](initialPageSize))
-                                                             }
-                                  } yield results match {
-                                    case beforeLast :+ last if results.length >= initialPageSize =>
-                                      if (beforeLast.isEmpty)
-                                        beforeLast :+ last
-                                          .runOption(RunOption.RemainOpen)
-                                          .moreResults(
-                                            MoreResults.Remaining(
-                                              p.copy(
-                                                results = restStream,
-                                                totalRemaining = totalRemaining.map(_ - initialPageSize)
-                                              )
-                                            )
-                                          )
-                                      else
-                                        beforeLast :+ last :+
-                                          PreviewResult
-                                            .nothing(Rendered.Ansi(Color.Yellow(p.moreMessage)))
-                                            .runOption(RunOption.RemainOpen)
-                                            .score(last.score)
-                                            .moreResults(
-                                              MoreResults.Remaining(
-                                                p.copy(
-                                                  results = restStream,
-                                                  totalRemaining = totalRemaining.map(_ - initialPageSize)
-                                                )
-                                              )
-                                            )
+      resultChunks <-
+        if (input.isEmpty)
+          ZIO.succeed(Chunk.empty)
+        else
+          ZIO
+            .foreachPar(Chunk.fromIterable(commands)) { command =>
+              // `suspendSucceed` so that exceptions thrown while constructing the effect become defects
+              ZIO
+                .suspendSucceed(command.preview(SearchInput(input, List(input), command.commandNames, context)))
+                .flatMap {
+                  case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
+                  case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
+                  case p @ PreviewResults.Paginated(
+                        rs,
+                        initialPageSize,
+                        _,
+                        totalRemaining
+                      ) =>
+                    for {
+                      (results, restStream) <- Scope.global.use {
+                                                 rs.peel(ZSink.take[PreviewResult[A]](initialPageSize))
+                                               }
+                    } yield results match {
+                      case beforeLast :+ last if results.length >= initialPageSize =>
+                        if (beforeLast.isEmpty)
+                          beforeLast :+ last
+                            .runOption(RunOption.RemainOpen)
+                            .moreResults(
+                              MoreResults.Remaining(
+                                p.copy(
+                                  results = restStream,
+                                  totalRemaining = totalRemaining.map(_ - initialPageSize)
+                                )
+                              )
+                            )
+                        else
+                          beforeLast :+ last :+
+                            PreviewResult
+                              .nothing(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+                              .runOption(RunOption.RemainOpen)
+                              .score(last.score)
+                              .moreResults(
+                                MoreResults.Remaining(
+                                  p.copy(
+                                    results = restStream,
+                                    totalRemaining = totalRemaining.map(_ - initialPageSize)
+                                  )
+                                )
+                              )
 
-                                    case chunk => chunk
-                                  }
-                              }
-                              .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
-                              .either
-                          }
-                          .withParallelism(previewParallelism)
-                          .timed
-                          .flatMap { case (timeTaken, r) =>
-                            ZIO
-                              .logTrace(s"All previews took ${timeTaken.render} (parallelism=$previewParallelism)")
-                              .as(r)
-                          }
+                      case chunk => chunk
+                    }
+                }
+                .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))
+                .either
+            }
+            .withParallelism(previewParallelism)
+            .timed
+            .flatMap { case (timeTaken, r) =>
+              ZIO
+                .logTrace(s"All previews took ${timeTaken.render} (parallelism=$previewParallelism)")
+                .as(r)
+            }
     } yield resultChunks.flatMap {
       case Left(e)  => Chunk.single(Left(e))
       case Right(r) => r.map(Right(_))

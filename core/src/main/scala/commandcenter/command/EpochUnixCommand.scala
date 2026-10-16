@@ -21,7 +21,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
                              .currentTime(TimeUnit.SECONDS)
                              .map(time => (time.toString, Scores.veryHigh(input.context)))
                          } else {
-                           input.rest.toLongOption match {
+                           input.rest.trim.toLongOption match {
                              case Some(seconds) =>
                                ZIO.attempt {
                                  val formatted = Instant
@@ -36,7 +36,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
                                  }
 
                                  (formatted, score)
-                               }.mapError(CommandError.UnexpectedError(this))
+                               }.orElseFail(CommandError.NotApplicable) // Out of range for `Instant`
 
                              case None => ZIO.fail(CommandError.NotApplicable)
                            }

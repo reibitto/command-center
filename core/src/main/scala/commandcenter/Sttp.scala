@@ -24,10 +24,6 @@ final case class SttpLive(backend: SttpBackend[Task, ZioStreams]) extends Sttp {
 object SttpLive {
 
   def make: ZLayer[Any, Throwable, Sttp] =
-    ZLayer {
-      for {
-        backend <- HttpClientZioBackend()
-      } yield SttpLive(backend)
-    }
+    ZLayer.scoped(HttpClientZioBackend.scoped().map(SttpLive(_)))
 
 }

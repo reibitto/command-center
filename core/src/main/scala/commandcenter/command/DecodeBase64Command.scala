@@ -20,7 +20,10 @@ final case class DecodeBase64Command(commandNames: List[String]) extends Command
       all = (stringArg(), encodingOpt).tupled
       parsedCommand = decline.Command("", s"Base64 decodes the given string")(all).parse(input.args)
       (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
-      decoded = new String(Base64.getDecoder.decode(valueToDecode.getBytes(charset)), charset)
+      // Partial input while typing is expected to be invalid Base64, so that's not an unexpected error.
+      decoded <- ZIO
+                   .attempt(new String(Base64.getDecoder.decode(valueToDecode), charset))
+                   .orElseFail(CommandError.NotApplicable)
     } yield PreviewResults.one(
       Preview(decoded).onRun(Tools.setClipboard(decoded)).score(Scores.veryHigh(input.context))
     )

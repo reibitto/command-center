@@ -19,7 +19,7 @@ final case class SearchMavenCommand(commandNames: List[String]) extends Command[
   val commandType: CommandType = CommandType.SearchMavenCommand
   val title: String = "Maven"
 
-  val scalaArtifactRegex: Regex = "(.+?)(_[02].\\d+)".r
+  val scalaArtifactRegex: Regex = "(.+?)(_(?:[02]\\.\\d+|3))".r
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {

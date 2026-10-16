@@ -21,7 +21,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
                              .currentTime(TimeUnit.MILLISECONDS)
                              .map(time => (time.toString, Scores.veryHigh(input.context)))
                          } else {
-                           input.rest.toLongOption match {
+                           input.rest.trim.toLongOption match {
                              case Some(millis) =>
                                ZIO.attempt {
                                  val formatted = Instant
@@ -36,7 +36,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
                                  }
 
                                  (formatted, score)
-                               }.mapError(CommandError.UnexpectedError(this))
+                               }.orElseFail(CommandError.NotApplicable) // Out of range for `Instant`
 
                              case None => ZIO.fail(CommandError.NotApplicable)
                            }

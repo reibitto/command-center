@@ -77,13 +77,7 @@ final case class SearchInput(
     }
 
   private def scoreInput(text: String): Option[Double] =
-    aliasedInputs.flatMap { aliasedInput =>
-      commandNames.map { commandName =>
-        val matchScore = LengthScorer.scoreDefault(commandName, text)
-        val aliasMatchScore = LengthScorer.scoreDefault(commandName, aliasedInput)
-        matchScore max aliasMatchScore
-      }
-    }.maxOption
+    (text :: aliasedInputs).distinct.flatMap(t => commandNames.map(LengthScorer.scoreDefault(_, t))).maxOption
 }
 
 object SearchInput {
