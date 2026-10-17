@@ -251,6 +251,107 @@ object WindowManager {
                 }
     } yield window
 
+  /** Foreground window, or the next window in z-order if Command Center itself
+    * is in front.
+    */
+  def targetWindow: Task[Option[HWND]] =
+    for {
+      currentPid <- ZIO.succeed(ProcessHandle.current.pid)
+      front      <- frontWindow
+      window     <- front match {
+                  case Some(w) if w.pid != currentPid => ZIO.some(w.windowHandle)
+                  case _                              =>
+                    topLevelWindows.map(_.map(_.windowHandle).find(w => windowPid(w) != currentPid))
+                }
+    } yield window
+
+  def windowPid(window: HWND): Long = {
+    val processId = new IntByReference()
+    User32.INSTANCE.GetWindowThreadProcessId(window, processId)
+    processId.getValue.toLong
+  }
+
+  def windowStyles(window: HWND): WindowStyles = {
+    val rect = new RECT()
+    User32.INSTANCE.GetWindowRect(window, rect)
+
+    WindowStyles(
+      User32.INSTANCE.GetWindowLong(window, WinUser.GWL_STYLE),
+      User32.INSTANCE.GetWindowLong(window, WinUser.GWL_EXSTYLE),
+      WindowRect(rect.left, rect.top, rect.right, rect.bottom)
+    )
+  }
+
+  /** Removes the title bar and frame. If `fillMonitor`, also covers the full
+    * monitor (including the taskbar area).
+    */
+  def makeBorderless(window: HWND, fillMonitor: Boolean): Task[Unit] = ZIO.attempt {
+    val WS_EX_DLGMODALFRAME = 0x00000001
+    val WS_EX_WINDOWEDGE = 0x00000100
+    val WS_EX_CLIENTEDGE = 0x00000200
+    val WS_EX_STATICEDGE = 0x00020000
+
+    val windowPlacement = new WINDOWPLACEMENT()
+    User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
+
+    // A maximized window keeps its maximized bounds and ignores the new size otherwise
+    if (windowPlacement.showCmd == WinUser.SW_SHOWMAXIMIZED) {
+      User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
+    }
+
+    // Capture client area before removing the frame so `strip` mode keeps the render size unchanged
+    val windowRect = new RECT()
+    User32.INSTANCE.GetWindowRect(window, windowRect)
+    val clientRect = new RECT()
+    User32.INSTANCE.GetClientRect(window, clientRect)
+
+    val style = User32.INSTANCE.GetWindowLong(window, WinUser.GWL_STYLE)
+    val exStyle = User32.INSTANCE.GetWindowLong(window, WinUser.GWL_EXSTYLE)
+
+    val removedStyles = WinUser.WS_CAPTION | WinUser.WS_THICKFRAME | WinUser.WS_SYSMENU |
+      WinUser.WS_MINIMIZEBOX | WinUser.WS_MAXIMIZEBOX
+    val removedExStyles = WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE
+
+    User32.INSTANCE.SetWindowLong(window, WinUser.GWL_STYLE, style & ~removedStyles)
+    User32.INSTANCE.SetWindowLong(window, WinUser.GWL_EXSTYLE, exStyle & ~removedExStyles)
+
+    val flags = WinUser.SWP_FRAMECHANGED | WinUser.SWP_NOZORDER | WinUser.SWP_NOOWNERZORDER
+
+    if (fillMonitor) {
+      val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
+      val monitorInfo = new MONITORINFO()
+      User32.INSTANCE.GetMonitorInfo(monitor, monitorInfo)
+      val m = monitorInfo.rcMonitor
+
+      User32.INSTANCE.SetWindowPos(window, null, m.left, m.top, m.right - m.left, m.bottom - m.top, flags)
+    } else {
+      // Frame is symmetric on left/right/bottom; whatever is left over on top is the title bar
+      val clientWidth = clientRect.right - clientRect.left
+      val clientHeight = clientRect.bottom - clientRect.top
+      val border = ((windowRect.right - windowRect.left) - clientWidth) / 2
+      val x = windowRect.left + border
+      val y = windowRect.bottom - border - clientHeight
+
+      User32.INSTANCE.SetWindowPos(window, null, x, y, clientWidth, clientHeight, flags)
+    }
+  }
+
+  def restoreWindowStyles(window: HWND, styles: WindowStyles): Task[Unit] = ZIO.attempt {
+    User32.INSTANCE.SetWindowLong(window, WinUser.GWL_STYLE, styles.style)
+    User32.INSTANCE.SetWindowLong(window, WinUser.GWL_EXSTYLE, styles.exStyle)
+
+    val r = styles.rect
+    User32.INSTANCE.SetWindowPos(
+      window,
+      null,
+      r.left,
+      r.top,
+      r.right - r.left,
+      r.bottom - r.top,
+      WinUser.SWP_FRAMECHANGED | WinUser.SWP_NOZORDER | WinUser.SWP_NOOWNERZORDER
+    )
+  }
+
   def lastErrorCode: Task[Option[Int]] = ZIO.attempt {
     val errorCode = Kernel32.INSTANCE.GetLastError()
     Option.when(errorCode != 0)(errorCode)
@@ -376,3 +477,7 @@ final case class CycleWindowState(index: Int, lastAction: Option[String])
 final case class TopLevelWindow(title: String, windowHandle: HWND)
 
 final case class FrontWindow(title: String, pid: Long, windowHandle: HWND)
+
+final case class WindowRect(left: Int, top: Int, right: Int, bottom: Int)
+
+final case class WindowStyles(style: Int, exStyle: Int, rect: WindowRect)

@@ -266,6 +266,7 @@ object Command {
     for {
       typeName <- ZIO.attempt(config.getString("type")).mapError(CommandPluginError.UnexpectedException.apply)
       command  <- CommandType.withNameOption(typeName).getOrElse(CommandType.External(typeName)) match {
+                   case CommandType.BorderlessCommand         => BorderlessCommand.make(config)
                    case CommandType.CalculatorCommand         => CalculatorCommand.make(config)
                    case CommandType.ChessCommand              => ChessCommand.make(config)
                    case CommandType.ConfigCommand             => ConfigCommand.make(config)

@@ -135,7 +135,8 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
     def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
-        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.frontWindow.map(_.map(_.pid)))
+        pidOpt <-
+          ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.targetWindow.map(_.map(WindowManager.windowPid)))
         tryingToSuspendSelf = pidOpt.contains(ProcessHandle.current.pid)
         _ <- ZIO
                .foreachDiscard(pidOpt) { pid =>
