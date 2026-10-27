@@ -4,10 +4,10 @@ import commandcenter.*
 import commandcenter.command.*
 import commandcenter.emulator.swt.event.KeyEventExtensions.KeyEventExtension
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
-import commandcenter.emulator.util.Lists
-import commandcenter.event.KeyboardShortcut
+import commandcenter.emulator.util.{Lists, WindowsIme}
+import commandcenter.event.{KeyboardShortcut, KeyModifier}
 import commandcenter.locale.Language
-import commandcenter.util.{Debouncer, WindowManager}
+import commandcenter.util.{Debouncer, OS, WindowManager}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import org.eclipse.swt.custom.StyleRange
@@ -38,6 +38,26 @@ final case class SwtTerminal(
     } yield ()
 
   terminal.display.asyncExec { () =>
+    if (OS.os == OS.Windows) {
+      // SWT sends KeyDown for both the key and its character message; both share the original message time
+      var suppressedTime: Option[Int] = None
+
+      terminal.inputBox.addListener(
+        SWT.KeyDown,
+        e =>
+          if (suppressedTime.contains(e.time)) e.doit = false
+          else {
+            // SWT reports letter keys as lowercase characters; Windows virtual-key codes are uppercase
+            val virtualKey = if (e.keyCode >= 'a' && e.keyCode <= 'z') e.keyCode - 'a' + 'A' else e.keyCode
+            val commandModifier = (e.stateMask & (SWT.CTRL | SWT.ALT | SWT.COMMAND)) != 0
+            if (WindowsIme.resendIfBypassed(terminal.inputBox.handle, virtualKey, commandModifier)) {
+              suppressedTime = Some(e.time)
+              e.doit = false
+            }
+          }
+      )
+    }
+
     terminal.inputBox.addModifyListener(new ModifyListener {
 
       override def modifyText(e: ModifyEvent): Unit = {
@@ -92,20 +112,29 @@ final case class SwtTerminal(
     })
 
     terminal.inputBox.addKeyListener(new KeyAdapter {
+      // Modifiers held when Enter was pressed, so they still count if released before Enter
+      private var enterModifiers: Set[KeyModifier] = Set.empty
 
       override def keyReleased(e: KeyEvent): Unit =
         e.keyCode match {
-          case SWT.CR | SWT.KEYPAD_CR => fork(runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease)))
-          case SWT.ESC                => fork(resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease)))
-          case _                      => ()
+          case SWT.CR | SWT.KEYPAD_CR =>
+            val modifiers = enterModifiers
+            enterModifiers = Set.empty
+            fork(runSelected(modifiers).whenZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.ESC => fork(resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case _       => ()
         }
 
       override def keyPressed(e: KeyEvent): Unit =
         e.keyCode match {
           // We also check the `character` field to that hitting `Enter` in IME composition mode doesn't immediately
-          // run the command.
-          case SWT.CR if e.character == SWT.CR => fork(runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
-          case SWT.KEYPAD_CR                   => fork(runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
+          // run the command. Ctrl+Enter produces LF instead of CR.
+          case SWT.CR if e.character == SWT.CR || (e.character == SWT.LF && (e.stateMask & SWT.CTRL) != 0) =>
+            enterModifiers = KeyboardShortcutUtil.fromKeyEvent(e).modifiers
+            fork(runSelected(enterModifiers).unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.KEYPAD_CR =>
+            enterModifiers = KeyboardShortcutUtil.fromKeyEvent(e).modifiers
+            fork(runSelected(enterModifiers).unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
           case SWT.ESC                         => fork(resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
           case SWT.ARROW_DOWN if e.isAltDown   => fork(invoke(terminal.outputBox.setFocus()))
 

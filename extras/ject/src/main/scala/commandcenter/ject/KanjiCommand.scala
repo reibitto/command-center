@@ -3,6 +3,7 @@ package commandcenter.ject
 import com.typesafe.config.Config
 import commandcenter.command.*
 import commandcenter.config.Decoders.*
+import commandcenter.event.KeyModifier
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
 import fansi.{Color, Str}
@@ -38,7 +39,7 @@ final case class KanjiCommand(
       kanjiStream.map { kanji =>
         Preview.unit
           .score(Scores.veryHigh(searchInput.context) * 1.5)
-          .onRun(Tools.setClipboard(kanji.doc.kanji))
+          .onAlternativeRun(KeyModifier.Shift)(Tools.setClipboard(kanji.doc.kanji))
           .renderedAnsi(render(kanji.doc, kanji.score))
       },
       initialPageSize = 30,

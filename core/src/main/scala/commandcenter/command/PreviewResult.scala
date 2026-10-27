@@ -1,12 +1,14 @@
 package commandcenter.command
 
-import commandcenter.event.KeyboardShortcut
+import commandcenter.event.{KeyboardShortcut, KeyModifier}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import zio.*
 
 sealed trait PreviewResult[+A] {
   def onRun: RIO[Env, Unit]
+  // Actions for running with an exact set of modifiers held (e.g. Shift+Enter). Unlisted sets fall back to `onRun`.
+  def alternativeRuns: Map[Set[KeyModifier], RIO[Env, Unit]]
   def runOption: RunOption
   def moreResults: MoreResults
   def score: Double
@@ -21,12 +23,16 @@ sealed trait PreviewResult[+A] {
 
   def onRun(onRun: RIO[Env, Unit]): PreviewResult[A]
 
+  def onAlternativeRun(modifiers: KeyModifier*)(onRun: RIO[Env, Unit]): PreviewResult[A]
+
   def rendered(rendered: => Rendered): PreviewResult[A]
 
   def renderedAnsi(renderedAnsi: => fansi.Str): PreviewResult[A] = rendered(Rendered.Ansi(renderedAnsi))
 
-  def onRunSandboxedLogged: URIO[Env, Unit] =
-    onRun.catchAllCause { c =>
+  def onRunSandboxedLogged: URIO[Env, Unit] = runSandboxedLogged(Set.empty)
+
+  def runSandboxedLogged(modifiers: Set[KeyModifier]): URIO[Env, Unit] =
+    alternativeRuns.getOrElse(modifiers, onRun).catchAllCause { c =>
       val commandName = this match {
         case _: PreviewResult.None    => ""
         case p: PreviewResult.Some[A] => p.source.getClass.getCanonicalName
@@ -43,6 +49,7 @@ object PreviewResult {
 
   final case class None(
       onRun: RIO[Env, Unit],
+      alternativeRuns: Map[Set[KeyModifier], RIO[Env, Unit]],
       runOption: RunOption,
       moreResults: MoreResults,
       score: Double,
@@ -56,6 +63,9 @@ object PreviewResult {
 
     def onRun(onRun: RIO[Env, Unit]): PreviewResult[Nothing] = copy(onRun = onRun)
 
+    def onAlternativeRun(modifiers: KeyModifier*)(onRun: RIO[Env, Unit]): PreviewResult[Nothing] =
+      copy(alternativeRuns = alternativeRuns.updated(modifiers.toSet, onRun))
+
     def rendered(rendered: => Rendered): PreviewResult[Nothing] = copy(renderFn = () => rendered)
 
     def shortcuts: Set[KeyboardShortcut] = Set.empty
@@ -65,6 +75,7 @@ object PreviewResult {
       source: Command[A],
       result: A,
       onRun: RIO[Env, Unit],
+      alternativeRuns: Map[Set[KeyModifier], RIO[Env, Unit]],
       runOption: RunOption,
       moreResults: MoreResults,
       score: Double,
@@ -78,6 +89,9 @@ object PreviewResult {
 
     def onRun(onRun: RIO[Env, Unit]): PreviewResult[A] = copy(onRun = onRun)
 
+    def onAlternativeRun(modifiers: KeyModifier*)(onRun: RIO[Env, Unit]): PreviewResult[A] =
+      copy(alternativeRuns = alternativeRuns.updated(modifiers.toSet, onRun))
+
     def rendered(rendered: => Rendered): PreviewResult[A] = copy(renderFn = () => rendered)
     def renderFn(renderFn: A => Rendered): PreviewResult[A] = copy(renderFn = () => renderFn(result))
 
@@ -85,8 +99,17 @@ object PreviewResult {
   }
 
   def nothing(rendered: Rendered): PreviewResult[Nothing] =
-    PreviewResult.None(ZIO.unit, RunOption.Hide, MoreResults.Exhausted, Scores.default, () => rendered)
+    PreviewResult.None(ZIO.unit, Map.empty, RunOption.Hide, MoreResults.Exhausted, Scores.default, () => rendered)
 
   def unit(source: Command[Unit], rendered: Rendered): PreviewResult[Unit] =
-    PreviewResult.Some(source, (), ZIO.unit, RunOption.Hide, MoreResults.Exhausted, Scores.default, () => rendered)
+    PreviewResult.Some(
+      source,
+      (),
+      ZIO.unit,
+      Map.empty,
+      RunOption.Hide,
+      MoreResults.Exhausted,
+      Scores.default,
+      () => rendered
+    )
 }

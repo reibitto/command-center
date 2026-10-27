@@ -1,5 +1,6 @@
 package commandcenter.emulator.swt.ui
 
+import commandcenter.ui.CCTheme
 import commandcenter.util.OS
 import commandcenter.CCConfig
 import org.eclipse.swt.custom.StyledText
@@ -16,43 +17,50 @@ class RawSwtTerminal(val initialConfig: CCConfig) {
     display.setData("org.eclipse.swt.internal.win32.useDarkModeExplorerTheme", true)
   }
 
-  val black = new Color(display, 0, 0, 0)
-  val red = new Color(display, 236, 91, 57)
-  val green = new Color(display, 122, 202, 107)
-  val yellow = new Color(display, 245, 218, 55)
-  val blue = new Color(display, 66, 142, 255)
-  val magenta = new Color(display, 135, 129, 211)
-  val cyan = new Color(display, 22, 180, 236)
-  val lightGray = new Color(display, 100, 100, 100)
-  val darkGray = new Color(display, 50, 50, 50)
-  val lightRed = new Color(display, 255, 135, 119)
-  val lightGreen = new Color(display, 165, 222, 153)
-  val lightYellow = new Color(display, 255, 236, 131)
-  val lightBlue = new Color(display, 75, 149, 255)
-  val lightMagenta = new Color(display, 135, 129, 211)
-  val lightCyan = new Color(display, 111, 214, 255)
-  val white = new Color(display, 209, 209, 209)
+  val theme = CCTheme.default
+
+  private def toSwtColor(c: java.awt.Color): Color = new Color(display, c.getRed, c.getGreen, c.getBlue)
+
+  val background = toSwtColor(theme.background)
+  val foreground = toSwtColor(theme.foreground)
+  val black = toSwtColor(theme.black)
+  val red = toSwtColor(theme.red)
+  val green = toSwtColor(theme.green)
+  val yellow = toSwtColor(theme.yellow)
+  val blue = toSwtColor(theme.blue)
+  val magenta = toSwtColor(theme.magenta)
+  val cyan = toSwtColor(theme.cyan)
+  val lightGray = toSwtColor(theme.lightGray)
+  val darkGray = toSwtColor(theme.darkGray)
+  val lightRed = toSwtColor(theme.lightRed)
+  val lightGreen = toSwtColor(theme.lightGreen)
+  val lightYellow = toSwtColor(theme.lightYellow)
+  val lightBlue = toSwtColor(theme.lightBlue)
+  val lightMagenta = toSwtColor(theme.lightMagenta)
+  val lightCyan = toSwtColor(theme.lightCyan)
+  val white = toSwtColor(theme.white)
+
+  private val swtColorsByAwtColor: Map[java.awt.Color, Color] = Map(
+    theme.black        -> black,
+    theme.red          -> red,
+    theme.green        -> green,
+    theme.yellow       -> yellow,
+    theme.blue         -> blue,
+    theme.magenta      -> magenta,
+    theme.cyan         -> cyan,
+    theme.lightGray    -> lightGray,
+    theme.darkGray     -> darkGray,
+    theme.lightRed     -> lightRed,
+    theme.lightGreen   -> lightGreen,
+    theme.lightYellow  -> lightYellow,
+    theme.lightBlue    -> lightBlue,
+    theme.lightMagenta -> lightMagenta,
+    theme.lightCyan    -> lightCyan,
+    theme.white        -> white
+  )
 
   def fromFansiColorCode(colorCode: Int): Option[Color] =
-    colorCode match {
-      case 1  => Some(black)
-      case 2  => Some(red)
-      case 3  => Some(green)
-      case 4  => Some(yellow)
-      case 5  => Some(blue)
-      case 6  => Some(magenta)
-      case 7  => Some(cyan)
-      case 8  => Some(lightGray)
-      case 9  => Some(darkGray)
-      case 10 => Some(lightRed)
-      case 11 => Some(lightGreen)
-      case 12 => Some(lightYellow)
-      case 13 => Some(lightBlue)
-      case 14 => Some(lightMagenta)
-      case 15 => Some(lightCyan)
-      case 16 => Some(white)
-      case _  => None
-    }
+    theme.fromFansiColorCode(colorCode).flatMap(swtColorsByAwtColor.get)
 
   val font = getPreferredFont(initialConfig.display.fonts)
 
@@ -61,8 +69,8 @@ class RawSwtTerminal(val initialConfig: CCConfig) {
   shell.setText("Command Center")
   shell.setMinimumSize(preferredFrameWidth, 0)
 
-  shell.setBackground(black)
-  shell.setForeground(white)
+  shell.setBackground(background)
+  shell.setForeground(foreground)
 
   val layout = new GridLayout()
   layout.numColumns = 1
@@ -76,8 +84,8 @@ class RawSwtTerminal(val initialConfig: CCConfig) {
   val inputBox = new Text(shell, SWT.NONE)
   inputBox.setFont(font)
   inputBox.setLayoutData(inputBoxGridData)
-  inputBox.setBackground(black)
-  inputBox.setForeground(white)
+  inputBox.setBackground(background)
+  inputBox.setForeground(foreground)
 
   val outputBoxGridData = new GridData()
   outputBoxGridData.exclude = true
@@ -91,8 +99,8 @@ class RawSwtTerminal(val initialConfig: CCConfig) {
   // certain environments. We could consider making this a config option and setting the default value to `true`.
   outputBox.setAlwaysShowScrollBars(true)
   outputBox.setFont(font)
-  outputBox.setBackground(black)
-  outputBox.setForeground(white)
+  outputBox.setBackground(background)
+  outputBox.setForeground(foreground)
   outputBox.setEditable(false)
   outputBox.setLayoutData(outputBoxGridData)
 

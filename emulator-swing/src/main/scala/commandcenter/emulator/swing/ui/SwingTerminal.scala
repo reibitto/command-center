@@ -3,8 +3,8 @@ package commandcenter.emulator.swing.ui
 import commandcenter.*
 import commandcenter.command.*
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
-import commandcenter.emulator.util.Lists
-import commandcenter.event.KeyboardShortcut
+import commandcenter.emulator.util.{Lists, WindowsIme}
+import commandcenter.event.{KeyboardShortcut, KeyModifier}
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.ui.CCTheme
@@ -14,7 +14,7 @@ import commandcenter.CCRuntime.Env
 import zio.*
 
 import java.awt.*
-import java.awt.event.KeyEvent
+import java.awt.event.{InputEvent, KeyAdapter, KeyEvent}
 import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.{DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext}
@@ -83,6 +83,8 @@ final case class SwingTerminal(
       }
   }
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
+  outputScrollPane.getViewport.setBackground(theme.background)
+  frame.getContentPane.setBackground(theme.background)
 
   outputScrollPane.getVerticalScrollBar.setUI(new BasicScrollBarUI() {
 
@@ -242,31 +244,48 @@ final case class SwingTerminal(
     for {
       _ <- commandCursorRef.set(0)
       _ <- ZIO.succeed {
-             inputTextField.setText("")
-             document.remove(0, document.getLength)
+             SwingUtilities.invokeLater { () =>
+               inputTextField.setText("")
+               document.remove(0, document.getLength)
+             }
            }
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
   inputTextField.addZKeyListener(new ZKeyAdapter {
+    // Enter/Escape pressed outside IME composition. The IME can swallow the press (committing or cancelling the
+    // composition) but still let the release through, so releases only act on a press recorded here. EDT-only.
+    private var pressedActionKey: Option[Int] = None
+    // Modifiers held when Enter was pressed, so they still count if released before Enter
+    private var enterModifiers: Set[KeyModifier] = Set.empty
 
-    override def keyReleased(e: KeyEvent): URIO[Env, Unit] =
+    override def keyReleased(e: KeyEvent): URIO[Env, Unit] = {
+      val pressed = pressedActionKey.contains(e.getKeyCode)
+      if (pressed) pressedActionKey = None
+
       e.getKeyCode match {
-        case KeyEvent.VK_ENTER =>
-          runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease)).unit
+        case KeyEvent.VK_ENTER if pressed =>
+          runSelected(enterModifiers).whenZIO(Conf.get(_.general.hideOnKeyRelease)).unit
 
-        case KeyEvent.VK_ESCAPE =>
+        case KeyEvent.VK_ESCAPE if pressed =>
           resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease)).unit
 
         case _ => ZIO.unit
       }
+    }
 
     override def keyPressed(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
+        case KeyEvent.VK_ENTER | KeyEvent.VK_ESCAPE if inputTextField.isComposing =>
+          ZIO.unit
+
         case KeyEvent.VK_ENTER =>
-          runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)).unit
+          pressedActionKey = Some(KeyEvent.VK_ENTER)
+          enterModifiers = KeyboardShortcutUtil.fromKeyEvent(e).modifiers
+          runSelected(enterModifiers).unlessZIO(Conf.get(_.general.hideOnKeyRelease)).unit
 
         case KeyEvent.VK_ESCAPE =>
+          pressedActionKey = Some(KeyEvent.VK_ESCAPE)
           resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease)).unit
 
         case KeyEvent.VK_DOWN =>
@@ -325,6 +344,30 @@ final case class SwingTerminal(
       _ <- preview.onRunSandboxedLogged.forkDaemon
       _ <- reset.when(preview.runOption != RunOption.RemainOpen)
     } yield ()
+
+  private def hwnd: Long = WindowsIme.windowHandle(frame)
+
+  if (OS.os == OS.Windows) {
+    inputTextField.addKeyListener(new KeyAdapter {
+      private var suppressTyped = false
+
+      override def keyPressed(e: KeyEvent): Unit = {
+        val commandModifier =
+          (e.getModifiersEx & (InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK | InputEvent.META_DOWN_MASK)) != 0
+        // Java letter and digit key codes are the same as Windows virtual-key codes
+        if (!inputTextField.isComposing && WindowsIme.resendIfBypassed(hwnd, e.getKeyCode, commandModifier)) {
+          e.consume()
+          suppressTyped = true
+        }
+      }
+
+      override def keyTyped(e: KeyEvent): Unit =
+        if (suppressTyped) {
+          suppressTyped = false
+          e.consume()
+        }
+    })
+  }
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 
@@ -403,7 +446,13 @@ final case class SwingTerminal(
     } yield ()
 
   def getPreferredFont: URIO[Conf, Font] = {
-    def fallbackFont = new Font("Monospaced", Font.PLAIN, 18)
+    def fallbackFont = new Font("Monospaced", Font.PLAIN, 14)
+
+    // Config sizes are points (as SWT treats them), but AWT treats font sizes as pixels at 72 DPI. Windows and Linux
+    // use 96 logical DPI, so convert to match SWT's rendered size.
+    def pointsToAwtSize(font: Font): Font =
+      if (OS.os == OS.MacOS) font
+      else font.deriveFont(math.round(font.getSize2D * 96f / 72f).toFloat)
 
     (for {
       fonts              <- Conf.get(_.display.fonts)
@@ -412,7 +461,7 @@ final case class SwingTerminal(
           GraphicsEnvironment.getLocalGraphicsEnvironment.getAvailableFontFamilyNames.map(_.toLowerCase).toSet
         )
       font = fonts.find(f => installedFontNames.contains(f.getName.toLowerCase)).getOrElse(fallbackFont)
-    } yield font).orElseSucceed(fallbackFont)
+    } yield pointsToAwtSize(font)).orElseSucceed(pointsToAwtSize(fallbackFont))
   }
 
   def getPreferredFrameWidth: URIO[Conf, Int] =
@@ -443,7 +492,11 @@ object SwingTerminal {
       swingTerminal    <-
         ZIO.acquireRelease(
           ZIO.succeed(new SwingTerminal(commandCursorRef, searchResultsRef, searchDebouncer, closePromise)(runtime))
-        )(t => ZIO.succeed(t.frame.dispose()))
+        )(t =>
+          // Don't block on dispose: during JVM shutdown the AWT toolkit thread is gone, so a blocking dispose hangs
+          // the shutdown hook (e.g. on Ctrl-C) forever.
+          ZIO.succeed(SwingUtilities.invokeLater(() => t.frame.dispose()))
+        )
       _ <- swingTerminal.init
     } yield swingTerminal
 }

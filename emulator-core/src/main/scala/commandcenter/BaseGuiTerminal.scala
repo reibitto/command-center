@@ -1,6 +1,7 @@
 package commandcenter
 
 import commandcenter.command.{MoreResults, PreviewResult, PreviewResults, RunOption, SearchResults}
+import commandcenter.event.KeyModifier
 import commandcenter.tools.Tools
 import commandcenter.util.{Debouncer, OS}
 import commandcenter.view.Rendered
@@ -31,7 +32,11 @@ abstract class BaseGuiTerminal extends GuiTerminal {
       _ <- reset
     } yield ()
 
-  protected def runIndex(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
+  protected def runIndex(
+      results: SearchResults[Any],
+      cursorIndex: Int,
+      modifiers: Set[KeyModifier]
+  ): RIO[Env, Option[PreviewResult[Any]]] =
     results.previews.lift(cursorIndex) match {
       case None =>
         for {
@@ -46,7 +51,7 @@ abstract class BaseGuiTerminal extends GuiTerminal {
                  case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, initialPageSize, pageSize, totalRemaining))
                      if totalRemaining.forall(_ > 0) =>
                    for {
-                     _                     <- preview.onRunSandboxedLogged.forkDaemon
+                     _                     <- preview.runSandboxedLogged(modifiers).forkDaemon
                      (results, restStream) <-
                        Scope.global.use {
                          rs.peel(ZSink.take[PreviewResult[Any]](pageSize))
@@ -83,17 +88,17 @@ abstract class BaseGuiTerminal extends GuiTerminal {
                    } yield ()
 
                  case _ =>
-                   preview.onRunSandboxedLogged.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
+                   preview.runSandboxedLogged(modifiers).forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
                }
         } yield previewOpt
     }
 
-  protected def runSelected: ZIO[Env, Nothing, Unit] =
+  protected def runSelected(modifiers: Set[KeyModifier]): ZIO[Env, Nothing, Unit] =
     for {
       _               <- searchDebouncer.triggerNowAwait
       previousResults <- searchResultsRef.get
       cursorIndex     <- commandCursorRef.get
-      resultOpt       <- runIndex(previousResults, cursorIndex).catchAll(_ => ZIO.none)
+      resultOpt       <- runIndex(previousResults, cursorIndex, modifiers).catchAll(_ => ZIO.none)
       _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
              ZIO.succeed(java.lang.System.exit(0)).forkDaemon
            }
