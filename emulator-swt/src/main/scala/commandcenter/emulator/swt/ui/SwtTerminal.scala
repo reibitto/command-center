@@ -111,8 +111,8 @@ final case class SwtTerminal(
           case SWT.KEYPAD_CR =>
             enterModifiers = KeyboardShortcutUtil.fromKeyEvent(e).modifiers
             fork(onPress(runSelected(enterModifiers)))
-          case SWT.ESC                         => fork(onPress(resetAndHide))
-          case SWT.ARROW_DOWN if e.isAltDown   => fork(invoke(terminal.outputBox.setFocus()))
+          case SWT.ESC                       => fork(onPress(resetAndHide))
+          case SWT.ARROW_DOWN if e.isAltDown => fork(invoke(terminal.outputBox.setFocus()))
 
           case SWT.ARROW_DOWN =>
             e.doit = false // Must be set synchronously in the SWT callback, so it can't be part of the effect

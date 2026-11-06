@@ -43,22 +43,22 @@ class RawSwtTerminal(val initialConfig: CCConfig) {
   val white = toSwtColor(theme.white)
 
   private val swtColorsByAwtColor: Map[java.awt.Color, Color] = Map(
-    theme.black        -> black,
-    theme.red          -> red,
-    theme.green        -> green,
-    theme.yellow       -> yellow,
-    theme.blue         -> blue,
-    theme.magenta      -> magenta,
-    theme.cyan         -> cyan,
-    theme.lightGray    -> lightGray,
-    theme.darkGray     -> darkGray,
-    theme.lightRed     -> lightRed,
-    theme.lightGreen   -> lightGreen,
-    theme.lightYellow  -> lightYellow,
-    theme.lightBlue    -> lightBlue,
+    theme.black -> black,
+    theme.red -> red,
+    theme.green -> green,
+    theme.yellow -> yellow,
+    theme.blue -> blue,
+    theme.magenta -> magenta,
+    theme.cyan -> cyan,
+    theme.lightGray -> lightGray,
+    theme.darkGray -> darkGray,
+    theme.lightRed -> lightRed,
+    theme.lightGreen -> lightGreen,
+    theme.lightYellow -> lightYellow,
+    theme.lightBlue -> lightBlue,
     theme.lightMagenta -> lightMagenta,
-    theme.lightCyan    -> lightCyan,
-    theme.white        -> white
+    theme.lightCyan -> lightCyan,
+    theme.white -> white
   )
 
   def fromFansiColorCode(colorCode: Int): Option[Color] =

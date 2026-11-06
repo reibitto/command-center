@@ -1,6 +1,6 @@
 package commandcenter.command
 
-import commandcenter.event.{KeyboardShortcut, KeyModifier}
+import commandcenter.event.{KeyModifier, KeyboardShortcut}
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import zio.*
@@ -38,7 +38,6 @@ sealed trait PreviewResult[+A] {
 
   def runSandboxedLogged(modifiers: Set[KeyModifier]): URIO[Env, Unit] =
     alternativeRuns.getOrElse(modifiers, onRun).catchAllCause { c =>
-
       val commandName = this match {
         case _: PreviewResult.None    => ""
         case p: PreviewResult.Some[A] => p.source.getClass.getCanonicalName
