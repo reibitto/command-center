@@ -71,11 +71,18 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
         case Some(p) if suspended.contains(p) => resume(p).as(suspended.filterNot(_ == p))
         case Some(p)                          => suspend(p).map(if (_) p :: suspended else suspended)
         case None                             =>
-          ProcessUtil.frontProcessId.flatMap {
+          targetProcessId.flatMap {
             case Some(p) => suspend(p).map(if (_) p :: suspended else suspended)
             case None    => ZIO.succeed(suspended)
           }
       }
+    }
+
+  // On Windows, skips past Command Center's own window if it's in front
+  private def targetProcessId: Task[Option[Long]] =
+    OS.os match {
+      case OS.Windows => WindowManager.targetWindow.map(_.map(WindowManager.windowPid))
+      case _          => ProcessUtil.frontProcessId
     }
 
   // Returns whether the process was suspended (it never suspends Command Center itself)

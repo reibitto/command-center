@@ -49,9 +49,9 @@ final case class CCTheme(
 object CCTheme {
 
   val default: CCTheme = CCTheme(
-    new Color(0x0f111a),
-    new Color(198, 198, 198),
-    new Color(0x0f111a),
+    new Color(0, 0, 0),
+    new Color(209, 209, 209),
+    new Color(0, 0, 0),
     new Color(236, 91, 57),
     new Color(122, 202, 107),
     new Color(245, 218, 55),

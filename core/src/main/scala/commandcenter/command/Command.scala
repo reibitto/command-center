@@ -41,6 +41,7 @@ trait Command[+A] {
         command,
         b,
         ZIO.unit,
+        Map.empty,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,

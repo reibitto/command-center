@@ -12,11 +12,13 @@ object CommandType extends Enum[CommandType] {
     def plugin: CommandPlugin[? <: Command[?]] = plugin0
   }
 
+  case object BorderlessCommand extends BuiltIn(command.BorderlessCommand)
   case object CalculatorCommand extends BuiltIn(command.CalculatorCommand)
   case object ChessCommand extends BuiltIn(command.ChessCommand)
   case object ConfigCommand extends BuiltIn(command.ConfigCommand)
   case object DecodeBase64Command extends BuiltIn(command.DecodeBase64Command)
   case object DecodeUrlCommand extends BuiltIn(command.DecodeUrlCommand)
+  case object DisplaySwitchCommand extends BuiltIn(command.DisplaySwitchCommand)
   case object EncodeBase64Command extends BuiltIn(command.EncodeBase64Command)
   case object EncodeUrlCommand extends BuiltIn(command.EncodeUrlCommand)
   case object EpochMillisCommand extends BuiltIn(command.EpochMillisCommand)
@@ -31,6 +33,7 @@ object CommandType extends Enum[CommandType] {
   case object HoogleCommand extends BuiltIn(command.HoogleCommand)
   case object HttpCommand extends BuiltIn(command.HttpCommand)
   case object ITunesCommand extends BuiltIn(command.ITunesCommand)
+  case object KeepSoundCommand extends BuiltIn(command.KeepSoundCommand)
   case object LocalIPCommand extends BuiltIn(command.LocalIPCommand)
   case object LockCommand extends BuiltIn(command.LockCommand)
   case object LoremIpsumCommand extends BuiltIn(command.LoremIpsumCommand)

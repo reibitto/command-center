@@ -1,7 +1,7 @@
 package commandcenter
 
 import commandcenter.command.*
-import commandcenter.event.KeyboardShortcut
+import commandcenter.event.{KeyboardShortcut, KeyModifier}
 import commandcenter.locale.Language
 import commandcenter.tools.Tools
 import commandcenter.util.{Debouncer, OS}
@@ -107,7 +107,11 @@ abstract class BaseGuiTerminal extends GuiTerminal {
     hide.when(close) *> preview.onRunSandboxedLogged.forkDaemon *> reset.when(close).unit
   }
 
-  protected def runIndex(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
+  protected def runIndex(
+      results: SearchResults[Any],
+      cursorIndex: Int,
+      modifiers: Set[KeyModifier]
+  ): RIO[Env, Option[PreviewResult[Any]]] =
     results.previews.lift(cursorIndex) match {
       case None =>
         (hide *> deactivate.ignore).as(None)
@@ -118,7 +122,7 @@ abstract class BaseGuiTerminal extends GuiTerminal {
           _ <- preview.moreResults match {
                  case more: MoreResults.Remaining[Any] @unchecked if more.totalRemaining.forall(_ > 0) =>
                    for {
-                     _                    <- preview.onRunSandboxedLogged.forkDaemon
+                     _                    <- preview.runSandboxedLogged(modifiers).forkDaemon
                      (morePreviews, rest) <- more.nextPage.mapError(_.toThrowable)
                      // The entry becomes the "More" row, with the count updated
                      nextSource = rest.map(r => preview.rendered(Rendered.Ansi(Color.Yellow(r.moreMessage))).moreResults(r))
@@ -126,17 +130,17 @@ abstract class BaseGuiTerminal extends GuiTerminal {
                    } yield ()
 
                  case _ =>
-                   preview.onRunSandboxedLogged.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
+                   preview.runSandboxedLogged(modifiers).forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
                }
         } yield previewOpt
     }
 
-  protected def runSelected: ZIO[Env, Nothing, Unit] =
+  protected def runSelected(modifiers: Set[KeyModifier]): ZIO[Env, Nothing, Unit] =
     for {
       _               <- searchDebouncer.triggerNowAwait
       previousResults <- searchResultsRef.get
       cursorIndex     <- commandCursorRef.get
-      resultOpt       <- runIndex(previousResults, cursorIndex).orElseSucceed(None)
+      resultOpt       <- runIndex(previousResults, cursorIndex, modifiers).orElseSucceed(None)
       _               <- ZIO.whenCase(resultOpt.map(_.runOption)) { case Some(RunOption.Exit) =>
              ZIO.succeed(java.lang.System.exit(0)).forkDaemon
            }
