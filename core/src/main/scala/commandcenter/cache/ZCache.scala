@@ -27,24 +27,19 @@ class ZCache[K, V](underlying: AsyncLoadingCache[K, V]) {
   def get(key: K): Task[Option[V]] =
     ZIO.fromCompletableFuture(underlying.get(key)).map(Option(_))
 
-  def getOrElseUpdate(key: K, expiration: Duration)(orElse: => Task[V]): Task[V] = {
-    val value = underlying
-      .asMap()
-      .computeIfAbsent(
-        key,
-        k =>
-          Unsafe.unsafe { implicit u =>
-            Runtime.default.unsafe
-              .runToFuture(orElse)
-              .asJava
-              .toCompletableFuture
-          }
-      )
+  def getOrElseUpdate(key: K, expiration: Duration)(orElse: => Task[V]): Task[V] =
+    ZIO.runtime[Any].flatMap { runtime =>
+      val value = underlying
+        .asMap()
+        .computeIfAbsent(
+          key,
+          _ => Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(orElse).asJava.toCompletableFuture)
+        )
 
-    underlying.synchronous.policy.expireVariably.ifPresent(_.setExpiresAfter(key, expiration))
+      underlying.synchronous.policy.expireVariably.ifPresent(_.setExpiresAfter(key, expiration))
 
-    ZIO.fromCompletableFuture(value)
-  }
+      ZIO.fromCompletableFuture(value)
+    }
 
   def contains(key: K): UIO[Boolean] =
     ZIO.succeed(underlying.asMap.containsKey(key))

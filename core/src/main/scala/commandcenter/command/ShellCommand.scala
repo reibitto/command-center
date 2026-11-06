@@ -33,7 +33,7 @@ final case class ShellCommand(
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.prefixed
       commandLine = commandTemplate.replace("{query}", input.rest.trim)
     } yield PreviewResults.one(
       Preview.unit
@@ -172,13 +172,11 @@ object ShellCommand extends CommandPlugin[ShellCommand] {
     for {
       title           <- config.getZIO[Option[String]]("title")
       commandTemplate <- config.getZIO[String]("command")
-      outputModeOpt   <- config.getZIO[Option[ShellOutputMode]]("outputMode")
-      runAsAdminOpt   <- config.getZIO[Option[Boolean]]("runAsAdmin")
-      commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
-      shortcuts       <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
-      outputMode = outputModeOpt.getOrElse(ShellOutputMode.Silent)
-      runAsAdmin = runAsAdminOpt.getOrElse(false)
-      _ <- ZIO.when(runAsAdmin && OS.os == OS.Windows && unsupportedAdminOutputModesOnWindows.contains(outputMode)) {
+      outputMode      <- config.getZIO[ShellOutputMode]("outputMode", ShellOutputMode.Silent)
+      runAsAdmin      <- config.getZIO("runAsAdmin", false)
+      commandNames    <- commandNames(config)
+      shortcuts       <- shortcuts(config)
+      _               <- ZIO.when(runAsAdmin && OS.os == OS.Windows && unsupportedAdminOutputModesOnWindows.contains(outputMode)) {
              ZIO.fail(
                CommandPluginError.UnexpectedException(
                  new IllegalArgumentException(
@@ -194,8 +192,8 @@ object ShellCommand extends CommandPlugin[ShellCommand] {
       commandTemplate,
       outputMode,
       runAsAdmin,
-      commandNames.getOrElse(Nil),
-      shortcuts.getOrElse(Set.empty)
+      commandNames,
+      shortcuts
     )
 }
 

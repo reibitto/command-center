@@ -109,17 +109,8 @@ object HttpCommand extends CommandPlugin[HttpCommand] {
                 }
       body         <- config.getZIO[Option[String]]("body")
       contentType  <- config.getZIO[Option[String]]("contentType")
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-      locales      <- config.getZIO[Option[Set[Locale]]]("locales")
-      shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
-    } yield HttpCommand(
-      title,
-      urlTemplate,
-      method,
-      body,
-      contentType,
-      commandNames.getOrElse(Nil),
-      locales.getOrElse(Set.empty),
-      shortcuts.getOrElse(Set.empty)
-    )
+      commandNames <- commandNames(config)
+      locales      <- config.getZIO("locales", Set.empty[Locale])
+      shortcuts    <- shortcuts(config)
+    } yield HttpCommand(title, urlTemplate, method, body, contentType, commandNames, locales, shortcuts)
 }

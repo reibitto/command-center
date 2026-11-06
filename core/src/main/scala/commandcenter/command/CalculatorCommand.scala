@@ -34,14 +34,12 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
 
   private def previewHelp(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = decline.Command(title, title)(helpTypeOpt).parse(input.args)
-      (helpTitle, message) <- ZIO
-                                .fromEither(parsed)
-                                .fold(
-                                  help => (title, HelpMessage.formatted(help)),
-                                  helpType => (helpType.title, CalculatorCommand.helpMessageByType(helpType))
-                                )
+      (helpTitle, message) = parsed.fold(
+                               help => (title, HelpMessage.formatted(help)),
+                               helpType => (helpType.title, CalculatorCommand.helpMessageByType(helpType))
+                             )
     } yield PreviewResults.one(
       Preview(BigDecimal(0.0))
         .score(Scores.veryHigh(searchInput.context))

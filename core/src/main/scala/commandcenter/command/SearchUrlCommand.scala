@@ -71,16 +71,9 @@ object SearchUrlCommand extends CommandPlugin[SearchUrlCommand] {
     for {
       title        <- config.getZIO[String]("title")
       urlTemplate  <- config.getZIO[String]("urlTemplate")
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-      locales      <- config.getZIO[Option[Set[Locale]]]("locales")
-      shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
+      commandNames <- commandNames(config)
+      locales      <- config.getZIO("locales", Set.empty[Locale])
+      shortcuts    <- shortcuts(config)
       firefoxPath  <- config.getZIO[Option[Path]]("firefoxPath")
-    } yield SearchUrlCommand(
-      title,
-      urlTemplate,
-      commandNames.getOrElse(Nil),
-      locales.getOrElse(Set.empty),
-      shortcuts.getOrElse(Set.empty),
-      firefoxPath
-    )
+    } yield SearchUrlCommand(title, urlTemplate, commandNames, locales, shortcuts, firefoxPath)
 }

@@ -104,23 +104,10 @@ lazy val coreUI = module("core-ui")
 lazy val cli = module("cli")
   .dependsOn(coreUI)
   .settings(
-    fork := true,
-    run / baseDirectory := file("."),
+    appSettings("commandcenter.cli.Main", "cc.jar"),
     libraryDependencies ++= Seq(
       "org.scalameta" %% "svm-subs" % V.graal
     ),
-    // Windows native terminal requires JNA.
-    libraryDependencies ++= Seq("net.java.dev.jna" % "jna-platform" % V.jna).filter(_ => OS.os == OS.Windows),
-    assembly / mainClass := Some("commandcenter.cli.Main"),
-    assembly / assemblyJarName := "cc.jar",
-    assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _*) => MergeStrategy.concat
-      case PathList("META-INF", _*)             => MergeStrategy.discard
-      case _                                    => MergeStrategy.first
-    },
-    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
-    installCC := installCCTask.value,
     graalVMNativeImageGraalVersion := Build.imageGraal,
     graalVMNativeImageOptions ++= Seq(
       "-H:+ReportExceptionStackTraces",
@@ -143,10 +130,7 @@ lazy val enabledPlugins: Set[String] =
   Build.compilerOption("command-center-plugins").map(_.split(',').map(_.trim).toSet).getOrElse(Set.empty)
 
 def optionalPlugin(project: Project): Option[ClasspathDependency] =
-  if (enabledPlugins.contains(project.id) || enabledPlugins.contains("*"))
-    Some(project: ClasspathDependency)
-  else
-    None
+  Option.when(enabledPlugins.contains(project.id) || enabledPlugins.contains("*"))(project)
 
 lazy val emulatorCore = module("emulator-core")
   .dependsOn(coreUI)
@@ -161,45 +145,21 @@ lazy val emulatorCore = module("emulator-core")
 
 lazy val emulatorSwt = module("emulator-swt")
   .dependsOn(emulatorCore)
-  .dependsOn(optionalPlugins *)
   .settings(
-    publishMavenStyle := false,
-    run / baseDirectory := file("."),
-    assembly / mainClass := Some("commandcenter.emulator.swt.Main"),
+    appSettings("commandcenter.emulator.swt.Main", "cc-swt.jar"),
+    publishMavenStyle := false, // SWT's native dependency is intransitive, which Maven style can't express
     javaOptions ++= Seq("-XstartOnFirstThread").filter(_ => OS.os == OS.MacOS),
-    assembly / assemblyJarName := "cc-swt.jar",
-    assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _*) => MergeStrategy.concat
-      case PathList("META-INF", _*)             => MergeStrategy.discard
-      case _                                    => MergeStrategy.first
-    },
     assembly / packageOptions += ManifestAttributes(
-      "Multi-Release" -> "true",
       "SWT-WS" -> SwtInfo.local.ws,
       "SWT-OS" -> SwtInfo.local.os,
       "SWT-Arch" -> SwtInfo.local.arch
     ),
-    installCC := installCCTask.value,
     libraryDependencies ++= SwtInfo.local.dependencies
   )
 
 lazy val emulatorSwing = module("emulator-swing")
   .dependsOn(emulatorCore)
-  .dependsOn(optionalPlugins *)
-  .settings(
-    run / baseDirectory := file("."),
-    assembly / mainClass := Some("commandcenter.emulator.swing.Main"),
-    assembly / assemblyJarName := "cc-swing.jar",
-    assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
-      case PathList("META-INF", "versions", _*) => MergeStrategy.concat
-      case PathList("META-INF", _*)             => MergeStrategy.discard
-      case _                                    => MergeStrategy.first
-    },
-    assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
-    installCC := installCCTask.value
-  )
+  .settings(appSettings("commandcenter.emulator.swing.Main", "cc-swing.jar"))
 
 lazy val strokeOrderPlugin = module("stroke-order-plugin", Some("extras/stroke-order"))
   .dependsOn(core)
@@ -218,9 +178,7 @@ lazy val experimentalPlugins = module("experimental-plugins", Some("extras/exper
   .settings(
     libraryDependencies ++= Seq(
       "net.ruippeixotog" %% "scala-scraper" % V.scalaScraper,
-      "com.lihaoyi" %% "pprint" % V.pprint,
-      "com.github.reibitto" %% "ject-ja" % V.ject,
-      "com.github.reibitto" %% "ject-ko" % V.ject
+      "com.github.reibitto" %% "ject-ja" % V.ject
     )
   )
 
@@ -237,31 +195,33 @@ lazy val optionalPlugins =
 
 lazy val installCC = taskKey[Unit]("install Command Center uberjar")
 
-def installCCTask =
-  Def.taskDyn {
-    Def.task {
-      val jarName = (assembly / assemblyJarName).value
-      val outputPath = (assembly / assemblyOutputPath).value
-      val installDirectoryEnvVarName = "COMMAND_CENTER_INSTALL_DIR"
+// Shared run/assembly/install settings for the runnable apps
+def appSettings(main: String, jarName: String): Seq[Setting[?]] = Seq(
+  run / baseDirectory := file("."),
+  assembly / mainClass := Some(main),
+  assembly / assemblyJarName := jarName,
+  assembly / assemblyMergeStrategy := {
+    case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
+    case PathList("META-INF", "versions", _*) => MergeStrategy.concat
+    case PathList("META-INF", _*)             => MergeStrategy.discard
+    case _                                    => MergeStrategy.first
+  },
+  assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
+  installCC := {
+    val jar = fileConverter.value.toPath(assembly.value).toFile
+    val installDirectoryEnvVarName = "COMMAND_CENTER_INSTALL_DIR"
 
-      sys.env.get(installDirectoryEnvVarName) match {
-        case Some(installDirectory) =>
-          val installPath = new File(installDirectory, jarName)
+    sys.env.get(installDirectoryEnvVarName) match {
+      case Some(installDirectory) =>
+        val installPath = new File(installDirectory, jar.getName)
+        Files.copy(jar.toPath, installPath.toPath, StandardCopyOption.REPLACE_EXISTING)
+        println(s"Installed uberjar to: ${installPath.absolutePath}")
 
-          if (outputPath.exists) {
-            Files.copy(outputPath.toPath, installPath.toPath, StandardCopyOption.REPLACE_EXISTING)
-
-            println(s"Installed uberjar to: ${installPath.absolutePath}")
-          } else {
-            println(s"Could not install uberjar because the uberjar was not found at: ${outputPath.absolutePath}")
-          }
-
-        case None =>
-          println(s"No environment variable found for install directory: $installDirectoryEnvVarName")
-      }
-
-    }.dependsOn(assembly)
+      case None =>
+        println(s"No environment variable found for install directory: $installDirectoryEnvVarName")
+    }
   }
+)
 
 def module(projectId: String, moduleFile: Option[String] = None): Project =
   Project(id = projectId, base = file(moduleFile.getOrElse(projectId)))

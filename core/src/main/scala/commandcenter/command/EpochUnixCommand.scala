@@ -15,7 +15,7 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input           <- searchInput.prefixed
       (output, score) <- if (input.rest.trim.isEmpty) {
                            Clock
                              .currentTime(TimeUnit.SECONDS)
@@ -51,7 +51,5 @@ final case class EpochUnixCommand(commandNames: List[String]) extends Command[St
 object EpochUnixCommand extends CommandPlugin[EpochUnixCommand] {
 
   def make(config: Config): IO[CommandPluginError, EpochUnixCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield EpochUnixCommand(commandNames.getOrElse(List("epochunix")))
+    commandNames(config, "epochunix").map(EpochUnixCommand(_))
 }

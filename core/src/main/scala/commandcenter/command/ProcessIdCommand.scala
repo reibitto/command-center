@@ -17,7 +17,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.prefixed
       processes = ProcessHandle
                     .allProcesses()
                     .iterator()
@@ -52,9 +52,7 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
 object ProcessIdCommand extends CommandPlugin[ProcessIdCommand] {
 
   def make(config: Config): IO[CommandPluginError, ProcessIdCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield ProcessIdCommand(commandNames.getOrElse(List("pid", "process")))
+    commandNames(config, "pid", "process").map(ProcessIdCommand(_))
 
   final case class ProcessInfo(pid: Long, command: String, startTime: Instant)
 }

@@ -20,7 +20,6 @@ object Build {
     "-feature",
     "-language:postfixOps",
     "-language:implicitConversions",
-    "-language:higherKinds",
     "-Xsource:3",
     "-Xfatal-warnings",
     "-Ymacro-annotations",

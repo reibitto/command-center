@@ -47,11 +47,6 @@ object SnippetsCommand extends CommandPlugin[SnippetsCommand] {
   }
 
   def make(config: Config): IO[CommandPluginError, SnippetsCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-      snippets     <- config.getZIO[Option[List[Snippet]]]("snippets")
-    } yield SnippetsCommand(
-      commandNames.getOrElse(List("snippets", "snippet", "snip")),
-      snippets.getOrElse(Nil)
-    )
+    commandNames(config, "snippets", "snippet", "snip")
+      .zipWith(config.getZIO("snippets", List.empty[Snippet]))(SnippetsCommand(_, _))
 }

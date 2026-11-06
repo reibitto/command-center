@@ -24,29 +24,14 @@ final case class SuspendProcessCommand(
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsedCommand = command.parse(input.args)
-      message <- ZIO
-                   .fromEither(parsedCommand)
-                   .fold(HelpMessage.formatted, p => Str("PID: ") ++ Color.Magenta(p.toString))
+      message = parsedCommand.fold(HelpMessage.formatted, p => Str("PID: ") ++ Color.Magenta(p.toString))
     } yield {
       val run = for {
         pid <- ZIO.fromEither(parsedCommand).orElseFail(RunError.Ignore)
-        _   <- for {
-               _ <- ZIO.logDebug(s"Toggling suspend for process `$pid`...")
-               _ <- OS.os match {
-                      case OS.MacOS | OS.Linux =>
-                        SuspendProcessCommand.UnixLike.toggleSuspendProcess(Some(pid), suspendedPidRef)
-
-                      case OS.Windows =>
-                        ZIO.scoped {
-                          SuspendProcessCommand.Windows.toggleSuspendProcess(Some(pid), suspendedPidRef)
-                        }
-
-                      case OS.Other(_) =>
-                        ZIO.unit
-                    }
-             } yield ()
+        _   <- ZIO.logDebug(s"Toggling suspend for process `$pid`...")
+        _   <- SuspendProcessCommand.toggleSuspendProcess(Some(pid), suspendedPidRef)
       } yield ()
 
       PreviewResults.one(
@@ -62,54 +47,44 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
 
   def make(config: Config): ZIO[Env, CommandPluginError, SuspendProcessCommand] =
     for {
-      commandNames     <- config.getZIO[Option[List[String]]]("commandNames")
-      suspendShortcuts <- config.getZIO[Option[List[KeyboardShortcut]]]("suspendShortcuts")
+      commandNames     <- commandNames(config, "suspend", "pause")
+      suspendShortcuts <- config.getZIO("suspendShortcuts", List.empty[KeyboardShortcut])
       suspendedPidRef  <- Ref.make(Option.empty[Long])
       _                <- ZIO
-             .foreach(suspendShortcuts.getOrElse(List.empty)) { suspendShortcut =>
+             .foreachDiscard(suspendShortcuts) { suspendShortcut =>
                Shortcuts.addGlobalShortcut(suspendShortcut)(_ =>
-                 (for {
-                   _ <- OS.os match {
-                          case OS.MacOS | OS.Linux =>
-                            SuspendProcessCommand.UnixLike.toggleSuspendProcess(None, suspendedPidRef)
-
-                          case OS.Windows =>
-                            ZIO.scoped {
-                              SuspendProcessCommand.Windows.toggleSuspendProcess(None, suspendedPidRef)
-                            }
-
-                          case OS.Other(_) =>
-                            ZIO.unit
-                        }
-                 } yield ()).tapErrorCause { t =>
+                 toggleSuspendProcess(None, suspendedPidRef).tapErrorCause { t =>
                    ZIO.logWarningCause("Error running SuspendProcess command", t)
                  }.ignore
                )
              }
              .mapError(CommandPluginError.UnexpectedException.apply)
-    } yield SuspendProcessCommand(commandNames.getOrElse(List("suspend", "pause")), suspendedPidRef)
+    } yield SuspendProcessCommand(commandNames, suspendedPidRef)
+
+  def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
+    OS.os match {
+      case OS.MacOS | OS.Linux => UnixLike.toggleSuspendProcess(pid, suspendedPidRef)
+      case OS.Windows          => ZIO.scoped(Windows.toggleSuspendProcess(pid, suspendedPidRef))
+      case OS.Other(_)         => ZIO.unit
+    }
 
   object UnixLike {
 
     def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
-      for {
-        tryingToSuspendSelf <- ZIO.succeed(pid.contains(ProcessHandle.current.pid))
-        _                   <- ZIO
-               .foreachDiscard(pid) { pid =>
-                 for {
-                   _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
-                   _ <- Tools
-                          .playSound(getClass.getResourceAsStream("/audio/button-switch-on.wav"))
-                          .forkDaemon
-                   _ <- suspendedPidRef.set(Some(pid))
-                 } yield ()
-               }
-               .when(!tryingToSuspendSelf)
-      } yield ()
+      ZIO
+        .foreachDiscard(pid) { pid =>
+          for {
+            _ <- PCommand("kill", "-STOP", pid.toString).exitCode.unit
+            _ <- Tools.playSound(getClass.getResourceAsStream("/audio/button-switch-on.wav")).forkDaemon
+            _ <- suspendedPidRef.set(Some(pid))
+          } yield ()
+        }
+        .unless(pid.contains(ProcessHandle.current.pid))
+        .unit
 
     def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
       for {
-        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
+        pidOpt <- pid.fold(suspendedPidRef.get)(ZIO.some(_))
         _      <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  _ <- PCommand("kill", "-CONT", pid.toString).exitCode.unit
@@ -122,20 +97,16 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
       } yield ()
 
     def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Tools, Unit] =
-      for {
-        suspendedPid <- suspendedPidRef.get
-        _            <- if (suspendedPid.isEmpty)
-               suspendProcess(pid, suspendedPidRef)
-             else
-               resumeProcess(pid, suspendedPidRef)
-      } yield ()
+      suspendedPidRef.get.flatMap { suspendedPid =>
+        if (suspendedPid.isEmpty) suspendProcess(pid, suspendedPidRef) else resumeProcess(pid, suspendedPidRef)
+      }
   }
 
   object Windows {
 
     def suspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
-        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => WindowManager.frontWindow.map(_.map(_.pid)))
+        pidOpt <- pid.fold(WindowManager.frontWindow.map(_.map(_.pid)))(ZIO.some(_))
         tryingToSuspendSelf = pidOpt.contains(ProcessHandle.current.pid)
         _ <- ZIO
                .foreachDiscard(pidOpt) { pid =>
@@ -150,12 +121,12 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
                    _ <- suspendedPidRef.set(Some(pid))
                  } yield ()
                }
-               .when(!tryingToSuspendSelf)
+               .unless(tryingToSuspendSelf)
       } yield ()
 
     def resumeProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
       for {
-        pidOpt <- ZIO.fromOption(pid).asSome.catchAll(_ => suspendedPidRef.get)
+        pidOpt <- pid.fold(suspendedPidRef.get)(ZIO.some(_))
         _      <- ZIO.foreachDiscard(pidOpt) { pid =>
                for {
                  windowHandle <- WindowManager.openProcess(pid)
@@ -171,13 +142,9 @@ object SuspendProcessCommand extends CommandPlugin[SuspendProcessCommand] {
       } yield ()
 
     def toggleSuspendProcess(pid: Option[Long], suspendedPidRef: Ref[Option[Long]]): RIO[Scope & Tools, Unit] =
-      for {
-        suspendedPid <- suspendedPidRef.get
-        _            <- if (suspendedPid.isEmpty)
-               suspendProcess(pid, suspendedPidRef)
-             else
-               resumeProcess(pid, suspendedPidRef)
-      } yield ()
+      suspendedPidRef.get.flatMap { suspendedPid =>
+        if (suspendedPid.isEmpty) suspendProcess(pid, suspendedPidRef) else resumeProcess(pid, suspendedPidRef)
+      }
   }
 
 }

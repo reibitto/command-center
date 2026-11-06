@@ -15,11 +15,11 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
-    for {
-      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield PreviewResults.one(
-      Preview.unit.onRun(pCommand.exitCode.unit).score(Scores.veryHigh(input.context))
-    )
+    searchInput.keyword.map { input =>
+      PreviewResults.one(
+        Preview.unit.onRun(pCommand.exitCode.unit).score(Scores.veryHigh(input.context))
+      )
+    }
 
   private def pCommand: PCommand =
     OS.os match {
@@ -31,7 +31,5 @@ final case class LockCommand(commandNames: List[String]) extends Command[Unit] {
 object LockCommand extends CommandPlugin[LockCommand] {
 
   def make(config: Config): IO[CommandPluginError, LockCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield LockCommand(commandNames.getOrElse(List("lock")))
+    commandNames(config, "lock").map(LockCommand(_))
 }

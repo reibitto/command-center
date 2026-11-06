@@ -6,7 +6,6 @@ import com.typesafe.config.Config
 import commandcenter.command.util.HashUtil
 import commandcenter.command.CommonOpts.*
 import commandcenter.tools.Tools
-import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import io.circe.Decoder
 import zio.*
@@ -18,7 +17,7 @@ final case class HashCommand(algorithm: String) extends Command[String] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       all = (stringArg(), encodingOpt).tupled
       parsedCommand = decline.Command(algorithm, s"Hashes the argument with $algorithm")(all).parse(input.args)
       (valueToHash, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
@@ -29,7 +28,6 @@ final case class HashCommand(algorithm: String) extends Command[String] {
       Preview(hashResult)
         .score(Scores.veryHigh(input.context))
         .onRun(Tools.setClipboard(hashResult))
-        .rendered(Renderer.renderDefault(algorithm, hashResult))
     )
 }
 

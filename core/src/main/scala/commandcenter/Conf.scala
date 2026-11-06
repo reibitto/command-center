@@ -48,11 +48,7 @@ final case class ConfigLive(configRef: Ref[Option[ReloadableConfig]]) extends Co
 object ConfigLive {
 
   def layer: ZLayer[Any, Nothing, ConfigLive] =
-    ZLayer {
-      for {
-        configRef <- Ref.make(Option.empty[ReloadableConfig])
-      } yield ConfigLive(configRef)
-    }
+    ZLayer(Ref.make(Option.empty[ReloadableConfig]).map(ConfigLive(_)))
 
 }
 

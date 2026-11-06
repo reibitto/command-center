@@ -3,6 +3,7 @@ package commandcenter.command
 import commandcenter.scorers.LengthScorer
 import commandcenter.util.StringExtensions.StringExtension
 import commandcenter.CommandContext
+import zio.*
 
 final case class SearchInput(
     input: String,
@@ -75,6 +76,14 @@ final case class SearchInput(
     scoreInput(input).collect {
       case score if score > 0 => CommandInput.Keyword(input, context.matchScore(score))
     }
+
+  def args: IO[CommandError, CommandInput.Args] = ZIO.fromOption(asArgs).orElseFail(CommandError.NotApplicable)
+
+  def prefixed: IO[CommandError, CommandInput.Prefixed] =
+    ZIO.fromOption(asPrefixed).orElseFail(CommandError.NotApplicable)
+
+  def keyword: IO[CommandError, CommandInput.Keyword] =
+    ZIO.fromOption(asKeyword).orElseFail(CommandError.NotApplicable)
 
   private def scoreInput(text: String): Option[Double] =
     (text :: aliasedInputs).distinct.flatMap(t => commandNames.map(LengthScorer.scoreDefault(_, t))).maxOption

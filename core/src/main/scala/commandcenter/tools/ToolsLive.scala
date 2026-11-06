@@ -62,7 +62,7 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File], scriptCache: ZCac
         }
       }
       .someOrElse("")
-      .catchAll(_ => ZIO.succeed(""))
+      .orElseSucceed("")
 
   def setClipboard(text: String): Task[Unit] =
     toolsPath match {
@@ -88,29 +88,22 @@ final case class ToolsLive(pid: Long, toolsPath: Option[File], scriptCache: ZCac
   def playSound(inputStream: InputStream): Task[Unit] =
     ZIO.scoped {
       for {
-        audioInputStream <- ZIO.attemptBlocking(AudioSystem.getAudioInputStream(new BufferedInputStream(inputStream)))
-        _                <- ZIO.addFinalizer(ZIO.succeed(audioInputStream.close()))
-        clip             <- ZIO.attemptBlocking(AudioSystem.getClip)
-        _                <- ZIO.addFinalizer(ZIO.succeed(clip.close()))
-        donePromise      <- Promise.make[Nothing, Unit]
-        _                <- ZIO
-               .async[Any, Throwable, Boolean] { cb =>
-                 clip.addLineListener { e =>
-                   if (e.getType == LineEvent.Type.STOP) {
-                     cb(donePromise.succeed(()))
-                   }
-                 }
+        audioInputStream <- ZIO.fromAutoCloseable(
+                              ZIO.attemptBlocking(AudioSystem.getAudioInputStream(new BufferedInputStream(inputStream)))
+                            )
+        clip <- ZIO.fromAutoCloseable(ZIO.attemptBlocking(AudioSystem.getClip))
+        // Listener is registered before `start` so the STOP event can't be missed
+        _ <- ZIO.async[Any, Throwable, Unit] { cb =>
+               clip.addLineListener(e => if (e.getType == LineEvent.Type.STOP) cb(ZIO.unit))
+
+               try {
+                 clip.open(audioInputStream)
+                 clip.getControl(FloatControl.Type.MASTER_GAIN).asInstanceOf[FloatControl].setValue(-15) // decibels
+                 clip.start()
+               } catch {
+                 case t: Throwable => cb(ZIO.fail(t))
                }
-               .fork
-        _ <- ZIO.attemptBlocking {
-               clip.open(audioInputStream)
-
-               val control = clip.getControl(FloatControl.Type.MASTER_GAIN).asInstanceOf[FloatControl]
-               control.setValue(-15) // unit is decibels
-
-               clip.start()
              }
-        _ <- donePromise.await
       } yield ()
     }
 }

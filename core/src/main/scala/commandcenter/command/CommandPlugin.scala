@@ -2,12 +2,19 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.config.ConfigParserExtensions
+import commandcenter.event.KeyboardShortcut
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
 import zio.*
 
 trait CommandPlugin[A <: Command[?]] extends ConfigParserExtensions {
   def make(config: Config): RIO[Scope & Env, A]
+
+  def commandNames(config: Config, default: String*): IO[CommandPluginError, List[String]] =
+    config.getZIO("commandNames", default.toList)
+
+  def shortcuts(config: Config): IO[CommandPluginError, Set[KeyboardShortcut]] =
+    config.getZIO("shortcuts", Set.empty[KeyboardShortcut])
 }
 
 object CommandPlugin {
@@ -26,37 +33,34 @@ object CommandPlugin {
       commands <- ZIO.foreach(commandConfigs) { c =>
                     Command
                       .parse(c)
-                      .foldZIO(
-                        {
-                          case CommandPluginError.PluginNotApplicable(commandType, reason) =>
-                            ZIO
-                              .logDebug(
-                                s"Skipping loading `$commandType` plugin because it's not applicable: $reason"
-                              )
-                              .as(None)
+                      .asSome
+                      .catchAll {
+                        case CommandPluginError.PluginNotApplicable(commandType, reason) =>
+                          ZIO
+                            .logDebug(
+                              s"Skipping loading `$commandType` plugin because it's not applicable: $reason"
+                            )
+                            .as(None)
 
-                          case CommandPluginError.PluginNotFound(typeName, _) =>
-                            ZIO.logWarning(s"Plugin '$typeName' not found").as(None)
+                        case CommandPluginError.PluginNotFound(typeName, _) =>
+                          ZIO.logWarning(s"Plugin '$typeName' not found").as(None)
 
-                          case CommandPluginError.PluginsNotSupported(typeName) =>
-                            ZIO
-                              .logWarning(
-                                s"Cannot load `$typeName` because external plugins not yet supported for Substrate VM."
-                              )
-                              .as(None)
+                        case CommandPluginError.PluginsNotSupported(typeName) =>
+                          ZIO
+                            .logWarning(
+                              s"Cannot load `$typeName` because external plugins not yet supported for Substrate VM."
+                            )
+                            .as(None)
 
-                          case error: CommandPluginError.UnexpectedException =>
-                            for {
-                              typeName <- ZIO.attempt(c.getString("type")).orElseSucceed("<unknown>")
-                              _        <- ZIO.logWarningCause(
-                                     s"Skipping loading `$typeName` plugin because it failed to load",
-                                     Cause.fail(error.cause)
-                                   )
-                            } yield None
-
-                        },
-                        c => ZIO.succeed(Some(c))
-                      )
+                        case error: CommandPluginError.UnexpectedException =>
+                          for {
+                            typeName <- ZIO.attempt(c.getString("type")).orElseSucceed("<unknown>")
+                            _        <- ZIO.logWarningCause(
+                                   s"Skipping loading `$typeName` plugin because it failed to load",
+                                   Cause.fail(error.cause)
+                                 )
+                          } yield None
+                      }
                   }
     } yield commands.flatten.filter(c => c.supportedOS.isEmpty || c.supportedOS.contains(OS.os))
   }

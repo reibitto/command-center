@@ -33,7 +33,7 @@ final case class TimerCommand(
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = timerCommand.parse(input.args)
       message <- ZIO
                    .fromEither(parsed)
@@ -85,7 +85,7 @@ object TimerCommand extends CommandPlugin[TimerCommand] {
   def make(config: Config): IO[CommandPluginError, TimerCommand] =
     for {
       activeTimersRef <- Ref.make(Set.empty[ActiveTimer])
-      commandNames    <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield TimerCommand(commandNames.getOrElse(List("timer", "remind")), activeTimersRef)
+      commandNames    <- commandNames(config, "timer", "remind")
+    } yield TimerCommand(commandNames, activeTimersRef)
 
 }

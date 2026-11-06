@@ -32,7 +32,7 @@ final case class ChessCommand(
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input         <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      input         <- searchInput.keyword
       clipboardText <- Tools.getClipboard.orElseSucceed("").map(_.trim)
     } yield PreviewResults.one(
       Preview.unit
@@ -186,16 +186,10 @@ object ChessCommand extends CommandPlugin[ChessCommand] {
 
   def make(config: Config): IO[CommandPluginError, ChessCommand] =
     for {
-      title          <- config.getZIO[Option[String]]("title")
-      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
-      shortcuts      <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
-      chessInterface <- config.getZIO[Option[ChessInterface]]("chessInterface")
+      title          <- config.getZIO("title", "Chess Analysis")
+      commandNames   <- commandNames(config)
+      shortcuts      <- shortcuts(config)
+      chessInterface <- config.getZIO[ChessInterface]("chessInterface", ChessInterface.Default)
       firefoxPath    <- config.getZIO[Option[Path]]("firefoxPath")
-    } yield ChessCommand(
-      title.getOrElse("Chess Analysis"),
-      commandNames.getOrElse(Nil),
-      shortcuts.getOrElse(Set.empty),
-      chessInterface.getOrElse(ChessInterface.Default),
-      firefoxPath
-    )
+    } yield ChessCommand(title, commandNames, shortcuts, chessInterface, firefoxPath)
 }

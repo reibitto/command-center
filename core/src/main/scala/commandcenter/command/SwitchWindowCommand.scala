@@ -15,7 +15,7 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.prefixed
       // TODO: Consider adding more info than just the title. Like "File Explorer" and so on.
       windows <- WindowManager.topLevelWindows.mapBoth(
                    CommandError.UnexpectedError(this),
@@ -32,7 +32,5 @@ final case class SwitchWindowCommand(commandNames: List[String]) extends Command
 object SwitchWindowCommand extends CommandPlugin[SwitchWindowCommand] {
 
   def make(config: Config): IO[CommandPluginError, SwitchWindowCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield SwitchWindowCommand(commandNames.getOrElse(List("window", "w")))
+    commandNames(config, "window", "w").map(SwitchWindowCommand(_))
 }

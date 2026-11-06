@@ -32,9 +32,7 @@ object SearchSpec extends CommandBaseSpec {
       def title: String = name
 
       def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
-        ZIO
-          .fromOption(searchInput.asArgs)
-          .orElseFail(CommandError.NotApplicable)
+        searchInput.args
           .as(PreviewResults.one(Preview(name).onRun(ranOrder.update(_ :+ name))))
     }
 

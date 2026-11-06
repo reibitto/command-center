@@ -33,23 +33,21 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
 
   private def previewRadixCommand(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = radixCommand.parse(input.args)
-      preview <- ZIO
-                   .fromEither(parsed)
-                   .fold(
-                     h => Preview.help(h).score(Scores.veryHigh(input.context)),
-                     { case (fromRadixOpt, toRadixOpt, numberAsString) =>
-                       val fromRadix = fromRadixOpt.getOrElse(10)
-                       val toRadix = toRadixOpt.getOrElse(10)
+      preview = parsed.fold(
+                  h => Preview.help(h).score(Scores.veryHigh(input.context)),
+                  { case (fromRadixOpt, toRadixOpt, numberAsString) =>
+                    val fromRadix = fromRadixOpt.getOrElse(10)
+                    val toRadix = toRadixOpt.getOrElse(10)
 
-                       Try {
-                         convertNumber(numberAsString, fromRadix, toRadix, input.context)
-                       }.getOrElse {
-                         Preview.help(Help.fromCommand(radixCommand)).score(Scores.veryHigh(input.context))
-                       }
-                     }
-                   )
+                    Try {
+                      convertNumber(numberAsString, fromRadix, toRadix, input.context)
+                    }.getOrElse {
+                      Preview.help(Help.fromCommand(radixCommand)).score(Scores.veryHigh(input.context))
+                    }
+                  }
+                )
     } yield PreviewResults.one(preview)
 
   private def detectAndPreviewHex(searchInput: SearchInput): Option[PreviewResults[Unit]] =
@@ -85,7 +83,5 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
 object RadixCommand extends CommandPlugin[RadixCommand] {
 
   def make(config: Config): IO[CommandPluginError, RadixCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield RadixCommand(commandNames.getOrElse(List("radix", "base")))
+    commandNames(config, "radix", "base").map(RadixCommand(_))
 }

@@ -26,37 +26,23 @@ trait Command[+A] {
 
   object Preview {
 
-    def apply[A1 >: A](a: A1): PreviewResult[A1] =
-      PreviewResult.Some(
-        Command.this,
-        a,
-        ZIO.unit,
-        RunOption.Hide,
-        MoreResults.Exhausted,
-        1.0,
-        () => Renderer.renderDefault(title, a.toString)
-      )
+    def apply[A1 >: A](a: A1): PreviewResult[A1] = some(Command.this, a, a.toString)
 
     def unit[A1 >: A](implicit ev: Command[A1] =:= Command[Unit]): PreviewResult[Unit] =
-      PreviewResult.Some(
-        ev(Command.this),
-        (),
-        ZIO.unit,
-        RunOption.Hide,
-        MoreResults.Exhausted,
-        1.0,
-        () => Renderer.renderDefault(title, "")
-      )
+      some(ev(Command.this), (), "")
 
     def help[A1 >: A](help: Help)(implicit ev: Command[A1] =:= Command[Unit]): PreviewResult[Unit] =
+      some(ev(Command.this), (), HelpMessage.formatted(help))
+
+    private def some[B](command: Command[B], b: B, content: => Str): PreviewResult[B] =
       PreviewResult.Some(
-        ev(Command.this),
-        (),
+        command,
+        b,
         ZIO.unit,
         RunOption.Hide,
         MoreResults.Exhausted,
         1.0,
-        () => Renderer.renderDefault(title, HelpMessage.formatted(help))
+        () => Renderer.renderDefault(title, content)
       )
   }
 
@@ -88,13 +74,13 @@ object Command {
       // The user's input, plus every matching alias resolved (expanded) to its full text value.
       val candidates = (input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)).distinct
 
-      for {
-        candidateResults <- ZIO.foreach(Chunk.fromIterable(candidates))(searchExpandedInput(commands, _, context))
-      } yield SearchResults(
-        input,
-        candidateResults.flatMap(_.previews).sortBy(_.score)(Ordering.Double.TotalOrdering.reverse),
-        candidateResults.flatMap(_.errors)
-      )
+      ZIO.foreach(Chunk.fromIterable(candidates))(searchExpandedInput(commands, _, context)).map { candidateResults =>
+        SearchResults(
+          input,
+          candidateResults.flatMap(_.previews).sortBy(_.score)(Ordering.Double.TotalOrdering.reverse),
+          candidateResults.flatMap(_.errors)
+        )
+      }
     }
 
   /** Runs a single command directly by its own canonical name, bypassing
@@ -105,7 +91,7 @@ object Command {
   def searchByCommandName[A](command: Command[A], context: CommandContext): URIO[Env, Option[PreviewResult[A]]] =
     command.commandNames.headOption match {
       case Some(name) => search(Vector(command), Map.empty, name, context).map(_.previews.maxByOption(_.score))
-      case None       => ZIO.succeed(None)
+      case None       => ZIO.none
     }
 
   /** Searches for commands matching a single already alias-expanded input
@@ -124,14 +110,14 @@ object Command {
         case Nil              => ZIO.succeed(SearchResults(input, Chunk.empty))
         case statement :: Nil => searchStatement(commands, statement, context).map(_.copy(searchTerm = input))
         case statements       =>
-          for {
-            statementResults <- ZIO.foreach(Chunk.fromIterable(statements))(searchStatement(commands, _, context))
-          } yield SearchResults(
-            input,
-            combinedRunAllPreview(statementResults).fold(Chunk.empty[PreviewResult[A]])(Chunk.single) ++
-              statementResults.flatMap(_.previews),
-            statementResults.flatMap(_.errors)
-          )
+          ZIO.foreach(Chunk.fromIterable(statements))(searchStatement(commands, _, context)).map { statementResults =>
+            SearchResults(
+              input,
+              combinedRunAllPreview(statementResults).fold(Chunk.empty[PreviewResult[A]])(Chunk.single) ++
+                statementResults.flatMap(_.previews),
+              statementResults.flatMap(_.errors)
+            )
+          }
       }
 
   /** Synthesizes a single combined entry that, when run, sequentially runs the
@@ -201,31 +187,19 @@ object Command {
                                                }
                     } yield results match {
                       case beforeLast :+ last if results.length >= initialPageSize =>
+                        val more = MoreResults.Remaining(
+                          p.copy(results = restStream, totalRemaining = totalRemaining.map(_ - initialPageSize))
+                        )
+
                         if (beforeLast.isEmpty)
-                          beforeLast :+ last
-                            .runOption(RunOption.RemainOpen)
-                            .moreResults(
-                              MoreResults.Remaining(
-                                p.copy(
-                                  results = restStream,
-                                  totalRemaining = totalRemaining.map(_ - initialPageSize)
-                                )
-                              )
-                            )
+                          beforeLast :+ last.runOption(RunOption.RemainOpen).moreResults(more)
                         else
                           beforeLast :+ last :+
                             PreviewResult
                               .nothing(Rendered.Ansi(Color.Yellow(p.moreMessage)))
                               .runOption(RunOption.RemainOpen)
                               .score(last.score)
-                              .moreResults(
-                                MoreResults.Remaining(
-                                  p.copy(
-                                    results = restStream,
-                                    totalRemaining = totalRemaining.map(_ - initialPageSize)
-                                  )
-                                )
-                              )
+                              .moreResults(more)
 
                       case chunk => chunk
                     }
@@ -240,16 +214,11 @@ object Command {
                 .logTrace(s"All previews took ${timeTaken.render} (parallelism=$previewParallelism)")
                 .as(r)
             }
-    } yield resultChunks.flatMap {
-      case Left(e)  => Chunk.single(Left(e))
-      case Right(r) => r.map(Right(_))
-    }.partitionMap(identity) match {
-      case (errors, successes) =>
-        val errorsWithMessages = errors.collect { case e: CommandError.ShowMessage =>
-          e.previewResult
-        }
+    } yield {
+      val (errors, successes) = resultChunks.partitionMap(identity)
+      val errorsWithMessages = errors.collect { case e: CommandError.ShowMessage => e.previewResult }
 
-        SearchResults(input, successes ++ errorsWithMessages, errors)
+      SearchResults(input, successes.flatten ++ errorsWithMessages, errors)
     }).tap { r =>
       ZIO.foreachDiscard(r.errors) {
         case CommandError.UnexpectedError(t, source) =>

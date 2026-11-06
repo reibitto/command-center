@@ -7,6 +7,15 @@ import zio.*
 
 object GlobalActions {
 
+  def setup(config: CCConfig)(openTerminal: RIO[Env, Unit]): RIO[Env, Unit] =
+    for {
+      _ <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
+             (ZIO.logDebug("Opening emulated terminal...") *> openTerminal).ignore
+           )
+      _ <- ZIO.logInfo(s"Ready to accept input. Press `${config.keyboard.openShortcut}` to open the terminal.")
+      _ <- setupCommon(config.globalActions)
+    } yield ()
+
   def setupCommon(actions: Vector[GlobalAction]): RIO[Env, Unit] =
     for {
       cycleWindowStateRef <- Ref.make(Option.empty[CycleWindowState])

@@ -36,16 +36,20 @@ final case class ITunesCommand(commandNames: List[String], cache: ZCache[String,
   val helpCommand = decline.Command("help", "Display command usage")(Opts(Opt.Help))
   // TODO: volume control + mute
 
-  val opts = Opts.subcommand(playCommand) orElse
-    Opts.subcommand(pauseCommand) orElse
-    Opts.subcommand(stopCommand) orElse
-    Opts.subcommand(nextTrackCommand) orElse
-    Opts.subcommand(previousTrackCommand) orElse
-    Opts.subcommand(rewindCommand) orElse
-    Opts.subcommand(seekCommand) orElse
-    Opts.subcommand(rateCommand) orElse
-    Opts.subcommand(deleteTrackCommand) orElse
-    Opts.subcommand(helpCommand) orNone
+  val opts = Opts
+    .subcommands(
+      playCommand,
+      pauseCommand,
+      stopCommand,
+      nextTrackCommand,
+      previousTrackCommand,
+      rewindCommand,
+      seekCommand,
+      rateCommand,
+      deleteTrackCommand,
+      helpCommand
+    )
+    .orNone
 
   val itunesCommand = decline.Command("itunes", "iTunes commands")(opts)
 
@@ -61,7 +65,7 @@ final case class ITunesCommand(commandNames: List[String], cache: ZCache[String,
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = itunesCommand.parse(input.args)
       message <- ZIO
                    .fromEither(parsed)
@@ -127,8 +131,8 @@ object ITunesCommand extends CommandPlugin[ITunesCommand] {
     for {
       runtime <- ZIO.runtime[Any]
       cache = ZCache.ofClasspathResources()(runtime)
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield ITunesCommand(commandNames.getOrElse(List("itunes")), cache)
+      commandNames <- commandNames(config, "itunes")
+    } yield ITunesCommand(commandNames, cache)
 
   sealed trait Opt
 

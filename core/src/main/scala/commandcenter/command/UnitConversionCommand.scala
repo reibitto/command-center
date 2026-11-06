@@ -27,32 +27,37 @@ final case class UnitConversionCommand() extends Command[Double] {
   private def escapedGroupingSeparator: String = s"\\$groupingSeparator"
   private def escapedDecimalSeparator: String = s"\\$decimalSeparator"
 
+  // sign, number, fraction, unit ("100 km", "1 1/2 cups"). Units can't start with "/" so "1/2" parses as a fraction.
   val unitRegex: Regex =
-    s"""^([+-]?[\\d$escapedGroupingSeparator]+(?:$escapedDecimalSeparator\\d+)?)\\s*(.+)$$""".r
+    s"""^([+-])?(?:([\\d$escapedGroupingSeparator]+(?:$escapedDecimalSeparator\\d+)?)\\s*)?(?:(\\d+)/(\\d+))?\\s*([^\\d\\s/].*)$$""".r
+
+  def parseQuantity(input: String): Option[(Double, UnitOfMeasure)] =
+    unitRegex.unapplySeq(input.trim).flatMap {
+      case List(sign, whole, numerator, denominator, unitText) if whole != null || numerator != null =>
+        for {
+          wholeValue <- Option(whole).fold(Option(0.0)) { w =>
+                          w.replace(groupingSeparator.toString, "").replace(decimalSeparator, '.').toDoubleOption
+                        }
+          fractionValue <- Option(numerator).fold(Option(0.0)) { n =>
+                             Option.when(denominator.toDouble != 0)(n.toDouble / denominator.toDouble)
+                           }
+          unit <- UnitOfMeasure.parse(unitText)
+        } yield ((if (sign == "-") -1 else 1) * (wholeValue + fractionValue), unit)
+
+      case _ => None
+    }
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Double]] =
-    for {
-      conversionResults <- ZIO.fromOption {
-                             unitRegex.unapplySeq(searchInput.input.trim).flatMap {
-                               case List(value, sourceUnit) =>
-                                 value.replace(groupingSeparator.toString, "").toDoubleOption.flatMap { number =>
-                                   UnitOfMeasure.parse(sourceUnit).map { unit =>
-                                     UnitOfMeasure.convert(number, unit)
-                                   }
-                                 }
+    ZIO.fromOption(parseQuantity(searchInput.input)).orElseFail(NotApplicable).map { case (number, unit) =>
+      PreviewResults.fromIterable(UnitOfMeasure.convert(number, unit).map { r =>
+        val formatted = r.unitOfMeasure.render(r.value)
 
-                               case _ => None
-                             }
-                           }.orElseFail(NotApplicable)
-      previewResults = conversionResults.map { r =>
-                         val formatted = r.unitOfMeasure.render(r.value)
-
-                         Preview(r.value)
-                           .score(Scores.veryHigh(searchInput.context))
-                           .rendered(Renderer.renderDefault(title, formatted))
-                           .onRun(Tools.setClipboard(formatted))
-                       }
-    } yield PreviewResults.fromIterable(previewResults)
+        Preview(r.value)
+          .score(Scores.veryHigh(searchInput.context))
+          .rendered(Renderer.renderDefault(title, formatted))
+          .onRun(Tools.setClipboard(formatted))
+      })
+    }
 }
 
 object UnitConversionCommand extends CommandPlugin[UnitConversionCommand] {
@@ -61,198 +66,195 @@ object UnitConversionCommand extends CommandPlugin[UnitConversionCommand] {
 
 final case class ConversionResult(value: Double, unitOfMeasure: UnitOfMeasure)
 
-sealed trait UnitOfMeasure {
-  def render(value: Double): String
+sealed trait Dimension
+
+object Dimension {
+  case object Length extends Dimension
+  case object Speed extends Dimension
+  case object Mass extends Dimension
+  case object Volume extends Dimension
+  case object Temperature extends Dimension
+  case object Data extends Dimension
+}
+
+/** A unit is converted through its dimension's base unit: `base = (value +
+  * offset) * factor`. `offset` is only needed for temperatures.
+  */
+class UnitOfMeasure(
+    val symbol: String,
+    val dimension: Dimension,
+    val factor: Double,
+    val digits: Int,
+    val names: Set[String],
+    val offset: Double = 0.0
+) {
+  def toBase(value: Double): Double = (value + offset) * factor
+
+  def fromBase(base: Double): Double = base / factor - offset
+
+  def render(value: Double): String = s"${value.digits(digits)} $symbol"
+
+  override def toString: String = symbol
 }
 
 object UnitOfMeasure {
+  import Dimension.*
 
-  case object Celsius extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} C"
-  }
+  private def unit(symbol: String, dimension: Dimension, factor: Double, digits: Int, names: String*): UnitOfMeasure =
+    new UnitOfMeasure(symbol, dimension, factor, digits, (symbol +: names).map(_.toLowerCase).toSet)
 
-  case object Fahrenheit extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} F"
-  }
+  // Length (base: meter)
+  val Millimeter: UnitOfMeasure = unit("mm", Length, 0.001, 1, "millimeter", "millimeters", "millimetre", "millimetres")
+  val Centimeter: UnitOfMeasure = unit("cm", Length, 0.01, 1, "centimeter", "centimeters", "centimetre", "centimetres")
+  val Meter: UnitOfMeasure = unit("m", Length, 1, 2, "meter", "meters", "metre", "metres")
+  val Kilometer: UnitOfMeasure = unit("km", Length, 1000, 1, "kilometer", "kilometers", "kilometre", "kilometres")
+  val Inch: UnitOfMeasure = unit("in", Length, 0.0254, 1, "inch", "inches", "\"", "″")
+  val Foot: UnitOfMeasure = unit("ft", Length, 0.3048, 2, "foot", "feet", "'", "′")
+  val Yard: UnitOfMeasure = unit("yd", Length, 0.9144, 2, "yds", "yard", "yards")
+  val Mile: UnitOfMeasure = unit("mi", Length, 1609.344, 1, "mile", "miles")
 
-  case object Kilometer extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} km"
-  }
+  // Rendering-only unit: the value is in inches, shown as e.g. "5 ft 11 in"
+  val FeetAndInches: UnitOfMeasure = new UnitOfMeasure("ft in", Length, 0.0254, 1, Set.empty) {
+    override def render(value: Double): String = {
+      val totalInches = math.round(value * 10) / 10.0
+      val feet = (totalInches / 12).toInt
 
-  case object Mile extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} mi"
-  }
-
-  case object Byte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(0)} bytes"
-  }
-
-  case object Kilobyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(2)} KB"
-  }
-
-  case object Kibibyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(2)} KiB"
-  }
-
-  case object Megabyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(3)} MB"
-  }
-
-  case object Mebibyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(3)} MiB"
-  }
-
-  case object Gigabyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(4)} GB"
-  }
-
-  case object Gibibyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(4)} GiB"
-  }
-
-  case object Terabyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(5)} TB"
-  }
-
-  case object Tebibyte extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(5)} TiB"
-  }
-
-  case object Pound extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} lbs"
-  }
-
-  case object Kilogram extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} kg"
-  }
-
-  case object Feet extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(2)} ft"
-  }
-
-  case object Inches extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} in"
-  }
-
-  case object FeetAndInches extends UnitOfMeasure {
-
-    // `value` is in inches
-    def render(value: Double): String = {
-      val feet = value.toInt / 12
-      val inches = value % 12
-
-      s"$feet ft ${inches.digits(1)} in"
+      s"$feet ft ${(totalInches - feet * 12).digits(1)} in"
     }
   }
 
-  case object Centimeter extends UnitOfMeasure {
-    def render(value: Double): String = s"${value.digits(1)} cm"
-  }
+  // Speed (base: meters per second)
+  val KilometersPerHour: UnitOfMeasure = unit("km/h", Speed, 1 / 3.6, 1, "kph", "kmh", "kmph", "km/hr")
+  val MilesPerHour: UnitOfMeasure = unit("mph", Speed, 0.44704, 1, "mi/h", "mi/hr")
+  val MetersPerSecond: UnitOfMeasure = unit("m/s", Speed, 1, 2, "mps")
+  val Knot: UnitOfMeasure = unit("kn", Speed, 1852 / 3600.0, 1, "kt", "kts", "knot", "knots")
+
+  // Mass (base: gram)
+  val Gram: UnitOfMeasure = unit("g", Mass, 1, 1, "gram", "grams", "gramme", "grammes")
+  val Kilogram: UnitOfMeasure = unit("kg", Mass, 1000, 1, "kgs", "kilo", "kilos", "kilogram", "kilograms")
+  val Ounce: UnitOfMeasure = unit("oz", Mass, 28.349523125, 2, "ounce", "ounces")
+  val Pound: UnitOfMeasure = unit("lbs", Mass, 453.59237, 1, "lb", "pound", "pounds")
+  val Stone: UnitOfMeasure = unit("st", Mass, 6350.29318, 2, "stone", "stones")
+
+  // Volume (base: milliliter). US customary units.
+  val Milliliter: UnitOfMeasure =
+    unit("ml", Volume, 1, 1, "cc", "milliliter", "milliliters", "millilitre", "millilitres")
+  val Liter: UnitOfMeasure = unit("L", Volume, 1000, 2, "liter", "liters", "litre", "litres")
+  val Teaspoon: UnitOfMeasure = unit("tsp", Volume, 4.92892159375, 2, "tsps", "teaspoon", "teaspoons")
+  val Tablespoon: UnitOfMeasure = unit("tbsp", Volume, 14.78676478125, 2, "tbsps", "tbs", "tablespoon", "tablespoons")
+
+  val FluidOunce: UnitOfMeasure =
+    unit("fl oz", Volume, 29.5735295625, 2, "floz", "fl. oz", "fl.oz", "fluid ounce", "fluid ounces")
+  val Cup: UnitOfMeasure = unit("cups", Volume, 236.5882365, 2, "cup")
+  val Pint: UnitOfMeasure = unit("pt", Volume, 473.176473, 2, "pint", "pints")
+  val Quart: UnitOfMeasure = unit("qt", Volume, 946.352946, 2, "quart", "quarts")
+  val Gallon: UnitOfMeasure = unit("gal", Volume, 3785.411784, 2, "gallon", "gallons")
+
+  // Temperature (base: kelvin)
+  val Celsius: UnitOfMeasure =
+    new UnitOfMeasure("C", Temperature, 1, 1, Set("c", "°c", "ｃ", "度", "ど", "ド", "celsius", "centigrade"), 273.15)
+
+  val Fahrenheit: UnitOfMeasure =
+    new UnitOfMeasure("F", Temperature, 5 / 9.0, 1, Set("f", "°f", "ｆ", "fahrenheit"), 459.67)
+  // No bare "k" alias since "100k" usually means 100,000
+  val Kelvin: UnitOfMeasure = new UnitOfMeasure("K", Temperature, 1, 1, Set("kelvin"))
+
+  // Data (base: byte)
+  val Byte: UnitOfMeasure = unit("bytes", Data, 1, 0, "b", "byte")
+  val Kilobyte: UnitOfMeasure = unit("KB", Data, 1e3, 2)
+  val Kibibyte: UnitOfMeasure = unit("KiB", Data, 1024.0, 2)
+  val Megabyte: UnitOfMeasure = unit("MB", Data, 1e6, 3)
+  val Mebibyte: UnitOfMeasure = unit("MiB", Data, math.pow(1024, 2), 3)
+  val Gigabyte: UnitOfMeasure = unit("GB", Data, 1e9, 4)
+  val Gibibyte: UnitOfMeasure = unit("GiB", Data, math.pow(1024, 3), 4)
+  val Terabyte: UnitOfMeasure = unit("TB", Data, 1e12, 5)
+  val Tebibyte: UnitOfMeasure = unit("TiB", Data, math.pow(1024, 4), 5)
+
+  val all: List[UnitOfMeasure] = List(
+    Millimeter,
+    Centimeter,
+    Meter,
+    Kilometer,
+    Inch,
+    Foot,
+    Yard,
+    Mile,
+    FeetAndInches,
+    KilometersPerHour,
+    MilesPerHour,
+    MetersPerSecond,
+    Knot,
+    Gram,
+    Kilogram,
+    Ounce,
+    Pound,
+    Stone,
+    Milliliter,
+    Liter,
+    Teaspoon,
+    Tablespoon,
+    FluidOunce,
+    Cup,
+    Pint,
+    Quart,
+    Gallon,
+    Celsius,
+    Fahrenheit,
+    Kelvin,
+    Byte,
+    Kilobyte,
+    Kibibyte,
+    Megabyte,
+    Mebibyte,
+    Gigabyte,
+    Gibibyte,
+    Terabyte,
+    Tebibyte
+  )
+
+  // Which units to show for a given source unit. Units not listed here convert to every other unit in their dimension.
+  private val targets: Map[UnitOfMeasure, List[UnitOfMeasure]] = Map(
+    Millimeter -> List(Inch),
+    Centimeter -> List(Inch, Foot, FeetAndInches),
+    Meter -> List(Foot, FeetAndInches, Yard),
+    Kilometer -> List(Mile),
+    Inch -> List(Centimeter, Foot),
+    Foot -> List(Meter, Centimeter, Inch),
+    Yard -> List(Meter, Foot),
+    Mile -> List(Kilometer),
+    KilometersPerHour -> List(MilesPerHour),
+    MilesPerHour -> List(KilometersPerHour),
+    MetersPerSecond -> List(KilometersPerHour, MilesPerHour),
+    Knot -> List(KilometersPerHour, MilesPerHour),
+    Gram -> List(Ounce),
+    Kilogram -> List(Pound),
+    Ounce -> List(Gram),
+    Pound -> List(Kilogram, Gram),
+    Stone -> List(Kilogram, Pound),
+    Milliliter -> List(Teaspoon, Tablespoon, FluidOunce, Cup),
+    Liter -> List(Cup, Quart, Gallon),
+    Teaspoon -> List(Milliliter, Tablespoon),
+    Tablespoon -> List(Milliliter, Teaspoon, FluidOunce),
+    FluidOunce -> List(Milliliter, Tablespoon, Cup),
+    Cup -> List(Milliliter, FluidOunce, Tablespoon),
+    Pint -> List(Milliliter, Cup),
+    Quart -> List(Liter, Cup),
+    Gallon -> List(Liter, Quart),
+    Celsius -> List(Fahrenheit),
+    Fahrenheit -> List(Celsius),
+    Kelvin -> List(Celsius, Fahrenheit)
+  )
+
+  private val byName: Map[String, UnitOfMeasure] = all.flatMap(u => u.names.map(_ -> u)).toMap
 
   def parse(text: String): Option[UnitOfMeasure] =
-    text.trim.toLowerCase match {
-      case "c" | "Ｃ" | "度" | "ど" | "ド" => Some(UnitOfMeasure.Celsius)
-      case "f" | "Ｆ"                   => Some(UnitOfMeasure.Fahrenheit)
-      case "km"                        => Some(UnitOfMeasure.Kilometer)
-      case "mi" | "mile" | "miles"     => Some(UnitOfMeasure.Mile)
-      case "b" | "byte" | "bytes"      => Some(UnitOfMeasure.Byte)
-      case "kb"                        => Some(UnitOfMeasure.Kilobyte)
-      case "kib"                       => Some(UnitOfMeasure.Kibibyte)
-      case "mb"                        => Some(UnitOfMeasure.Megabyte)
-      case "mib"                       => Some(UnitOfMeasure.Mebibyte)
-      case "gb"                        => Some(UnitOfMeasure.Gigabyte)
-      case "gib"                       => Some(UnitOfMeasure.Gibibyte)
-      case "tb"                        => Some(UnitOfMeasure.Terabyte)
-      case "tib"                       => Some(UnitOfMeasure.Tebibyte)
-      case "lb" | "lbs"                => Some(UnitOfMeasure.Pound)
-      case "kg"                        => Some(UnitOfMeasure.Kilogram)
-      case "ft"                        => Some(UnitOfMeasure.Feet)
-      case "in"                        => Some(UnitOfMeasure.Inches)
-      case "cm"                        => Some(UnitOfMeasure.Centimeter)
-      case _                           => None
-    }
+    byName.get(text.trim.toLowerCase.replaceAll("\\s+", " "))
 
-  def convertFromBytes(bytes: Double): Seq[ConversionResult] =
-    Seq(
-      ConversionResult(bytes, UnitOfMeasure.Byte),
-      ConversionResult(bytes / 1000, UnitOfMeasure.Kilobyte),
-      ConversionResult(bytes / 1024, UnitOfMeasure.Kibibyte),
-      ConversionResult(bytes / 1000 / 1000, UnitOfMeasure.Megabyte),
-      ConversionResult(bytes / 1024 / 1024, UnitOfMeasure.Mebibyte),
-      ConversionResult(bytes / 1000 / 1000 / 1000, UnitOfMeasure.Gigabyte),
-      ConversionResult(bytes / 1024 / 1024 / 1024, UnitOfMeasure.Gibibyte),
-      ConversionResult(bytes / 1000 / 1000 / 1000 / 1000, UnitOfMeasure.Terabyte),
-      ConversionResult(bytes / 1024 / 1024 / 1024 / 1024, UnitOfMeasure.Tebibyte)
-    )
+  def convert(number: Double, source: UnitOfMeasure): List[ConversionResult] = {
+    val base = source.toBase(number)
 
-  def convert(number: Double, source: UnitOfMeasure): Seq[ConversionResult] =
-    source match {
-      case UnitOfMeasure.Celsius =>
-        Seq(ConversionResult(number * (9.0 / 5) + 32, UnitOfMeasure.Fahrenheit))
-
-      case UnitOfMeasure.Fahrenheit =>
-        Seq(ConversionResult((number - 32) * (5 / 9.0), UnitOfMeasure.Celsius))
-
-      case UnitOfMeasure.Kilometer =>
-        Seq(ConversionResult(number * 0.62137119, UnitOfMeasure.Mile))
-
-      case UnitOfMeasure.Mile =>
-        Seq(ConversionResult(number / 0.62137119, UnitOfMeasure.Kilometer))
-
-      case u @ UnitOfMeasure.Byte =>
-        convertFromBytes(number).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Kilobyte =>
-        convertFromBytes(number * 1000).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Kibibyte =>
-        convertFromBytes(number * 1024).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Megabyte =>
-        convertFromBytes(number * 1000 * 1000).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Mebibyte =>
-        convertFromBytes(number * 1024 * 1024).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Gigabyte =>
-        convertFromBytes(number * 1000 * 1000 * 1000).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Gibibyte =>
-        convertFromBytes(number * 1024 * 1024 * 1024).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Terabyte =>
-        convertFromBytes(number * 1000 * 1000 * 1000 * 1000).filter(_.unitOfMeasure != u)
-
-      case u @ UnitOfMeasure.Tebibyte =>
-        convertFromBytes(number * 1024 * 1024 * 1024 * 1024).filter(_.unitOfMeasure != u)
-
-      case UnitOfMeasure.Pound =>
-        Seq(ConversionResult(number * 0.453592, UnitOfMeasure.Kilogram))
-
-      case UnitOfMeasure.Kilogram =>
-        Seq(ConversionResult(number / 0.453592, UnitOfMeasure.Pound))
-
-      case UnitOfMeasure.Feet =>
-        Seq(
-          ConversionResult(number * 12 * 2.54, UnitOfMeasure.Centimeter),
-          ConversionResult(number * 12, UnitOfMeasure.Inches)
-        )
-
-      case UnitOfMeasure.Inches =>
-        Seq(
-          ConversionResult(number * 2.54, UnitOfMeasure.Centimeter),
-          ConversionResult(number / 12, UnitOfMeasure.Feet)
-        )
-
-      case UnitOfMeasure.FeetAndInches =>
-        Seq.empty
-
-      case UnitOfMeasure.Centimeter =>
-        Seq(
-          ConversionResult(number / 2.54, UnitOfMeasure.Inches),
-          ConversionResult(number / 2.54 / 12, UnitOfMeasure.Feet),
-          ConversionResult(number / 2.54, UnitOfMeasure.FeetAndInches)
-        )
-    }
+    targets
+      .getOrElse(source, all.filter(u => u.dimension == source.dimension && u != source))
+      .map(target => ConversionResult(target.fromBase(base), target))
+  }
 }

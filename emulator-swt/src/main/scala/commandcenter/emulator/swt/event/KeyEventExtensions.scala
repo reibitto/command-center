@@ -10,6 +10,9 @@ object KeyEventExtensions {
     def isAltDown: Boolean =
       (self.stateMask & SWT.ALT) == SWT.ALT
 
+    def isAltGraphDown: Boolean =
+      (self.stateMask & SWT.ALT_GR) == SWT.ALT_GR
+
     def isControlDown: Boolean =
       (self.stateMask & SWT.CONTROL) == SWT.CONTROL
 

@@ -4,10 +4,10 @@ import commandcenter.*
 import commandcenter.command.*
 import commandcenter.emulator.swt.event.KeyEventExtensions.KeyEventExtension
 import commandcenter.emulator.swt.event.KeyboardShortcutUtil
-import commandcenter.emulator.util.Lists
-import commandcenter.event.KeyboardShortcut
-import commandcenter.locale.Language
+import commandcenter.emulator.util.AnsiRun
+import commandcenter.ui.SearchDebouncer
 import commandcenter.util.{Debouncer, WindowManager}
+import commandcenter.util.RuntimeExtensions.*
 import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import org.eclipse.swt.custom.StyleRange
@@ -31,38 +31,12 @@ final case class SwtTerminal(
 
   val smartBuffer: TerminalBuffer = new TerminalBuffer(new StringBuilder, mutable.ArrayDeque.empty)
 
-  def init: RIO[Env, Unit] =
-    for {
-      opacity <- Conf.get(_.display.opacity)
-      _       <- setOpacity(opacity)
-    } yield ()
-
   terminal.display.asyncExec { () =>
     terminal.inputBox.addModifyListener(new ModifyListener {
 
       override def modifyText(e: ModifyEvent): Unit = {
         val searchTerm = terminal.inputBox.getText
-
-        Unsafe.unsafe { implicit u =>
-          runtime.unsafe.run {
-            for {
-              _             <- ZIO.logTrace(s"Input text was modified to `$searchTerm`")
-              context       <- ZIO.succeed(CommandContext(Language.detect(searchTerm), SwtTerminal.this, 1.0))
-              config        <- Conf.config
-              searchResults <- searchResultsRef.get
-              // This is an optimization but it also helps with certain IMEs where they resend all the changes when
-              // exiting out of composition mode (committing the changes).
-              sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
-              _ <- searchDebouncer(
-                     Command
-                       .search(config.commands, config.aliases, searchTerm, context)
-                       .tap(r => setResults(r))
-                       .unless(sameAsLast)
-                       .unit
-                   )
-            } yield ()
-          }
-        }
+        runtime.unsafeRun(ZIO.logTrace(s"Input text was modified to `$searchTerm`") *> onInputChanged(searchTerm))
       }
     })
 
@@ -95,8 +69,8 @@ final case class SwtTerminal(
 
       override def keyReleased(e: KeyEvent): Unit =
         e.keyCode match {
-          case SWT.CR | SWT.KEYPAD_CR => fork(runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease)))
-          case SWT.ESC                => fork(resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.CR | SWT.KEYPAD_CR => fork(onRelease(runSelected))
+          case SWT.ESC                => fork(onRelease(resetAndHide))
           case _                      => ()
         }
 
@@ -104,9 +78,9 @@ final case class SwtTerminal(
         e.keyCode match {
           // We also check the `character` field to that hitting `Enter` in IME composition mode doesn't immediately
           // run the command.
-          case SWT.CR if e.character == SWT.CR => fork(runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
-          case SWT.KEYPAD_CR                   => fork(runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
-          case SWT.ESC                         => fork(resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease)))
+          case SWT.CR if e.character == SWT.CR => fork(onPress(runSelected))
+          case SWT.KEYPAD_CR                   => fork(onPress(runSelected))
+          case SWT.ESC                         => fork(onPress(resetAndHide))
           case SWT.ARROW_DOWN if e.isAltDown   => fork(invoke(terminal.outputBox.setFocus()))
 
           case SWT.ARROW_DOWN =>
@@ -133,43 +107,12 @@ final case class SwtTerminal(
 
           case _ =>
             val shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
-
-            fork {
-              searchResultsRef.get.flatMap { previousResults =>
-                previousResults.previews.filter(_.shortcuts.contains(shortcutPressed)).maxByOption(_.score) match {
-                  case Some(preview) => runPreview(preview)
-                  case None          => runGlobalShortcut(shortcutPressed)
-                }
-              }
-            }
+            fork(runShortcut(shortcutPressed))
         }
     })
   }
 
-  private def fork(effect: URIO[Env, Any]): Unit =
-    Unsafe.unsafe { implicit u =>
-      runtime.unsafe.fork(effect)
-    }
-
-  // Falls back to a command's own configured `shortcuts` even when the input textbox is empty.
-  private def runGlobalShortcut(shortcutPressed: KeyboardShortcut): URIO[Env, Unit] =
-    if (shortcutPressed.isEmpty)
-      ZIO.unit
-    else
-      for {
-        config <- Conf.config
-        commandOpt = config.commands.find(_.shortcuts.contains(shortcutPressed))
-        cmdContext = CommandContext(Language.default, SwtTerminal.this, 1.0)
-        previewOpt <- ZIO.foreach(commandOpt)(Command.searchByCommandName(_, cmdContext)).map(_.flatten)
-        _          <- ZIO.foreachDiscard(previewOpt)(runPreview)
-      } yield ()
-
-  private def runPreview(preview: PreviewResult[Any]): URIO[Env, Unit] =
-    for {
-      _ <- hide.when(preview.runOption != RunOption.RemainOpen)
-      _ <- preview.onRunSandboxedLogged.forkDaemon
-      _ <- reset.when(preview.runOption != RunOption.RemainOpen)
-    } yield ()
+  private def fork(effect: URIO[Env, Any]): Unit = runtime.unsafeFork(effect)
 
   private def renderSelectionCursor(cursorDelta: Int): UIO[Unit] =
     for {
@@ -200,76 +143,12 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  override protected def render(searchResults: SearchResults[Any]): URIO[Env, Unit] = {
-    var scrollToPosition: Int = 0
-
+  override protected def render(searchResults: SearchResults[Any]): URIO[Env, Unit] =
     for {
-      commandCursor <- commandCursorRef.get
-      _ = smartBuffer.clear()
-      styles = new mutable.ArrayDeque[StyleRange]()
-      _ = {
-        def renderBar(rowIndex: Int): Unit = {
-          val barColor = if (rowIndex == commandCursor) terminal.green else terminal.darkGray
-
-          styles.append(new StyleRange(smartBuffer.buffer.length, 1, terminal.black, barColor))
-          smartBuffer.buffer.append("  ")
-        }
-
-        def colorMask(width: Int): Long = ~0L >>> (64 - width)
-
-        var lineStart = 0
-
-        searchResults.rendered.zipWithIndex.foreach { case (r, row) =>
-          r match {
-            case Rendered.Styled(segments) => ()
-
-            case ar: Rendered.Ansi =>
-              renderBar(row)
-
-              if (row < commandCursor)
-                scrollToPosition += ar.ansiStr.length + 3
-
-              val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
-
-              smartBuffer.lineStartIndices.addOne(lineStart)
-              lineStart += renderStr.length + 2
-
-              val plainText = renderStr.plainText
-              var i: Int = 0
-              Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
-                val s = plainText.substring(i, i + c.length)
-
-                i += c.length
-
-                val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
-                val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
-
-                smartBuffer.buffer.append(s)
-
-                val swtForegroundOpt = terminal.fromFansiColorCode(ansiForeground.toInt)
-                val swtBackgroundOpt = terminal.fromFansiColorCode(ansiBackground.toInt)
-
-                (swtForegroundOpt, swtBackgroundOpt) match {
-                  case (None, None) =>
-                  // Don't bother wastefully creating a StyleRange object
-
-                  case _ =>
-                    styles.append(
-                      new StyleRange(
-                        smartBuffer.buffer.length - s.length,
-                        s.length,
-                        swtForegroundOpt.orNull,
-                        swtBackgroundOpt.orNull
-                      )
-                    )
-                }
-              }
-          }
-        }
-      }
-
-      config <- Conf.config
-      _      <- invoke {
+      commandCursor              <- commandCursorRef.get
+      (styles, scrollToPosition) <- ZIO.succeed(fillBuffer(searchResults, commandCursor))
+      config                     <- Conf.config
+      _                          <- invoke {
              if (smartBuffer.buffer.isEmpty || !terminal.shell.isVisible) {
                terminal.outputBox.setVisible(false)
                terminal.outputBoxGridData.exclude = true
@@ -279,7 +158,7 @@ final case class SwtTerminal(
                terminal.outputBoxGridData.exclude = false
                terminal.outputBox.setText(smartBuffer.buffer.toString)
 
-               terminal.outputBox.setStyleRanges(styles.toArray)
+               terminal.outputBox.setStyleRanges(styles)
              }
 
              val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
@@ -292,6 +171,45 @@ final case class SwtTerminal(
              terminal.outputBox.setSelection(scrollToPosition)
            }
     } yield ()
+
+  // Rewrites `smartBuffer` with the rendered results and returns the style ranges and the cursor's scroll position.
+  private def fillBuffer(searchResults: SearchResults[Any], commandCursor: Int): (Array[StyleRange], Int) = {
+    smartBuffer.clear()
+
+    val styles = mutable.ArrayBuffer.empty[StyleRange]
+    var scrollToPosition = 0
+    var lineStart = 0
+
+    searchResults.rendered.zipWithIndex.foreach {
+      case (Rendered.Styled(_), _) => ()
+
+      case (ar: Rendered.Ansi, row) =>
+        val barColor = if (row == commandCursor) terminal.green else terminal.darkGray
+        styles.append(new StyleRange(smartBuffer.buffer.length, 1, terminal.black, barColor))
+        smartBuffer.buffer.append("  ")
+
+        if (row < commandCursor)
+          scrollToPosition += ar.ansiStr.length + 3
+
+        val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
+
+        smartBuffer.lineStartIndices.addOne(lineStart)
+        lineStart += renderStr.length + 2
+
+        AnsiRun.runs(renderStr).foreach { run =>
+          val start = smartBuffer.buffer.length
+          smartBuffer.buffer.append(run.text)
+
+          val foreground = terminal.fromFansiColorCode(run.foreground)
+          val background = terminal.fromFansiColorCode(run.background)
+
+          // Don't bother wastefully creating a StyleRange object
+          if (foreground.nonEmpty || background.nonEmpty)
+            styles.append(new StyleRange(start, run.text.length, foreground.orNull, background.orNull))
+        }
+    }
+
+    (styles.toArray, scrollToPosition)
   }
 
   def invoke(effect: => Unit): UIO[Unit] =
@@ -300,7 +218,7 @@ final case class SwtTerminal(
   // Evaluated on the UI thread. Exceptions are passed to the callback so the fiber can't hang.
   def invokeReturn[A](effect: => A): Task[A] =
     ZIO.async { cb =>
-      terminal.display.asyncExec(() => cb(ZIO.fromTry(Try(effect))))
+      terminal.display.asyncExec(() => cb(Exit.fromTry(Try(effect))))
     }
 
   def reset: URIO[Env, Unit] =
@@ -312,24 +230,13 @@ final case class SwtTerminal(
       _ <- searchResultsRef.set(SearchResults.empty)
     } yield ()
 
-  def openActivated: URIO[Env, Unit] =
+  def openActivated: RIO[Env, Unit] =
     for {
       consecutiveOpenCount <- consecutiveOpenCountRef.updateAndGet(_ + 1)
       config               <- Conf.config
-      _                    <- open
-      _                    <- activate
-      _                    <- ZIO.foreachDiscard(config.general.reopenDelay) { delay =>
-             for {
-               _ <- ZIO.sleep(delay)
-               _ <- open
-               _ <- activate
-             } yield ()
-           }
-      _ <- ZIO.foreachDiscard(config.display.alternateOpacity) { alternateOpacity =>
-             if (consecutiveOpenCount % 2 == 0)
-               setOpacity(alternateOpacity).ignore
-             else
-               setOpacity(config.display.opacity).ignore
+      _                    <- openAndActivate(config.general.reopenDelay)
+      _                    <- ZIO.foreachDiscard(config.display.alternateOpacity) { alternateOpacity =>
+             setOpacity(if (consecutiveOpenCount % 2 == 0) alternateOpacity else config.display.opacity).ignore
            }
     } yield ()
 
@@ -359,9 +266,7 @@ final case class SwtTerminal(
 
   def opacity: RIO[Env, Float] = invokeReturn(terminal.shell.getAlpha / 255.0f)
 
-  def setOpacity(opacity: Float): RIO[Env, Unit] = invoke {
-    terminal.shell.setAlpha((255 * opacity).toInt)
-  }.whenZIO(isOpacitySupported).unit
+  def setOpacity(opacity: Float): RIO[Env, Unit] = invoke(terminal.shell.setAlpha((255 * opacity).toInt))
 
   def isOpacitySupported: URIO[Env, Boolean] = ZIO.succeed(true)
 
@@ -392,21 +297,13 @@ object SwtTerminal {
 
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {
-      generalConfig   <- Conf.get(_.general)
-      searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
-                           generalConfig.debounceDelay,
-                           Some(generalConfig.opTimeoutOrDefault)
-                         )
+      searchDebouncer         <- SearchDebouncer.make
       commandCursorRef        <- Ref.make(0)
       searchResultsRef        <- Ref.make(SearchResults.empty[Any])
       consecutiveOpenCountRef <- Ref.make(0)
-      swtTerminal = new SwtTerminal(
-                      terminal,
-                      searchDebouncer,
-                      commandCursorRef,
-                      searchResultsRef,
-                      consecutiveOpenCountRef
-                    )(runtime)
+      swtTerminal = SwtTerminal(terminal, searchDebouncer, commandCursorRef, searchResultsRef, consecutiveOpenCountRef)(
+                      runtime
+                    )
       _ <- swtTerminal.init
     } yield swtTerminal
 }
