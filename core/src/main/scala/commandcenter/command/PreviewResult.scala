@@ -25,6 +25,11 @@ sealed trait PreviewResult[+A] {
 
   def renderedAnsi(renderedAnsi: => fansi.Str): PreviewResult[A] = rendered(Rendered.Ansi(renderedAnsi))
 
+  // A catch-all result (e.g. web search for the raw input) that isn't a real match, so "run all" skips it
+  def isFallback: Boolean
+
+  def asFallback: PreviewResult[A]
+
   def onRunSandboxedLogged: URIO[Env, Unit] =
     onRun.catchAllCause { c =>
       val commandName = this match {
@@ -59,6 +64,10 @@ object PreviewResult {
     def rendered(rendered: => Rendered): PreviewResult[Nothing] = copy(renderFn = () => rendered)
 
     def shortcuts: Set[KeyboardShortcut] = Set.empty
+
+    def isFallback: Boolean = false
+
+    def asFallback: PreviewResult[Nothing] = this
   }
 
   final case class Some[+A](
@@ -68,7 +77,8 @@ object PreviewResult {
       runOption: RunOption,
       moreResults: MoreResults,
       score: Double,
-      renderFn: () => Rendered
+      renderFn: () => Rendered,
+      isFallback: Boolean = false
   ) extends PreviewResult[A] {
     def runOption(runOption: RunOption): PreviewResult[A] = copy(runOption = runOption)
 
@@ -82,6 +92,8 @@ object PreviewResult {
     def renderFn(renderFn: A => Rendered): PreviewResult[A] = copy(renderFn = () => renderFn(result))
 
     def shortcuts: Set[KeyboardShortcut] = source.shortcuts
+
+    def asFallback: PreviewResult[A] = copy(isFallback = true)
   }
 
   def nothing(rendered: Rendered): PreviewResult[Nothing] =

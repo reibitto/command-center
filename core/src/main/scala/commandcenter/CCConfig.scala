@@ -4,12 +4,12 @@ import com.typesafe.config.{Config as TypesafeConfig, ConfigFactory}
 import commandcenter.command.{Command, CommandPlugin}
 import commandcenter.config.ConfigParserExtensions.*
 import commandcenter.config.Decoders.*
-import commandcenter.event.KeyboardShortcut
+import commandcenter.event.{KeyCode, KeyModifier, KeyboardShortcut}
 import commandcenter.util.OS
 import commandcenter.CCRuntime.Env
 import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
-import io.circe.{Decoder, DecodingFailure}
+import io.circe.Decoder
 import zio.*
 
 import java.awt.Font
@@ -28,20 +28,13 @@ final case class CCConfig(
 object CCConfig {
 
   def defaultConfigFile: UIO[File] =
-    envConfigFile.orElse(homeConfigFile).catchAll(_ => ZIO.succeed(new File("application.conf")))
+    envConfigFile.orElse(homeConfigFile).orElseSucceed(new File("application.conf"))
 
   def load: ZIO[Scope & Env, Throwable, CCConfig] =
-    for {
-      file   <- defaultConfigFile
-      _      <- ZIO.logDebug(s"Loading config file at ${file.getAbsolutePath}")
-      config <- load(file)
-    } yield config
+    defaultConfigFile.tap(file => ZIO.logDebug(s"Loading config file at ${file.getAbsolutePath}")).flatMap(load)
 
   def load(file: File): ZIO[Scope & Env, Throwable, CCConfig] =
-    for {
-      config   <- ZIO.attemptBlocking(ConfigFactory.parseFile(file))
-      ccConfig <- loadFrom(config)
-    } yield ccConfig
+    ZIO.attemptBlocking(ConfigFactory.parseFile(file)).flatMap(loadFrom)
 
   def loadFrom(config: TypesafeConfig): ZIO[Scope & Env, Exception, CCConfig] =
     for {
@@ -61,18 +54,17 @@ object CCConfig {
     )
 
   private def envConfigFile: ZIO[Any, Option[SecurityException], File] =
-    for {
-      configPathOpt <- zio.System.env("COMMAND_CENTER_CONFIG_PATH").asSomeError
-      configPath    <- ZIO.fromOption(configPathOpt)
-      file = new File(configPath)
-    } yield if (file.isDirectory) new File(file, "application.conf") else file
+    zio.System.env("COMMAND_CENTER_CONFIG_PATH").some.map { configPath =>
+      val file = new File(configPath)
+      if (file.isDirectory) new File(file, "application.conf") else file
+    }
 
   private def homeConfigFile: ZIO[Any, Option[Throwable], File] =
-    for {
-      userHome <- zio.System.propertyOrElse("user.home", "").asSomeError
-      potentialFile = new File(userHome, "/.command-center/application.conf")
-      file <- ZIO.fromOption(Option.when(potentialFile.exists())(potentialFile))
-    } yield file
+    zio.System
+      .propertyOrElse("user.home", "")
+      .asSomeError
+      .map(new File(_, "/.command-center/application.conf"))
+      .filterOrFail(_.exists())(None)
 }
 
 final case class GeneralConfig(
@@ -97,14 +89,14 @@ object GeneralConfig {
         debounceDelay    <- c.get[ScalaDuration]("debounceDelay")
         opTimeout        <- c.get[Option[ScalaDuration]]("opTimeout")
         reopenDelay      <- c.get[Option[ScalaDuration]]("reopenDelay")
-        hideOnKeyRelease <- c.get[Option[Boolean]]("hideOnKeyRelease")
-        keepOpen         <- c.get[Option[Boolean]]("keepOpen")
+        hideOnKeyRelease <- c.getOrElse("hideOnKeyRelease")(false)
+        keepOpen         <- c.getOrElse("keepOpen")(false)
       } yield GeneralConfig(
         Duration.fromScala(debounceDelay),
         opTimeout.map(Duration.fromScala),
         reopenDelay.map(Duration.fromScala),
-        hideOnKeyRelease.getOrElse(false),
-        keepOpen.getOrElse(false)
+        hideOnKeyRelease,
+        keepOpen
       )
     }
 }
@@ -125,20 +117,12 @@ object DisplayConfig {
     for {
       width            <- c.get[Int]("width")
       maxHeight        <- c.get[Int]("maxHeight")
-      offsetX          <- c.get[Option[Int]]("offsetX")
-      offsetY          <- c.get[Option[Int]]("offsetY")
+      offsetX          <- c.getOrElse("offsetX")(0)
+      offsetY          <- c.getOrElse("offsetY")(0)
       opacity          <- c.get[Float]("opacity")
       alternateOpacity <- c.get[Option[Float]]("alternateOpacity")
       fonts            <- c.get[List[Font]]("fonts")
-    } yield DisplayConfig(
-      width,
-      maxHeight,
-      offsetX.getOrElse(0),
-      offsetY.getOrElse(0),
-      opacity,
-      alternateOpacity,
-      fonts
-    )
+    } yield DisplayConfig(width, maxHeight, offsetX, offsetY, opacity, alternateOpacity, fonts)
   }
 }
 
@@ -155,19 +139,9 @@ object KeyboardConfig {
       openShortcut <-
         c.get[KeyboardShortcut](s"openShortcut_${OS.os.entryName}").orElse(c.get[KeyboardShortcut]("openShortcut"))
       suspendShortcut      <- c.get[Option[String]]("suspendShortcut")
-      outputLookupShortcut <- c.get[Option[KeyboardShortcut]]("outputLookupShortcut").flatMap {
-                                case Some(shortcut) => Right(shortcut)
-                                case None           =>
-                                  KeyboardShortcut
-                                    .fromString("alt+e")
-                                    .toOption
-                                    .toRight(DecodingFailure("outputLookupShortcut is not valid", Nil))
-                              }
-    } yield KeyboardConfig(
-      openShortcut,
-      suspendShortcut,
-      outputLookupShortcut
-    )
+      outputLookupShortcut <-
+        c.getOrElse("outputLookupShortcut")(KeyboardShortcut(KeyCode.E, Set(KeyModifier.Alt)))
+    } yield KeyboardConfig(openShortcut, suspendShortcut, outputLookupShortcut)
   }
 }
 
@@ -176,12 +150,7 @@ final case class GlobalAction(id: GlobalActionId, shortcut: KeyboardShortcut)
 
 object GlobalAction {
 
-  implicit val decoder: Decoder[GlobalAction] = Decoder.instance { c =>
-    for {
-      id       <- c.get[GlobalActionId]("id")
-      shortcut <- c.get[KeyboardShortcut]("shortcut")
-    } yield GlobalAction(id, shortcut)
-  }
+  implicit val decoder: Decoder[GlobalAction] = Decoder.forProduct2("id", "shortcut")(GlobalAction.apply)
 }
 
 sealed trait GlobalActionId extends EnumEntry with LowerCamelcase

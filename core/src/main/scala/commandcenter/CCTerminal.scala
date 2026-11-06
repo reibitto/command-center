@@ -19,11 +19,7 @@ trait CCTerminal {
   def reset: URIO[Env, Unit]
   def reload: RIO[Env, Unit]
 
-  def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
-  ): RIO[Env, Unit]
+  def showMore[A](moreResults: Chunk[PreviewResult[A]], nextSource: Option[PreviewResult[A]]): RIO[Env, Unit]
 }
 
 trait GuiTerminal extends CCTerminal {

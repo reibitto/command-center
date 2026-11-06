@@ -15,7 +15,7 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input      <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      input      <- searchInput.keyword
       externalIP <- getExternalIP
     } yield PreviewResults.one(
       Preview(externalIP)
@@ -49,7 +49,5 @@ final case class ExternalIPCommand(commandNames: List[String]) extends Command[S
 object ExternalIPCommand extends CommandPlugin[ExternalIPCommand] {
 
   def make(config: Config): IO[CommandPluginError, ExternalIPCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield ExternalIPCommand(commandNames.getOrElse(List("externalip")))
+    commandNames(config, "externalip").map(ExternalIPCommand(_))
 }

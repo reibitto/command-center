@@ -8,6 +8,8 @@ import org.eclipse.swt.layout.{GridData, GridLayout}
 import org.eclipse.swt.widgets.{Display, Shell, Text}
 import org.eclipse.swt.SWT
 
+import scala.util.control.NonFatal
+
 class RawSwtTerminal(val initialConfig: CCConfig) {
   val display = new Display()
   val shell = new Shell(display, SWT.MODELESS | SWT.DOUBLE_BUFFERED)
@@ -98,9 +100,14 @@ class RawSwtTerminal(val initialConfig: CCConfig) {
 
   shell.pack()
 
-  def loop(): Unit = {
+  // A throwing asyncExec runnable surfaces here; report it and keep the UI loop alive.
+  def loop(onError: Throwable => Unit): Unit = {
     while (!shell.isDisposed)
-      if (!display.readAndDispatch()) display.sleep()
+      try
+        if (!display.readAndDispatch()) display.sleep()
+      catch {
+        case NonFatal(t) => onError(t)
+      }
 
     display.dispose()
   }

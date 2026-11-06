@@ -3,12 +3,11 @@ package commandcenter.emulator.swing.ui
 import commandcenter.*
 import commandcenter.command.*
 import commandcenter.emulator.swing.event.KeyboardShortcutUtil
-import commandcenter.emulator.util.Lists
-import commandcenter.event.KeyboardShortcut
-import commandcenter.locale.Language
+import commandcenter.emulator.util.AnsiRun
 import commandcenter.tools.Tools
-import commandcenter.ui.CCTheme
+import commandcenter.ui.{CCTheme, SearchDebouncer}
 import commandcenter.util.{Debouncer, OS, WindowManager}
+import commandcenter.util.RuntimeExtensions.*
 import commandcenter.view.{Rendered, Style}
 import commandcenter.CCRuntime.Env
 import zio.*
@@ -18,6 +17,7 @@ import java.awt.event.KeyEvent
 import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.{DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext}
+import scala.util.Try
 
 final case class SwingTerminal(
     commandCursorRef: Ref[Int],
@@ -33,9 +33,7 @@ final case class SwingTerminal(
   val context = new StyleContext
   val frame = new JFrame("Command Center")
 
-  val preferredFont = Unsafe.unsafe { implicit u =>
-    runtime.unsafe.run(getPreferredFont).getOrThrow()
-  }
+  val preferredFont = runtime.unsafeRunOrThrow(getPreferredFont)
 
   frame.setBackground(theme.background)
   frame.setFocusable(false)
@@ -69,17 +67,15 @@ final case class SwingTerminal(
   ) {
 
     override def getPreferredSize: Dimension =
-      Unsafe.unsafe { implicit u =>
-        runtime.unsafe.run {
-          for {
-            config              <- Conf.config
-            preferredFrameWidth <- getPreferredFrameWidth
-            searchResults       <- searchResultsRef.get
-            height = if (searchResults.previews.isEmpty) 0
-                     else
-                       outputTextPane.getPreferredSize.height min config.display.maxHeight
-          } yield new Dimension(preferredFrameWidth, height)
-        }.getOrThrow()
+      runtime.unsafeRunOrThrow {
+        for {
+          config              <- Conf.config
+          preferredFrameWidth <- getPreferredFrameWidth
+          searchResults       <- searchResultsRef.get
+          height = if (searchResults.previews.isEmpty) 0
+                   else
+                     outputTextPane.getPreferredSize.height min config.display.maxHeight
+        } yield new Dimension(preferredFrameWidth, height)
       }
   }
   outputScrollPane.setBorder(BorderFactory.createEmptyBorder())
@@ -109,42 +105,15 @@ final case class SwingTerminal(
 
   frame.getContentPane.add(outputScrollPane, BorderLayout.CENTER)
 
-  inputTextField.addOnChangeListener { e =>
-    val searchTerm = inputTextField.getText
-    val context = CommandContext(Language.detect(searchTerm), SwingTerminal.this, 1.0)
-
-    for {
-      config        <- Conf.config
-      searchResults <- searchResultsRef.get
-      // This is an optimization but it also helps with certain IMEs where they resend all the changes when
-      // exiting out of composition mode (committing the changes).
-      sameAsLast = searchResults.searchTerm == searchTerm && searchTerm.nonEmpty
-      _ <- searchDebouncer(
-             Command
-               .search(config.commands, config.aliases, searchTerm, context)
-               .tap(r => commandCursorRef.set(0) *> searchResultsRef.set(r) *> render(r))
-               .unless(sameAsLast)
-               .unit
-           )
-    } yield ()
-  }
-
-  def init: RIO[Env, Unit] =
-    for {
-      opacity <- Conf.get(_.display.opacity)
-      _       <- setOpacity(opacity)
-    } yield ()
+  inputTextField.addOnChangeListener(_ => onInputChanged(inputTextField.getText))
 
   override protected def render(searchResults: SearchResults[Any]): URIO[Env, Unit] =
-    for {
-      commandCursor <- commandCursorRef.get
-    } yield
-      if (frame.isVisible) { // If the frame isn't visible, trying to insert into the document will throw an exception
-        SwingUtilities.invokeLater { () =>
-          def colorMask(width: Int): Long = ~0L >>> (64 - width)
+    commandCursorRef.get.map { commandCursor =>
+      SwingUtilities.invokeLater { () =>
+        document.remove(0, document.getLength)
 
-          document.remove(0, document.getLength)
-
+        // If the frame isn't visible, trying to insert into the document will throw an exception
+        if (frame.isVisible) {
           var scrollToPosition: Int = 0
 
           def renderBar(rowIndex: Int): Unit = {
@@ -194,154 +163,92 @@ final case class SwingTerminal(
 
                 val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
-                val plainText = renderStr.plainText
-                var i: Int = 0
-                Lists.groupConsecutive(renderStr.getColors.toList).foreach { c =>
-                  val s = plainText.substring(i, i + c.length)
+                AnsiRun.runs(renderStr).foreach { run =>
+                  val foreground = theme.fromFansiColorCode(run.foreground)
+                  val background = theme.fromFansiColorCode(run.background)
 
-                  i += c.length
-
-                  val ansiForeground = (c.head >>> fansi.Color.offset) & colorMask(fansi.Color.width)
-                  val ansiBackground = (c.head >>> fansi.Back.offset) & colorMask(fansi.Back.width)
-
-                  val awtForegroundOpt = CCTheme.default.fromFansiColorCode(ansiForeground.toInt)
-                  val awtBackgroundOpt = CCTheme.default.fromFansiColorCode(ansiBackground.toInt)
-
-                  val style = (awtForegroundOpt, awtBackgroundOpt) match {
-                    case (None, None) =>
-                      // Don't bother wastefully creating a StyleRange object
-                      null
-
-                    case _ =>
+                  // Don't bother wastefully creating a style object
+                  val style =
+                    if (foreground.isEmpty && background.isEmpty) null
+                    else {
                       val style = new SimpleAttributeSet()
-
-                      awtForegroundOpt.foreach(StyleConstants.setForeground(style, _))
-                      awtBackgroundOpt.foreach(StyleConstants.setBackground(style, _))
-
+                      foreground.foreach(StyleConstants.setForeground(style, _))
+                      background.foreach(StyleConstants.setBackground(style, _))
                       style
-                  }
+                    }
 
-                  document.insertString(document.getLength, s, style)
+                  document.insertString(document.getLength, run.text, style)
                 }
-
             }
           }
 
           outputTextPane.setCaretPosition(scrollToPosition)
+        }
 
-          frame.pack()
-        }
-      } else {
-        SwingUtilities.invokeLater { () =>
-          document.remove(0, document.getLength)
-          frame.pack()
-        }
+        frame.pack()
       }
+    }
+
+  // Runs `f` on the EDT and waits for it. Runs inline if already on the EDT, where waiting would deadlock.
+  private def onEdt[A](f: => A): Task[A] =
+    ZIO.suspendSucceed {
+      if (SwingUtilities.isEventDispatchThread) ZIO.attempt(f)
+      else ZIO.async[Any, Throwable, A](cb => SwingUtilities.invokeLater(() => cb(Exit.fromTry(Try(f)))))
+    }
 
   def reset: URIO[Env, Unit] =
     for {
       _ <- commandCursorRef.set(0)
-      _ <- ZIO.succeed {
+      _ <- onEdt {
              inputTextField.setText("")
              document.remove(0, document.getLength)
-           }
-      _ <- searchResultsRef.set(SearchResults.empty)
+           }.orDie
+      _ <- replaceResults(SearchResults.empty)
     } yield ()
 
   inputTextField.addZKeyListener(new ZKeyAdapter {
 
     override def keyReleased(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
-        case KeyEvent.VK_ENTER =>
-          runSelected.whenZIO(Conf.get(_.general.hideOnKeyRelease)).unit
-
-        case KeyEvent.VK_ESCAPE =>
-          resetAndHide.whenZIO(Conf.get(_.general.hideOnKeyRelease)).unit
-
-        case _ => ZIO.unit
+        case KeyEvent.VK_ENTER  => onRelease(runSelected)
+        case KeyEvent.VK_ESCAPE => onRelease(resetAndHide)
+        case _                  => ZIO.unit
       }
 
     override def keyPressed(e: KeyEvent): URIO[Env, Unit] =
       e.getKeyCode match {
-        case KeyEvent.VK_ENTER =>
-          runSelected.unlessZIO(Conf.get(_.general.hideOnKeyRelease)).unit
-
-        case KeyEvent.VK_ESCAPE =>
-          resetAndHide.unlessZIO(Conf.get(_.general.hideOnKeyRelease)).unit
+        case KeyEvent.VK_ENTER  => onPress(runSelected)
+        case KeyEvent.VK_ESCAPE => onPress(resetAndHide)
 
         case KeyEvent.VK_DOWN =>
           e.consume() // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
 
-          for {
-            previousResults <- searchResultsRef.get
-            previousCursor  <-
-              commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-            // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
-            _ <- render(previousResults).when(previousCursor < previousResults.previews.length - 1)
-          } yield ()
+          // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
+          moveCursorAndRender(1)
 
         case KeyEvent.VK_UP =>
           e.consume() // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
 
-          for {
-            previousResults <- searchResultsRef.get
-            previousCursor  <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
-            // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
-            _ <- render(previousResults).when(previousCursor > 0)
-          } yield ()
+          moveCursorAndRender(-1)
 
-        case _ =>
-          for {
-            previousResults <- searchResultsRef.get
-            shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
-            eligibleResults = previousResults.previews.filter { p =>
-                                p.shortcuts.contains(shortcutPressed)
-                              }
-            bestMatch = eligibleResults.maxByOption(_.score)
-            _ <- bestMatch match {
-                   case Some(preview) => runPreview(preview)
-                   case None          => runGlobalShortcut(shortcutPressed)
-                 }
-          } yield ()
+        case _ => runShortcut(KeyboardShortcutUtil.fromKeyEvent(e))
       }
   })
 
-  // Falls back to a command's own configured `shortcuts` even when the input textbox is empty.
-  private def runGlobalShortcut(shortcutPressed: KeyboardShortcut): URIO[Env, Unit] =
-    if (shortcutPressed.isEmpty)
-      ZIO.unit
-    else
-      for {
-        config <- Conf.config
-        commandOpt = config.commands.find(_.shortcuts.contains(shortcutPressed))
-        cmdContext = CommandContext(Language.default, SwingTerminal.this, 1.0)
-        previewOpt <- ZIO.foreach(commandOpt)(Command.searchByCommandName(_, cmdContext)).map(_.flatten)
-        _          <- ZIO.foreachDiscard(previewOpt)(runPreview)
-      } yield ()
-
-  private def runPreview(preview: PreviewResult[Any]): URIO[Env, Unit] =
-    for {
-      _ <- hide.when(preview.runOption != RunOption.RemainOpen)
-      _ <- preview.onRunSandboxedLogged.forkDaemon
-      _ <- reset.when(preview.runOption != RunOption.RemainOpen)
-    } yield ()
+  private def moveCursorAndRender(delta: Int): URIO[Env, Unit] =
+    moveCursor(delta).flatMap { case (previousCursor, cursor) =>
+      searchResultsRef.get.flatMap(render).when(previousCursor != cursor).unit
+    }
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 
-  frame.setMinimumSize(
-    new Dimension(
-      Unsafe.unsafe { implicit u =>
-        runtime.unsafe.run(getPreferredFrameWidth).getOrThrow()
-      },
-      20
-    )
-  )
+  frame.setMinimumSize(new Dimension(runtime.unsafeRunOrThrow(getPreferredFrameWidth), 20))
   frame.pack()
 
   def open: RIO[Env, Unit] =
     for {
       conf <- Conf.config
-      _    <- ZIO.attempt {
+      _    <- onEdt {
              val bounds =
                GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
 
@@ -352,30 +259,30 @@ final case class SwingTerminal(
            }
     } yield ()
 
-  def hide: URIO[Conf, Unit] =
+  protected def hideWindow: URIO[Conf, Unit] =
     for {
       keepOpen <- Conf.get(_.general.keepOpen)
       _        <- if (keepOpen)
-             WindowManager.switchFocusToPreviousActiveWindow.when(keepOpen).ignore
+             WindowManager.switchFocusToPreviousActiveWindow.ignore
            else
-             ZIO.succeed(frame.setVisible(false))
+             onEdt(frame.setVisible(false)).orDie
     } yield ()
 
   def activate: RIO[Tools, Unit] =
     OS.os match {
       case OS.MacOS => Tools.activate
       case _        =>
-        ZIO.succeed {
+        onEdt {
           frame.toFront()
           frame.requestFocus()
           inputTextField.requestFocusInWindow()
-        }
+        }.unit.orDie
     }
 
-  def opacity: RIO[Env, Float] = ZIO.succeed(frame.getOpacity)
+  def opacity: RIO[Env, Float] = onEdt(frame.getOpacity)
 
   def setOpacity(opacity: Float): RIO[Env, Unit] =
-    ZIO.attempt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported).unit
+    onEdt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported).unit
 
   def isOpacitySupported: URIO[Env, Boolean] =
     ZIO
@@ -385,7 +292,7 @@ final case class SwingTerminal(
       )
       .orElseSucceed(false)
 
-  def size: RIO[Env, Dimension] = ZIO.succeed(frame.getSize)
+  def size: RIO[Env, Dimension] = onEdt(frame.getSize)
 
   def setSize(width: Int, maxHeight: Int): RIO[Env, Unit] = ZIO.unit
 
@@ -423,7 +330,7 @@ final case class SwingTerminal(
           .attempt(
             GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds.width
           )
-          .orElse(ZIO.succeed(width))
+          .orElseSucceed(width)
     } yield width min screenWidth
 }
 
@@ -431,12 +338,8 @@ object SwingTerminal {
 
   def create: RIO[Scope & Env, SwingTerminal] =
     for {
-      runtime         <- ZIO.runtime[Env]
-      generalConfig   <- Conf.get(_.general)
-      searchDebouncer <- Debouncer.make[Env, Nothing, Unit](
-                           generalConfig.debounceDelay,
-                           Some(generalConfig.opTimeoutOrDefault)
-                         )
+      runtime          <- ZIO.runtime[Env]
+      searchDebouncer  <- SearchDebouncer.make
       commandCursorRef <- Ref.make(0)
       searchResultsRef <- Ref.make(SearchResults.empty[Any])
       closePromise     <- Promise.make[Nothing, Unit]

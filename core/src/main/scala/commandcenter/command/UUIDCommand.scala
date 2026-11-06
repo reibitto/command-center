@@ -13,7 +13,7 @@ final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[UUID]] =
     for {
-      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.keyword
       uuid = UUID.randomUUID()
     } yield PreviewResults.one(
       Preview(uuid).onRun(Tools.setClipboard(uuid.toString)).score(Scores.veryHigh(input.context))
@@ -23,7 +23,5 @@ final case class UUIDCommand(commandNames: List[String]) extends Command[UUID] {
 object UUIDCommand extends CommandPlugin[UUIDCommand] {
 
   def make(config: Config): IO[CommandPluginError, UUIDCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield UUIDCommand(commandNames.getOrElse(List("uuid", "guid")))
+    commandNames(config, "uuid", "guid").map(UUIDCommand(_))
 }

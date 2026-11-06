@@ -98,7 +98,7 @@ final case class WorldTimesCommand(
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.prefixed
       rest = input.rest.trim
       previews <- if (rest.isEmpty) configuredZones(input.context) else parseTimeQuery(rest, input.context)
     } yield previews
@@ -189,7 +189,7 @@ final case class WorldTimesCommand(
           .score(Scores.veryHigh(context))
           .rendered(
             Rendered.Ansi(
-              Color.Cyan(s"${zone.displayName}") ++ Str(" ") ++ Str(dateTimeDetailedFormat.format(time)) ++ offset
+              Color.Cyan(zone.displayName) ++ Str(" ") ++ Str(dateTimeDetailedFormat.format(time)) ++ offset
             )
           )
       })
@@ -208,7 +208,7 @@ final case class WorldTimesCommand(
           .score(Scores.veryHigh(context))
           .rendered(
             Rendered.Ansi(
-              Color.Cyan(s"${dateTimeWithZoneFormat.format(dateTimeFrom)}") ++ Str(" is ") ++
+              Color.Cyan(dateTimeWithZoneFormat.format(dateTimeFrom)) ++ Str(" is ") ++
                 Color.Green(dateTimeWithZoneFormat.format(time)) ++ WorldTimesCommand.relativeOffset(now, dateTimeFrom)
             )
           )
@@ -219,7 +219,6 @@ final case class WorldTimesCommand(
     for {
       now <- zio.Clock.currentDateTime.map(_.toZonedDateTime)
       times = zones.map(tz => WorldTimesResult(tz.zoneId, tz.displayName, now.withZoneSameInstant(tz.zoneId)))
-      _ = times.map(time => dateTimeFormat.format(time.dateTime))
     } yield PreviewResults.fromIterable(times.map { time =>
       Preview.unit
         .score(Scores.veryHigh(context))
@@ -250,18 +249,14 @@ object WorldTimesCommand extends CommandPlugin[WorldTimesCommand] {
 
   def make(config: Config): IO[CommandPluginError, WorldTimesCommand] =
     for {
-      commandNames           <- config.getZIO[Option[List[String]]]("commandNames")
-      dateTimeFormat         <- config.getZIO[Option[DateTimeFormatter]]("dateTimeFormat")
-      dateTimeDetailedFormat <- config.getZIO[Option[DateTimeFormatter]]("dateTimeDetailedFormat")
-      dateTimeWithZoneFormat <- config.getZIO[Option[DateTimeFormatter]]("dateTimeWithZoneFormat")
-      zones                  <- config.getZIO[List[TimeZone]]("zones")
-    } yield WorldTimesCommand(
-      commandNames.getOrElse(List("time", "times")),
-      dateTimeFormat.getOrElse(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)),
-      dateTimeDetailedFormat.getOrElse(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG)),
-      dateTimeWithZoneFormat.getOrElse(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG)),
-      zones
-    )
+      commandNames           <- commandNames(config, "time", "times")
+      dateTimeFormat         <- config.getZIO("dateTimeFormat", DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM))
+      dateTimeDetailedFormat <-
+        config.getZIO("dateTimeDetailedFormat", DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG))
+      dateTimeWithZoneFormat <-
+        config.getZIO("dateTimeWithZoneFormat", DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG))
+      zones <- config.getZIO[List[TimeZone]]("zones")
+    } yield WorldTimesCommand(commandNames, dateTimeFormat, dateTimeDetailedFormat, dateTimeWithZoneFormat, zones)
 }
 
 final case class WorldTimesResult(zone: ZoneId, displayName: String, dateTime: ZonedDateTime)

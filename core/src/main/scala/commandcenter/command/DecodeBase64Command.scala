@@ -16,7 +16,7 @@ final case class DecodeBase64Command(commandNames: List[String]) extends Command
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       all = (stringArg(), encodingOpt).tupled
       parsedCommand = decline.Command("", s"Base64 decodes the given string")(all).parse(input.args)
       (valueToDecode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
@@ -32,7 +32,5 @@ final case class DecodeBase64Command(commandNames: List[String]) extends Command
 object DecodeBase64Command extends CommandPlugin[DecodeBase64Command] {
 
   def make(config: Config): IO[CommandPluginError, DecodeBase64Command] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield DecodeBase64Command(commandNames.getOrElse(List("decodebase64")))
+    commandNames(config, "decodebase64").map(DecodeBase64Command(_))
 }

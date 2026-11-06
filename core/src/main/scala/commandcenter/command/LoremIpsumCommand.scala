@@ -36,16 +36,14 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = lipsumCommand.parse(input.args)
-      message <- ZIO
-                   .fromEither(parsed)
-                   .fold(
-                     HelpMessage.formatted,
-                     { case (i, chunkType) =>
-                       Str(s"Will generate $i ${chunkType.toString}s to the clipboard")
-                     }
-                   )
+      message = parsed.fold(
+                  HelpMessage.formatted,
+                  { case (i, chunkType) =>
+                    Str(s"Will generate $i ${chunkType.toString}s to the clipboard")
+                  }
+                )
     } yield {
       val run = for {
         (i, chunkType) <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
@@ -57,6 +55,7 @@ final case class LoremIpsumCommand(commandNames: List[String], lipsum: String) e
                }
         _ <- Tools.setClipboard(text)
       } yield ()
+
       PreviewResults.one(
         Preview.unit
           .onRun(run)
@@ -77,8 +76,8 @@ object LoremIpsumCommand extends CommandPlugin[LoremIpsumCommand] {
 
   def make(config: Config): IO[CommandPluginError, LoremIpsumCommand] =
     for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
+      commandNames <- commandNames(config, "lipsum", "lorem", "ipsum")
       lipsum       <- ClasspathResource.loadText("lipsum").mapError(CommandPluginError.UnexpectedException.apply)
-    } yield LoremIpsumCommand(commandNames.getOrElse(List("lipsum", "lorem", "ipsum")), lipsum)
+    } yield LoremIpsumCommand(commandNames, lipsum)
 
 }

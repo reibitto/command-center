@@ -20,21 +20,18 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = resizeCommand.parse(input.args)
-      message <- ZIO
-                   .fromEither(parsed)
-                   .fold(
-                     HelpMessage.formatted,
-                     { case (w, h) =>
-                       Str(s"Set window size to width: $w, height: $h")
-                     }
-                   )
+      message = parsed.fold(
+                  HelpMessage.formatted,
+                  { case (w, h) =>
+                    Str(s"Set window size to width: $w, height: $h")
+                  }
+                )
     } yield {
-      val run = for {
-        (w, h) <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
-        _      <- input.context.terminal.setSize(w, h)
-      } yield ()
+      val run = ZIO.fromEither(parsed).orElseFail(RunError.Ignore).flatMap { case (w, h) =>
+        input.context.terminal.setSize(w, h)
+      }
 
       PreviewResults.one(
         Preview.unit
@@ -48,7 +45,5 @@ final case class ResizeCommand(commandNames: List[String]) extends Command[Unit]
 object ResizeCommand extends CommandPlugin[ResizeCommand] {
 
   def make(config: Config): IO[CommandPluginError, ResizeCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield ResizeCommand(commandNames.getOrElse(List("resize", "size")))
+    commandNames(config, "resize", "size").map(ResizeCommand(_))
 }

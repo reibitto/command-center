@@ -33,20 +33,24 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
   val deleteTrackCommand = decline.Command("delete", "Delete the current track")(Opts(Opt.DeleteTrack))
   val helpCommand = decline.Command("help", "Display command usage")(Opts(Opt.Help))
 
-  val opts = Opts.subcommand(playCommand) orElse
-    Opts.subcommand(pauseCommand) orElse
-    Opts.subcommand(stopCommand) orElse
-    Opts.subcommand(nextTrackCommand) orElse
-    Opts.subcommand(previousTrackCommand) orElse
-    Opts.subcommand(rewindCommand) orElse
-    Opts.subcommand(deleteTrackCommand) orElse
-    Opts.subcommand(helpCommand) orNone
+  val opts = Opts
+    .subcommands(
+      playCommand,
+      pauseCommand,
+      stopCommand,
+      nextTrackCommand,
+      previousTrackCommand,
+      rewindCommand,
+      deleteTrackCommand,
+      helpCommand
+    )
+    .orNone
 
   val foobarCommand = decline.Command("foobar", "foobar2000 commands")(opts)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       opt   <-
         ZIO
           .fromEither(foobarCommand.parse(input.args))
@@ -85,11 +89,7 @@ final case class Foobar2000Command(commandNames: List[String], foobarPath: File)
                    case Opt.DeleteTrack   => ZIO.succeed(Str(deleteTrackCommand.header))
                    case Opt.Help          => ZIO.succeed(Str(foobarCommand.showHelp))
                    case Opt.Show          =>
-                     for {
-                       trackInfo <- trackInfoFromWindow.catchAll(_ => ZIO.none)
-                     } yield trackInfo
-                       .map(t => Color.Magenta(t))
-                       .getOrElse(Str("Show window"))
+                     trackInfoFromWindow.orElseSucceed(None).map(_.fold(Str("Show window"))(Color.Magenta(_)))
 
                  }
     } yield PreviewResults.one(
@@ -127,10 +127,9 @@ object Foobar2000Command extends CommandPlugin[Foobar2000Command] {
     import commandcenter.config.Decoders.*
 
     for {
-      commandNames  <- config.getZIO[Option[List[String]]]("commandNames")
-      foobarPathOpt <- config.getZIO[Option[File]]("foobarPath")
-      foobarPath    <- ZIO.succeed(foobarPathOpt).someOrElseZIO(findFoobarPath)
-    } yield Foobar2000Command(commandNames.getOrElse(List("foobar", "fb")), foobarPath)
+      commandNames <- commandNames(config, "foobar", "fb")
+      foobarPath   <- config.getZIO[Option[File]]("foobarPath").someOrElseZIO(findFoobarPath)
+    } yield Foobar2000Command(commandNames, foobarPath)
   }
 
   private def findFoobarPath: IO[CommandPluginError, File] =

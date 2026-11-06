@@ -116,7 +116,5 @@ object SearchMavenCommand extends CommandPlugin[SearchMavenCommand] {
   }
 
   def make(config: Config): IO[CommandPluginError, SearchMavenCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield SearchMavenCommand(commandNames.getOrElse(List("maven", "mvn")))
+    commandNames(config, "maven", "mvn").map(SearchMavenCommand(_))
 }

@@ -15,36 +15,37 @@ import scala.jdk.FutureConverters.FutureOps
 class ZCache[K, V](underlying: AsyncLoadingCache[K, V]) {
 
   def apply(key: K): Task[V] =
-    ZIO.fromCompletableFuture(underlying.get(key)).flatMap { v =>
-      Option(v) match {
-        case Some(a) => ZIO.succeed(a)
-        case None    => ZIO.fail(new Exception(s"Key `$key` not found in cache"))
-      }
-    }
+    get(key).someOrFail(new Exception(s"Key `$key` not found in cache"))
 
   // When using a loading cache, a `CacheLoaderException` will be thrown if the load function failed, hence why this
   // returns a `Task`. You may or may not want to handle this exception explicitly in the error channel.
   def get(key: K): Task[Option[V]] =
-    ZIO.fromCompletableFuture(underlying.get(key)).map(Option(_))
+    await(underlying.get(key)).map(Option(_))
 
-  def getOrElseUpdate(key: K, expiration: Duration)(orElse: => Task[V]): Task[V] = {
-    val value = underlying
-      .asMap()
-      .computeIfAbsent(
-        key,
-        k =>
-          Unsafe.unsafe { implicit u =>
-            Runtime.default.unsafe
-              .runToFuture(orElse)
-              .asJava
-              .toCompletableFuture
+  def getOrElseUpdate(key: K, expiration: Duration)(orElse: => Task[V]): Task[V] =
+    ZIO.runtime[Any].flatMap { runtime =>
+      var created = false
+      val value = underlying
+        .asMap()
+        .computeIfAbsent(
+          key,
+          _ => {
+            created = true
+            Unsafe.unsafe(implicit u => runtime.unsafe.runToFuture(orElse).asJava.toCompletableFuture)
           }
-      )
+        )
 
-    underlying.synchronous.policy.expireVariably.ifPresent(_.setExpiresAfter(key, expiration))
+      // Caffeine ignores expirations set while an entry is still loading, so it's set once the value is in
+      await(value).tap { _ =>
+        ZIO
+          .succeed(underlying.synchronous.policy.expireVariably.ifPresent(_.setExpiresAfter(key, expiration)))
+          .when(created)
+      }
+    }
 
-    ZIO.fromCompletableFuture(value)
-  }
+  // Callers share the cache's future, so each awaits a copy: interrupting one caller must not cancel the others
+  private def await[A](future: => CompletableFuture[A]): Task[A] =
+    ZIO.fromCompletableFuture(future.copy())
 
   def contains(key: K): UIO[Boolean] =
     ZIO.succeed(underlying.asMap.containsKey(key))

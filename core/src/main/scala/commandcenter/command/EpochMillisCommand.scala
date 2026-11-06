@@ -15,7 +15,7 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input           <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input           <- searchInput.prefixed
       (output, score) <- if (input.rest.trim.isEmpty) {
                            Clock
                              .currentTime(TimeUnit.MILLISECONDS)
@@ -51,7 +51,5 @@ final case class EpochMillisCommand(commandNames: List[String]) extends Command[
 object EpochMillisCommand extends CommandPlugin[EpochMillisCommand] {
 
   def make(config: Config): IO[CommandPluginError, EpochMillisCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield EpochMillisCommand(commandNames.getOrElse(List("epochmillis")))
+    commandNames(config, "epochmillis").map(EpochMillisCommand(_))
 }

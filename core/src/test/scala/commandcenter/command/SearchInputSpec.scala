@@ -116,6 +116,12 @@ object SearchInputSpec extends ZIOSpecDefault {
             SearchInput.splitStatements("""echo "a\"; echo b"; echo c""") ==
               List("""echo "a\"; echo b"""", "echo c")
           )
+        },
+        test("a semicolon inside parentheses doesn't split the statement") {
+          assertTrue(SearchInput.splitStatements("gcd(20; 16); md5 a") == List("gcd(20; 16)", "md5 a"))
+        },
+        test("an apostrophe inside a word doesn't open a quote") {
+          assertTrue(SearchInput.splitStatements("don't; md5 a") == List("don't", "md5 a"))
         }
       ),
       suite("splitCommandAndRest")(

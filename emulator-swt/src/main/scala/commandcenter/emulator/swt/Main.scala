@@ -1,63 +1,42 @@
 package commandcenter.emulator.swt
 
 import commandcenter.*
-import commandcenter.emulator.swt.shortcuts.ShortcutsLive
+import commandcenter.emulator.shortcuts.ShortcutsLive
 import commandcenter.emulator.swt.ui.{RawSwtTerminal, SwtTerminal}
-import commandcenter.shortcuts.Shortcuts
-import commandcenter.tools.ToolsLive
 import commandcenter.util.EnvironmentSetup
 import commandcenter.CCRuntime.Env
 import zio.*
 
 object Main {
-  type Environment = Scope & Env
 
   def main(args: Array[String]): Unit = {
     EnvironmentSetup.setup()
 
-    val runtime: Runtime.Scoped[Environment] = Unsafe.unsafe { implicit u =>
-      Runtime.unsafe.fromLayer(
-        Runtime.setExecutor(Executor.makeDefault(autoBlocking = false)) >>>
-          Runtime.removeDefaultLoggers >>>
-          ZLayer.make[Environment](
-            ShortcutsLive.layer,
-            ConfigLive.layer,
-            ToolsLive.make,
-            SttpLive.make,
-            CCLogging.addLoggerFor(TerminalType.Swt),
-            Runtime.setUnhandledErrorLogLevel(LogLevel.Warning),
-            Scope.default
-          )
-      )
-    }
-
+    // SWT's UI loop must run on the main thread, so the UI setup and loop are plain calls between separate
+    // unsafe runs. Otherwise the next `flatMap` call might run in a ZScheduler worker thread.
     Unsafe.unsafe { implicit u =>
-      // Written this way because SWT's UI loop must run from the main thread. That's why we do multiple, separate
-      // unsafe run calls. Otherwise the next `flatMap` call might run in a ZScheduler worker thread.
+      val runtime = Runtime.unsafe.fromLayer(
+        CCRuntime.layer(TerminalType.Swt, ShortcutsLive.layer(useSwingEventQueue = false)) ++ Scope.default
+      )
+
       val config = runtime.unsafe.run(Conf.load).getOrThrowFiberFailure()
 
-      val rawTerminal = runtime.unsafe.run(ZIO.succeed(new RawSwtTerminal(config))).getOrThrowFiberFailure()
+      val rawTerminal = new RawSwtTerminal(config)
 
-      runtime.unsafe.run {
+      val setup = runtime.unsafe.run {
         (for {
           runtime  <- ZIO.runtime[Env]
           terminal <- SwtTerminal.create(runtime, rawTerminal)
-          _        <- Shortcuts.addGlobalShortcut(config.keyboard.openShortcut)(_ =>
-                 (for {
-                   _ <- ZIO.logDebug("Opening emulated terminal...")
-                   _ <- terminal.openActivated
-                 } yield ()).ignore
-               )
-          _ <- ZIO.logInfo(
-                 s"Ready to accept input. Press `${config.keyboard.openShortcut}` to open the terminal."
-               )
-          _ <- GlobalActions.setupCommon(config.globalActions)
-        } yield ()).tapErrorCause { c =>
-          ZIO.logFatalCause("Fatal error", c)
-        }
+          _        <- GlobalActions.setup(config)(terminal.openActivated)
+        } yield ()).tapErrorCause(ZIO.logFatalCause("Fatal error", _))
       }
 
-      runtime.unsafe.run(ZIO.succeed(rawTerminal.loop()))
+      if (setup.isFailure) {
+        rawTerminal.display.dispose()
+        java.lang.System.exit(1)
+      }
+
+      rawTerminal.loop(t => runtime.unsafe.run(ZIO.logErrorCause("Uncaught error in UI loop", Cause.die(t))))
     }
   }
 }

@@ -23,6 +23,8 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
 
   val title: String = "Calculator"
 
+  override def allowsSemicolons: Boolean = parameters.parameterSeparator == ';'
+
   private val helpTypeOpt = Opts.argument[String]("functions or parameters").mapValidated {
     case arg if arg.matches("functions?")  => Validated.valid(FunctionsList)
     case arg if arg.matches("parameters?") => Validated.valid(ParametersList)
@@ -34,14 +36,12 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
 
   private def previewHelp(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[BigDecimal]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = decline.Command(title, title)(helpTypeOpt).parse(input.args)
-      (helpTitle, message) <- ZIO
-                                .fromEither(parsed)
-                                .fold(
-                                  help => (title, HelpMessage.formatted(help)),
-                                  helpType => (helpType.title, CalculatorCommand.helpMessageByType(helpType))
-                                )
+      (helpTitle, message) = parsed.fold(
+                               help => (title, HelpMessage.formatted(help)),
+                               helpType => (helpType.title, CalculatorCommand.helpMessageByType(helpType))
+                             )
     } yield PreviewResults.one(
       Preview(BigDecimal(0.0))
         .score(Scores.veryHigh(searchInput.context))

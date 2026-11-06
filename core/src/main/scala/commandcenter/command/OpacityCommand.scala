@@ -19,17 +19,12 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       _     <- ZIO.fail(CommandError.NotApplicable).unlessZIO(searchInput.context.terminal.isOpacitySupported)
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = opacityCommand.parse(input.args)
-      message <- ZIO
-                   .fromEither(parsed)
-                   .fold(HelpMessage.formatted, o => Str(s"Set opacity to $o"))
+      message = parsed.fold(HelpMessage.formatted, o => Str(s"Set opacity to $o"))
       currentOpacity <- input.context.terminal.opacity.mapError(CommandError.UnexpectedError(this))
     } yield {
-      val run = for {
-        opacity <- ZIO.fromEither(parsed).orElseFail(RunError.Ignore)
-        _       <- input.context.terminal.setOpacity(opacity)
-      } yield ()
+      val run = ZIO.fromEither(parsed).orElseFail(RunError.Ignore).flatMap(input.context.terminal.setOpacity)
 
       PreviewResults.one(
         Preview.unit
@@ -43,7 +38,5 @@ final case class OpacityCommand(commandNames: List[String]) extends Command[Unit
 object OpacityCommand extends CommandPlugin[OpacityCommand] {
 
   def make(config: Config): IO[CommandPluginError, OpacityCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield OpacityCommand(commandNames.getOrElse(List("opacity")))
+    commandNames(config, "opacity").map(OpacityCommand(_))
 }

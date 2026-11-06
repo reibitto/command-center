@@ -55,11 +55,14 @@ trait ConfigParserExtensions {
         else
           Json.Null
 
-      implicitly[Decoder[A]].decodeJson(json)
+      Decoder[A].decodeJson(json)
     }
 
     def getZIO[A: Decoder](path: String): IO[CommandPluginError, A] =
       ZIO.fromEither(get(path)).mapError(CommandPluginError.UnexpectedException.apply)
+
+    def getZIO[A: Decoder](path: String, default: => A): IO[CommandPluginError, A] =
+      getZIO[Option[A]](path).map(_.getOrElse(default))
 
   }
 }

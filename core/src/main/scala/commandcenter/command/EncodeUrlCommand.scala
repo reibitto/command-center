@@ -17,7 +17,7 @@ final case class EncodeUrlCommand(commandNames: List[String]) extends Command[St
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       all = (stringArg(), encodingOpt).tupled
       parsedCommand = decline.Command("", s"URL encodes the given string")(all).parse(input.args)
       (valueToEncode, charset) <- ZIO.fromEither(parsedCommand).mapError(CommandError.CliError.apply)
@@ -30,7 +30,5 @@ final case class EncodeUrlCommand(commandNames: List[String]) extends Command[St
 object EncodeUrlCommand extends CommandPlugin[EncodeUrlCommand] {
 
   def make(config: Config): IO[CommandPluginError, EncodeUrlCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield EncodeUrlCommand(commandNames.getOrElse(List("encodeurl")))
+    commandNames(config, "encodeurl").map(EncodeUrlCommand(_))
 }

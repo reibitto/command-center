@@ -105,7 +105,5 @@ object SearchCratesCommand extends CommandPlugin[SearchCratesCommand] {
   }
 
   def make(config: Config): IO[CommandPluginError, SearchCratesCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield SearchCratesCommand(commandNames.getOrElse(List("crate", "crates")))
+    commandNames(config, "crate", "crates").map(SearchCratesCommand(_))
 }

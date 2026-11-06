@@ -72,9 +72,9 @@ object JectKoCommand extends CommandPlugin[JectKoCommand] {
   def make(config: Config): ZIO[Scope, CommandPluginError, JectKoCommand] =
     // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
     for {
-      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
+      commandNames   <- commandNames(config, "ject", "j")
       dictionaryPath <- config.getZIO[Path]("dictionaryPath")
       luceneIndex    <- WordReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException.apply)
-      showScore      <- config.getZIO[Option[Boolean]]("showScore")
-    } yield JectKoCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
+      showScore      <- config.getZIO("showScore", false)
+    } yield JectKoCommand(commandNames, luceneIndex, showScore)
 }

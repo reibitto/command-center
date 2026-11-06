@@ -14,7 +14,6 @@ import commandcenter.view.Rendered
 import commandcenter.CCRuntime.Env
 import fansi.{Bold, Color, Str}
 import zio.*
-import zio.stream.ZSink
 
 import java.awt.Dimension
 
@@ -59,59 +58,41 @@ final case class CliTerminal[T <: Terminal](
         case Some(RunOption.RemainOpen) => EventResult.RemainOpen
         case _                          => EventResult.Success
       }).catchAll(t => ZIO.succeed(EventResult.UnexpectedError(t))),
-      new KeyStroke(KeyType.Backspace) -> (for {
-        currentCursor <- textCursorRef.get
-        _             <- if (buffer.nonEmpty && currentCursor.logical.column > 0) {
-               val delta = buffer.lift(currentCursor.logical.column - 1).map(TextUtils.charWidth).getOrElse(0)
-
-               textCursorRef.update(_.offsetColumnBy(-1, -delta)) *> ZIO.succeed(
-                 buffer.deleteCharAt(currentCursor.logical.column - 1)
-               )
-             } else
-               ZIO.succeed(currentCursor)
-      } yield EventResult.Success),
+      new KeyStroke(KeyType.Backspace) -> atTextCursor { column =>
+        ZIO.when(buffer.nonEmpty && column > 0) {
+          val delta = widthAt(column - 1)
+          textCursorRef.update(_.offsetColumnBy(-1, -delta)) *> ZIO.succeed(buffer.deleteCharAt(column - 1))
+        }
+      },
       new KeyStroke(KeyType.Escape) -> ZIO.succeed(EventResult.Exit),
-      new KeyStroke(KeyType.Delete) -> (for {
-        currentCursor <- textCursorRef.get
-        _             <- if (buffer.nonEmpty && currentCursor.logical.column < buffer.length)
-               ZIO.succeed(buffer.deleteCharAt(currentCursor.logical.column))
-             else
-               ZIO.succeed(currentCursor)
-      } yield EventResult.Success),
-      new KeyStroke(KeyType.ArrowDown) -> (
-        for {
-          previousResults <- searchResultsRef.get
-          _               <- commandCursorRef.update(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-        } yield EventResult.Success
-      ),
-      new KeyStroke(KeyType.ArrowUp) -> commandCursorRef.update(cursor => (cursor - 1) max 0).as(EventResult.Success),
-      new KeyStroke(KeyType.ArrowLeft) -> (
-        for {
-          currentCursor <- textCursorRef.get
-          _             <- if (currentCursor.logical.column > 0) {
-                 val delta = buffer.lift(currentCursor.logical.column - 1).map(TextUtils.charWidth).getOrElse(0)
-                 textCursorRef.update(_.offsetColumnBy(-1, -delta))
-               } else
-                 ZIO.succeed(currentCursor)
-        } yield EventResult.Success
-      ),
-      new KeyStroke(KeyType.ArrowRight) -> (
-        for {
-          currentCursor <- textCursorRef.get
-          _             <- if (currentCursor.logical.column < buffer.length) {
-                 val delta = buffer.lift(currentCursor.logical.column).map(TextUtils.charWidth).getOrElse(0)
-                 textCursorRef.update(_.offsetColumnBy(1, delta))
-               } else
-                 ZIO.succeed(currentCursor)
-        } yield EventResult.Success
-      )
+      new KeyStroke(KeyType.Delete) -> atTextCursor { column =>
+        ZIO.when(buffer.nonEmpty && column < buffer.length)(ZIO.succeed(buffer.deleteCharAt(column)))
+      },
+      new KeyStroke(KeyType.ArrowDown) -> moveCommandCursor(1),
+      new KeyStroke(KeyType.ArrowUp) -> moveCommandCursor(-1),
+      new KeyStroke(KeyType.ArrowLeft) -> atTextCursor { column =>
+        ZIO.when(column > 0)(textCursorRef.update(_.offsetColumnBy(-1, -widthAt(column - 1))))
+      },
+      new KeyStroke(KeyType.ArrowRight) -> atTextCursor { column =>
+        ZIO.when(column < buffer.length)(textCursorRef.update(_.offsetColumnBy(1, widthAt(column))))
+      }
     )
+
+  private def moveCommandCursor(delta: Int): UIO[EventResult] =
+    searchResultsRef.get.flatMap { results =>
+      commandCursorRef.update(cursor => ((cursor + delta) min (results.previews.length - 1)) max 0)
+    }.as(EventResult.Success)
+
+  private def atTextCursor(f: Int => UIO[Any]): UIO[EventResult] =
+    textCursorRef.get.flatMap(cursor => f(cursor.logical.column)).as(EventResult.Success)
+
+  private def widthAt(i: Int): Int = buffer.lift(i).map(TextUtils.charWidth).getOrElse(0)
 
   def reset: URIO[Env, Unit] =
     for {
       _ <- commandCursorRef.set(0)
       _ <- textCursorRef.set(TextCursor.unit)
-      _ <- searchResultsRef.set(SearchResults.empty)
+      _ <- searchResultsRef.getAndSet(SearchResults.empty).flatMap(_.release)
       _ = screen.clear()
       _ = buffer.clear()
     } yield ()
@@ -121,12 +102,14 @@ final case class CliTerminal[T <: Terminal](
   ): URIO[Env, Unit] = {
     val context = CommandContext(Language.detect(searchTerm), this, 1.0)
 
-    Command
-      .search(commands, aliases, searchTerm, context)
-      .tap { r =>
+    // Uninterruptible once the search is done, so the debouncer can't drop (and leak) completed results
+    ZIO.uninterruptibleMask { restore =>
+      restore(Command.search(commands, aliases, searchTerm, context)).tap { r =>
         // TODO: Make resetCursorOnChange customizable
-        commandCursorRef.set(0) *> searchResultsRef.set(r) *> renderQueue.offer(r)
+        commandCursorRef.set(0) *> searchResultsRef.getAndSet(r).flatMap(_.release)
       }
+    }
+      .flatMap(renderQueue.offer)
       .unit
   }
 
@@ -158,7 +141,7 @@ final case class CliTerminal[T <: Terminal](
 
                  lines.indices.foreach(offset => graphics.putCSIStyledString(0, di + offset, renderedLine))
 
-                 (ci + 1, di + plainText.linesIterator.length)
+                 (ci + 1, di + lines.length)
                }
              }
            }
@@ -176,52 +159,29 @@ final case class CliTerminal[T <: Terminal](
 
   def runSelected(results: SearchResults[Any], cursorIndex: Int): RIO[Env, Option[PreviewResult[Any]]] =
     ZIO.foreach(results.previews.lift(cursorIndex)) { preview =>
-      for {
-        _ <- preview.moreResults match {
-               case MoreResults.Remaining(p @ PreviewResults.Paginated(rs, _, pageSize, totalRemaining))
-                   if totalRemaining.forall(_ > 0) =>
-                 for {
-                   // TODO: Log defects (need file logging for this)
-                   _                     <- preview.onRun.absorb.forkDaemon
-                   (results, restStream) <- Scope.global.use {
-                                              rs.peel(ZSink.take[PreviewResult[Any]](pageSize)).mapError(_.toThrowable)
-                                            }
-                   _ <- showMore(
-                          results,
-                          preview.moreResults(
-                            MoreResults.Remaining(
-                              p.copy(
-                                results = restStream,
-                                totalRemaining = p.totalRemaining.map(_ - pageSize)
-                              )
-                            )
-                          ),
-                          pageSize
-                        )
-                 } yield ()
+      (preview.moreResults match {
+        case more: MoreResults.Remaining[Any] @unchecked if more.totalRemaining.forall(_ > 0) =>
+          for {
+            // TODO: Log defects (need file logging for this)
+            _               <- preview.onRun.absorb.forkDaemon
+            (results, rest) <- more.nextPage.mapError(_.toThrowable)
+            _               <- showMore(results, rest.map(preview.moreResults))
+          } yield ()
 
-               case _ =>
-                 // TODO: Log defects (need file logging for this)
-                 preview.onRun.absorb.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
-             }
-      } yield preview
+        case _ =>
+          // TODO: Log defects (need file logging for this)
+          preview.onRun.absorb.forkDaemon *> reset.when(preview.runOption != RunOption.RemainOpen)
+      }).as(preview)
     }
 
-  def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
-  ): RIO[Env, Unit] =
+  // `nextSource` is the "more" entry to show after the new results, if any remain
+  def showMore[A](moreResults: Chunk[PreviewResult[A]], nextSource: Option[PreviewResult[A]]): RIO[Env, Unit] =
     for {
       cursorIndex   <- commandCursorRef.get
       searchResults <- searchResultsRef.updateAndGet { results =>
                          val (front, back) = results.previews.splitAt(cursorIndex)
 
-                         val previews = if (moreResults.length < pageSize) {
-                           front ++ moreResults ++ back.tail
-                         } else {
-                           front ++ moreResults ++ Chunk.single(previewSource) ++ back.tail
-                         }
+                         val previews = front ++ moreResults ++ Chunk.fromIterable(nextSource) ++ back.drop(1)
 
                          results.copy(previews = previews)
                        }
@@ -232,11 +192,8 @@ final case class CliTerminal[T <: Terminal](
     (for {
       keyStroke       <- readInput
       previousResults <- searchResultsRef.get
-      eventResult     <- for {
-                       handlers <- keyHandlersRef.get
-                       result   <- handlers.getOrElse(keyStroke, ZIO.succeed(EventResult.Success))
-                     } yield result
-      _ <- ZIO.foreachDiscard(Option(keyStroke.getCharacter)) { c =>
+      eventResult     <- keyHandlersRef.get.flatMap(_.getOrElse(keyStroke, ZIO.succeed(EventResult.Success)))
+      _               <- ZIO.foreachDiscard(Option(keyStroke.getCharacter)) { c =>
              ZIO.when(!TerminalTextUtils.isControlCharacter(c)) {
                for {
                  cursor <- textCursorRef.getAndUpdate(_.offsetColumnBy(1, TextUtils.charWidth(c)))
@@ -247,16 +204,15 @@ final case class CliTerminal[T <: Terminal](
       searchTerm = buffer.toString
       // Render the user input change right away so there is immediate feedback. Rendering the new search results will
       // come later when they're ready.
-      resultsWithNewInput = previousResults.copy(searchTerm = searchTerm)
       // TODO: Add option for re-rendering only the input textfield and so on. Or auto-detect that case
+      // Updated in place, so search results stored meanwhile aren't overwritten by (already released) older ones
       _ <- ZIO.when(eventResult == EventResult.Success) {
-             searchResultsRef.set(resultsWithNewInput) *> renderQueue.offer(resultsWithNewInput)
+             searchResultsRef.updateAndGet(_.copy(searchTerm = searchTerm)).flatMap(renderQueue.offer)
            }
       _ <- ZIO.when(previousResults.hasChange(searchTerm)) {
              // TODO: confirm if this flatMap(_.join) is still necessary (it used to be)
              searchDebouncer(search(commands, aliases)(searchTerm)).flatMap(_.join).forkDaemon
            }
-      _ <- textCursorRef.get
     } yield eventResult).catchAll(t => ZIO.succeed(EventResult.UnexpectedError(t)))
 
   def readInput: Task[KeyStroke] =
@@ -271,10 +227,9 @@ final case class CliTerminal[T <: Terminal](
     ZIO.attempt(screen.refresh(RefreshType.DELTA))
 
   def putAnsiStr(str: Str): UIO[Unit] =
-    for {
-      cursor <- textCursorRef.get
-      _      <- ZIO.succeed(graphics.putCSIStyledString(cursor.actual.column, cursor.actual.row, str.render))
-    } yield ()
+    textCursorRef.get.flatMap { cursor =>
+      ZIO.succeed(graphics.putCSIStyledString(cursor.actual.column, cursor.actual.row, str.render))
+    }
 
   def putAnsiStr(column: Int, row: Int, str: Str): UIO[Unit] =
     ZIO.succeed(graphics.putCSIStyledString(column, row, str.render))
@@ -284,11 +239,9 @@ final case class CliTerminal[T <: Terminal](
 
   def printAnsiStr(string: Str, cursor: Cursor): UIO[Cursor] = {
     val lines = string.render.linesIterator.toVector
-    for {
-      _ <- ZIO.foreachDiscard(lines.zipWithIndex) { case (s, i) =>
-             putAnsiStrRaw(s, cursor + Cursor(0, i))
-           }
-    } yield cursor + Cursor(0, lines.length)
+    ZIO
+      .foreachDiscard(lines.zipWithIndex) { case (s, i) => putAnsiStrRaw(s, cursor + Cursor(0, i)) }
+      .as(cursor + Cursor(0, lines.length))
   }
 
   def printRendered(rendered: Rendered, cursor: Cursor): UIO[Cursor] =
@@ -322,12 +275,8 @@ object CliTerminal {
       textCursorRef    <- Ref.make(TextCursor.unit)
       searchResultsRef <- Ref.make(SearchResults.empty[Any])
       keyHandlersRef   <- Ref.make(Map.empty[KeyStroke, URIO[Env, EventResult]])
-      generalConfig    <- Conf.get(_.general)
-      searchDebouncer  <- Debouncer.make[Env, Nothing, Unit](
-                           generalConfig.debounceDelay,
-                           Some(generalConfig.opTimeoutOrDefault)
-                         )
-      renderQueue <- Queue.sliding[SearchResults[Any]](1)
+      searchDebouncer  <- SearchDebouncer.make
+      renderQueue      <- Queue.sliding[SearchResults[Any]](1)
     } yield CliTerminal(
       terminal,
       screen,
