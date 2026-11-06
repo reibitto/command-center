@@ -298,6 +298,7 @@ object DisplaySwitchCommand extends CommandPlugin[DisplaySwitchCommand] {
                    .ignore
                )
              }
+             .when(OS.os == OS.Windows)
              .mapError(CommandPluginError.UnexpectedException.apply)
     } yield DisplaySwitchCommand(commandNames.getOrElse(List("display")), displays)
 }

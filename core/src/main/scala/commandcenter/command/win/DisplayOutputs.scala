@@ -379,7 +379,8 @@ object DisplayOutputs {
           targets.zipWithIndex.filter { case (info, _) =>
             info.friendlyName.toLowerCase.contains(nameMatch.toLowerCase)
           }
-        sourceId = rotationOrder(attemptNum - 1)
+        // Wraps around when there are fewer candidate pipelines than attempts
+        sourceId = rotationOrder((attemptNum - 1) % rotationOrder.length)
         targetIdx <-
           ZIO
             .fromOption(matches.find { case (_, idx) => paths(idx).sourceInfo.id == sourceId }.map(_._2))
