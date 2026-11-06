@@ -1,56 +1,63 @@
 package commandcenter.command
 
+import commandcenter.command
 import enumeratum.*
 
 sealed trait CommandType extends EnumEntry
 
 object CommandType extends Enum[CommandType] {
-  case object CalculatorCommand extends CommandType
-  case object ChessCommand extends CommandType
-  case object ConfigCommand extends CommandType
-  case object DecodeBase64Command extends CommandType
-  case object DecodeUrlCommand extends CommandType
-  case object EncodeBase64Command extends CommandType
-  case object EncodeUrlCommand extends CommandType
-  case object EpochMillisCommand extends CommandType
-  case object EpochUnixCommand extends CommandType
-  case object ExitCommand extends CommandType
-  case object ExternalIPCommand extends CommandType
-  case object FileNavigationCommand extends CommandType
-  case object FindFileCommand extends CommandType
-  case object FindInFileCommand extends CommandType
-  case object Foobar2000Command extends CommandType
-  case object HashCommand extends CommandType
-  case object HoogleCommand extends CommandType
-  case object HttpCommand extends CommandType
-  case object ITunesCommand extends CommandType
-  case object LocalIPCommand extends CommandType
-  case object LockCommand extends CommandType
-  case object LoremIpsumCommand extends CommandType
-  case object MuteCommand extends CommandType
-  case object OpacityCommand extends CommandType
-  case object OpenBrowserCommand extends CommandType
-  case object ProcessIdCommand extends CommandType
-  case object RadixCommand extends CommandType
-  case object RebootCommand extends CommandType
-  case object ReloadCommand extends CommandType
-  case object ResizeCommand extends CommandType
-  case object SearchCratesCommand extends CommandType
-  case object SearchMavenCommand extends CommandType
-  case object SearchUrlCommand extends CommandType
-  case object ShellCommand extends CommandType
-  case object SnippetsCommand extends CommandType
-  case object SpeakCommand extends CommandType
-  case object SuspendProcessCommand extends CommandType
-  case object SwitchWindowCommand extends CommandType
-  case object SystemCommand extends CommandType
-  case object UnitConversionCommand extends CommandType
-  case object TerminalCommand extends CommandType
-  case object TimerCommand extends CommandType
-  case object ToggleDesktopIconsCommand extends CommandType
-  case object ToggleHiddenFilesCommand extends CommandType
-  case object UUIDCommand extends CommandType
-  case object WorldTimesCommand extends CommandType
+
+  // By-name to avoid an init cycle, since each companion refers back to its CommandType
+  sealed abstract class BuiltIn(plugin0: => CommandPlugin[? <: Command[?]]) extends CommandType {
+    def plugin: CommandPlugin[? <: Command[?]] = plugin0
+  }
+
+  case object CalculatorCommand extends BuiltIn(command.CalculatorCommand)
+  case object ChessCommand extends BuiltIn(command.ChessCommand)
+  case object ConfigCommand extends BuiltIn(command.ConfigCommand)
+  case object DecodeBase64Command extends BuiltIn(command.DecodeBase64Command)
+  case object DecodeUrlCommand extends BuiltIn(command.DecodeUrlCommand)
+  case object EncodeBase64Command extends BuiltIn(command.EncodeBase64Command)
+  case object EncodeUrlCommand extends BuiltIn(command.EncodeUrlCommand)
+  case object EpochMillisCommand extends BuiltIn(command.EpochMillisCommand)
+  case object EpochUnixCommand extends BuiltIn(command.EpochUnixCommand)
+  case object ExitCommand extends BuiltIn(command.ExitCommand)
+  case object ExternalIPCommand extends BuiltIn(command.ExternalIPCommand)
+  case object FileNavigationCommand extends BuiltIn(command.FileNavigationCommand)
+  case object FindFileCommand extends BuiltIn(command.FindFileCommand)
+  case object FindInFileCommand extends BuiltIn(command.FindInFileCommand)
+  case object Foobar2000Command extends BuiltIn(command.Foobar2000Command)
+  case object HashCommand extends BuiltIn(command.HashCommand)
+  case object HoogleCommand extends BuiltIn(command.HoogleCommand)
+  case object HttpCommand extends BuiltIn(command.HttpCommand)
+  case object ITunesCommand extends BuiltIn(command.ITunesCommand)
+  case object LocalIPCommand extends BuiltIn(command.LocalIPCommand)
+  case object LockCommand extends BuiltIn(command.LockCommand)
+  case object LoremIpsumCommand extends BuiltIn(command.LoremIpsumCommand)
+  case object MuteCommand extends BuiltIn(command.MuteCommand)
+  case object OpacityCommand extends BuiltIn(command.OpacityCommand)
+  case object OpenBrowserCommand extends BuiltIn(command.OpenBrowserCommand)
+  case object ProcessIdCommand extends BuiltIn(command.ProcessIdCommand)
+  case object RadixCommand extends BuiltIn(command.RadixCommand)
+  case object RebootCommand extends BuiltIn(command.RebootCommand)
+  case object ReloadCommand extends BuiltIn(command.ReloadCommand)
+  case object ResizeCommand extends BuiltIn(command.ResizeCommand)
+  case object SearchCratesCommand extends BuiltIn(command.SearchCratesCommand)
+  case object SearchMavenCommand extends BuiltIn(command.SearchMavenCommand)
+  case object SearchUrlCommand extends BuiltIn(command.SearchUrlCommand)
+  case object ShellCommand extends BuiltIn(command.ShellCommand)
+  case object SnippetsCommand extends BuiltIn(command.SnippetsCommand)
+  case object SpeakCommand extends BuiltIn(command.SpeakCommand)
+  case object SuspendProcessCommand extends BuiltIn(command.SuspendProcessCommand)
+  case object SwitchWindowCommand extends BuiltIn(command.SwitchWindowCommand)
+  case object SystemCommand extends BuiltIn(command.SystemCommand)
+  case object UnitConversionCommand extends BuiltIn(command.UnitConversionCommand)
+  case object TerminalCommand extends BuiltIn(command.TerminalCommand)
+  case object TimerCommand extends BuiltIn(command.TimerCommand)
+  case object ToggleDesktopIconsCommand extends BuiltIn(command.ToggleDesktopIconsCommand)
+  case object ToggleHiddenFilesCommand extends BuiltIn(command.ToggleHiddenFilesCommand)
+  case object UUIDCommand extends BuiltIn(command.UUIDCommand)
+  case object WorldTimesCommand extends BuiltIn(command.WorldTimesCommand)
 
   final case class External(typeName: String) extends CommandType
 

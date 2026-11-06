@@ -79,10 +79,7 @@ object CommandPlugin {
                       .asInstanceOf[CommandPlugin[Command[?]]]
                   )
                   .mapError(CommandPluginError.UnexpectedException.apply)
-      command <- plugin.make(c).mapError {
-                   case e: CommandPluginError => e
-                   case t                     => CommandPluginError.UnexpectedException(t)
-                 }
+      command <- plugin.make(c).mapError(CommandPluginError.fromThrowable)
     } yield command
   }
 }
@@ -94,4 +91,9 @@ object CommandPluginError {
   final case class PluginNotFound(typeName: String, cause: Throwable) extends CommandPluginError(cause)
   final case class PluginsNotSupported(typeName: String) extends CommandPluginError(null)
   final case class UnexpectedException(cause: Throwable) extends CommandPluginError(cause)
+
+  def fromThrowable(t: Throwable): CommandPluginError = t match {
+    case e: CommandPluginError => e
+    case other                 => UnexpectedException(other)
+  }
 }
