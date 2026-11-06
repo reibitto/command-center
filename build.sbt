@@ -223,7 +223,8 @@ def appSettings(main: String, jarName: String): Seq[Setting[?]] = Seq(
     case _                                    => MergeStrategy.first
   },
   assembly / packageOptions += ManifestAttributes("Multi-Release" -> "true"),
-  installCC := {
+  // Copies a file to an external directory, so it must run every time rather than come from sbt's task cache
+  installCC := Def.uncached {
     val jar = fileConverter.value.toPath(assembly.value).toFile
     val installDirectoryEnvVarName = "COMMAND_CENTER_INSTALL_DIR"
 
