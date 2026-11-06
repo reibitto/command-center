@@ -214,8 +214,9 @@ lazy val installCC = taskKey[Unit]("install Command Center uberjar")
 // Shared run/assembly/install settings for the runnable apps
 def appSettings(main: String, jarName: String): Seq[Setting[?]] = Seq(
   run / baseDirectory := file("."),
-  assembly / mainClass := Some(main),
-  assembly / assemblyJarName := jarName,
+  // sbt 2's task cache ignores captured def params, so per-app values must be uncached or every app shares one
+  assembly / mainClass := Def.uncached(Some(main)),
+  assembly / assemblyJarName := Def.uncached(jarName),
   assembly / assemblyMergeStrategy := {
     case PathList("META-INF", "services", _*) => MergeStrategy.filterDistinctLines
     case PathList("META-INF", "versions", _*) => MergeStrategy.concat
