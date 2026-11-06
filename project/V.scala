@@ -25,8 +25,6 @@ object V {
 
   val lanterna = "3.2.0-alpha1"
 
-  val pprint = "0.9.0"
-
   val prettytime = "5.0.9.Final"
 
   val scalaScraper = "3.2.0"

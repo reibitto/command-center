@@ -75,7 +75,5 @@ object HoogleCommand extends CommandPlugin[HoogleCommand] {
   }
 
   def make(config: Config): IO[CommandPluginError, HoogleCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield HoogleCommand(commandNames.getOrElse(List("hoogle", "h")))
+    commandNames(config, "hoogle", "h").map(HoogleCommand(_))
 }

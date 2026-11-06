@@ -16,7 +16,7 @@ object TextFormats {
 
     def digits(digits: Int): String =
       if (digits <= 0)
-        self.toInt.toString
+        math.round(self).toString
       else
         new DecimalFormat(s"#,###.${"#" * digits}").format(self)
 

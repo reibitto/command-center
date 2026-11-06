@@ -35,24 +35,19 @@ final case class ConfigLive(configRef: Ref[Option[ReloadableConfig]]) extends Co
       }
     }
 
+  // Loads before swapping so a broken config keeps the current one; `getAndSet` releases each config exactly once.
   def reload: RIO[Env, CCConfig] =
     for {
-      _ <- ZIO.whenCaseZIO(configRef.get) { case Some(reloadableConfig) =>
-             reloadableConfig.release
-           }
       (release, config) <- Scope.global.use(CCConfig.load.withEarlyRelease)
-      _                 <- configRef.set(Some(ReloadableConfig(config, release)))
+      previous          <- configRef.getAndSet(Some(ReloadableConfig(config, release)))
+      _                 <- ZIO.foreachDiscard(previous)(_.release)
     } yield config
 }
 
 object ConfigLive {
 
   def layer: ZLayer[Any, Nothing, ConfigLive] =
-    ZLayer {
-      for {
-        configRef <- Ref.make(Option.empty[ReloadableConfig])
-      } yield ConfigLive(configRef)
-    }
+    ZLayer(Ref.make(Option.empty[ReloadableConfig]).map(ConfigLive(_)))
 
 }
 

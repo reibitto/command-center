@@ -14,11 +14,11 @@ final case class MuteCommand(commandNames: List[String]) extends Command[Unit] {
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
-    for {
-      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield PreviewResults.one(
-      Preview.unit.onRun(muteTask).score(Scores.veryHigh(input.context))
-    )
+    searchInput.keyword.map { input =>
+      PreviewResults.one(
+        Preview.unit.onRun(muteTask).score(Scores.veryHigh(input.context))
+      )
+    }
 
   private def muteTask: Task[Unit] =
     OS.os match {
@@ -43,7 +43,5 @@ final case class MuteCommand(commandNames: List[String]) extends Command[Unit] {
 object MuteCommand extends CommandPlugin[MuteCommand] {
 
   def make(config: Config): IO[CommandPluginError, MuteCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield MuteCommand(commandNames.getOrElse(List("mute")))
+    commandNames(config, "mute").map(MuteCommand(_))
 }

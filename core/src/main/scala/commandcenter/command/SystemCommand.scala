@@ -34,11 +34,9 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
   val helpCommand = decline.Command("help", "Display usage help")(Opts(SystemSubcommand.Help))
 
   val opts: Opts[SystemSubcommand] =
-    Opts.subcommand(sleepCommand) orElse
-      Opts.subcommand(monitorOffCommand) orElse
-      Opts.subcommand(screensaverCommand) orElse
-      Opts.subcommand(shutdownCommand) orElse
-      Opts.subcommand(helpCommand) withDefault SystemSubcommand.Help
+    Opts
+      .subcommands(sleepCommand, monitorOffCommand, screensaverCommand, shutdownCommand, helpCommand)
+      .withDefault(SystemSubcommand.Help)
 
   val systemCommand: decline.Command[SystemSubcommand] = decline.Command("system", title)(opts)
 
@@ -49,49 +47,47 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- ZIO.fromOption(searchInput.asArgs).orElseFail(CommandError.NotApplicable)
+      input <- searchInput.args
       parsed = systemCommand.parse(input.args)
-      preview <- ZIO
-                   .fromEither(parsed)
-                   .fold(
-                     h => Preview.help(h).score(Scores.veryHigh(input.context)),
-                     subcommand => {
-                       val (rendered, run) = subcommand match {
-                         case SystemSubcommand.Sleep =>
-                           Tuple2(
-                             Renderer.renderDefault("Sleep", "Put computer to sleep"),
-                             systemSleep
-                           )
+      preview = parsed.fold(
+                  h => Preview.help(h).score(Scores.veryHigh(input.context)),
+                  subcommand => {
+                    val (rendered, run) = subcommand match {
+                      case SystemSubcommand.Sleep =>
+                        Tuple2(
+                          Renderer.renderDefault("Sleep", "Put computer to sleep"),
+                          systemSleep
+                        )
 
-                         case SystemSubcommand.MonitorOff =>
-                           Tuple2(
-                             Renderer.renderDefault("Turn off monitor", ""),
-                             turnMonitorOff
-                           )
+                      case SystemSubcommand.MonitorOff =>
+                        Tuple2(
+                          Renderer.renderDefault("Turn off monitor", ""),
+                          turnMonitorOff
+                        )
 
-                         case SystemSubcommand.Screensaver(delay) =>
-                           Tuple2(
-                             Renderer.renderDefault("Activate screensaver", ""),
-                             enableScreenSaver.delay(delay.getOrElse(Duration.Zero))
-                           )
+                      case SystemSubcommand.Screensaver(delay) =>
+                        Tuple2(
+                          Renderer.renderDefault("Activate screensaver", ""),
+                          enableScreenSaver.delay(delay.getOrElse(Duration.Zero))
+                        )
 
-                         case SystemSubcommand.Shutdown =>
-                           Tuple2(
-                             Renderer.renderDefault("Shut down computer", ""),
-                             shutdownComputer
-                           )
+                      case SystemSubcommand.Shutdown =>
+                        Tuple2(
+                          Renderer.renderDefault("Shut down computer", ""),
+                          shutdownComputer
+                        )
 
-                         case SystemSubcommand.Help =>
-                           Tuple2(
-                             Renderer.renderDefault(title, HelpMessage.formatted(Help.fromCommand(systemCommand))),
-                             ZIO.unit
-                           )
+                      case SystemSubcommand.Help =>
+                        Tuple2(
+                          Renderer.renderDefault(title, HelpMessage.formatted(Help.fromCommand(systemCommand))),
+                          ZIO.unit
+                        )
 
-                       }
+                    }
 
-                       Preview.unit.onRun(run).rendered(rendered).score(Scores.veryHigh(input.context))
-                     }
-                   )
+                    Preview.unit.onRun(run).rendered(rendered).score(Scores.veryHigh(input.context))
+                  }
+                )
     } yield PreviewResults.one(preview)
 
   def systemSleep: Task[Unit] =
@@ -120,7 +116,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
         }.unit
 
       case OS.MacOS =>
-        AppleScript.runScript("""activate application "ScreenSaverEngine"""").unit
+        PCommand("pmset", "displaysleepnow").successfulExitCode.unit
 
       case _ => ZIO.unit
     }
@@ -158,9 +154,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
 object SystemCommand extends CommandPlugin[SystemCommand] {
 
   def make(config: Config): IO[CommandPluginError, SystemCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield SystemCommand(commandNames.getOrElse(List("system")))
+    commandNames(config, "system").map(SystemCommand(_))
 
   sealed trait SystemSubcommand
 

@@ -19,7 +19,7 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[File]] =
     for {
-      input  <- ZIO.fromOption(searchInput.asPrefixed).orElseFail(CommandError.NotApplicable)
+      input  <- searchInput.prefixed
       result <- // TODO: mdfind/Spotlight can be really slow, especially when there are a lot of matches. Streaming the top N results
         // only seems to help a little bit (there appears to be no "top N" command line option for mdfind). This needs some
         // investigation. Or look into alternative approaches.
@@ -45,7 +45,5 @@ final case class FindFileCommand(commandNames: List[String]) extends Command[Fil
 object FindFileCommand extends CommandPlugin[FindFileCommand] {
 
   def make(config: Config): IO[CommandPluginError, FindFileCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield FindFileCommand(commandNames.getOrElse(List("find")))
+    commandNames(config, "find").map(FindFileCommand(_))
 }

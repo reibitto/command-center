@@ -13,9 +13,7 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
   override val supportedOS: Set[OS] = Set(OS.MacOS, OS.Windows)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
-    for {
-      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield {
+    searchInput.keyword.map { input =>
       val run = OS.os match {
         case OS.MacOS => runMacOS
         case _        => runWindows
@@ -64,7 +62,5 @@ final case class ToggleHiddenFilesCommand(commandNames: List[String]) extends Co
 object ToggleHiddenFilesCommand extends CommandPlugin[ToggleHiddenFilesCommand] {
 
   def make(config: Config): IO[CommandPluginError, ToggleHiddenFilesCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield ToggleHiddenFilesCommand(commandNames.getOrElse(List("hidden")))
+    commandNames(config, "hidden").map(ToggleHiddenFilesCommand(_))
 }

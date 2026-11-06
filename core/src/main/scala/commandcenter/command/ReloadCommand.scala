@@ -2,7 +2,6 @@ package commandcenter.command
 
 import com.typesafe.config.Config
 import commandcenter.event.KeyboardShortcut
-import commandcenter.view.Renderer
 import commandcenter.CCRuntime.Env
 import zio.*
 
@@ -12,21 +11,17 @@ final case class ReloadCommand(commandNames: List[String], override val shortcut
   val title: String = "Reload Config"
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
-    for {
-      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield PreviewResults.one(
-      Preview.unit
-        .onRun(input.context.terminal.reload)
-        .score(Scores.veryHigh(input.context))
-        .rendered(Renderer.renderDefault(title, ""))
-    )
+    searchInput.keyword.map { input =>
+      PreviewResults.one(
+        Preview.unit
+          .onRun(input.context.terminal.reload)
+          .score(Scores.veryHigh(input.context))
+      )
+    }
 }
 
 object ReloadCommand extends CommandPlugin[ReloadCommand] {
 
   def make(config: Config): IO[CommandPluginError, ReloadCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-      shortcuts    <- config.getZIO[Option[Set[KeyboardShortcut]]]("shortcuts")
-    } yield ReloadCommand(commandNames.getOrElse(List("reload")), shortcuts.getOrElse(Set.empty))
+    commandNames(config, "reload").zipWith(shortcuts(config))(ReloadCommand(_, _))
 }

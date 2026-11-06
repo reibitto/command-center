@@ -49,30 +49,23 @@ final case class JectJaCommand(commandNames: List[String], luceneIndex: WordRead
     )
 
   def renderWord(word: WordDoc, score: Double): Str = {
-    val kanjiTerms = (word.kanjiTerms.headOption.map { k =>
-      Color.Green(k)
-    }.toList ++ word.kanjiTerms.drop(1).map { k =>
-      Color.LightGreen(k)
-    }).reduceOption(_ ++ " " ++ _).getOrElse(Str(""))
+    val kanjiTerms =
+      Str.join(word.kanjiTerms.headOption.map(Color.Green(_)) ++ word.kanjiTerms.drop(1).map(Color.LightGreen(_)), " ")
 
-    val readingTerms = (word.readingTerms.headOption.map { k =>
-      Color.Blue(k)
-    }.toList ++ word.readingTerms.drop(1).map { k =>
-      Color.LightBlue(k)
-    }).reduceOption(_ ++ " " ++ _).getOrElse(Str(""))
+    val readingTerms =
+      Str.join(
+        word.readingTerms.headOption.map(Color.Blue(_)) ++ word.readingTerms.drop(1).map(Color.LightBlue(_)),
+        " "
+      )
 
     val definitions = word.definitions match {
       case Seq(d) => Str(d)
 
       case definitions =>
-        definitions.zipWithIndex.map { case (d, i) =>
-          Color.LightGray((i + 1).toString) ++ " " ++ d
-        }.reduceOption(_ ++ "\n" ++ _).getOrElse(Str(""))
+        Str.join(definitions.zipWithIndex.map { case (d, i) => Color.LightGray((i + 1).toString) ++ " " ++ d }, "\n")
     }
 
-    val partsOfSpeech = word.partsOfSpeech.map { pos =>
-      Back.DarkGray(pos)
-    }.reduceOption(_ ++ " " ++ _).getOrElse(Str(""))
+    val partsOfSpeech = Str.join(word.partsOfSpeech.map(Back.DarkGray(_)), " ")
 
     // TODO: Consider creating a StrBuilder class to make this nicer
     (if (kanjiTerms.length == 0) Str("") else kanjiTerms ++ " ") ++
@@ -88,9 +81,9 @@ object JectJaCommand extends CommandPlugin[JectJaCommand] {
   def make(config: Config): ZIO[Scope, CommandPluginError, JectJaCommand] =
     // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
     for {
-      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
+      commandNames   <- commandNames(config, "ject", "j")
       dictionaryPath <- config.getZIO[Path]("dictionaryPath")
       luceneIndex    <- WordReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException.apply)
-      showScore      <- config.getZIO[Option[Boolean]]("showScore")
-    } yield JectJaCommand(commandNames.getOrElse(List("ject", "j")), luceneIndex, showScore.getOrElse(false))
+      showScore      <- config.getZIO("showScore", false)
+    } yield JectJaCommand(commandNames, luceneIndex, showScore)
 }

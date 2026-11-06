@@ -16,7 +16,7 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
     for {
-      input    <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
+      input    <- searchInput.keyword
       localIps <- ZIO.attemptBlocking {
                     val interfaces = NetworkInterface.getNetworkInterfaces.asScala.toList
                     interfaces
@@ -40,7 +40,5 @@ final case class LocalIPCommand(commandNames: List[String]) extends Command[Stri
 object LocalIPCommand extends CommandPlugin[LocalIPCommand] {
 
   def make(config: Config): IO[CommandPluginError, LocalIPCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield LocalIPCommand(commandNames.getOrElse(List("localip")))
+    commandNames(config, "localip").map(LocalIPCommand(_))
 }

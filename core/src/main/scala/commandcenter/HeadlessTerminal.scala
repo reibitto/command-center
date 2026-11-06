@@ -22,7 +22,11 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
 
   def reload: RIO[Env, Unit] = ZIO.unit
 
-  def reset: URIO[Env, Unit] = searchResultsRef.set(SearchResults.empty)
+  def reset: URIO[Env, Unit] = replaceResults(SearchResults.empty)
+
+  // Releases the previous results, closing any streams they kept open for "More"
+  private def replaceResults(results: SearchResults[Any]): UIO[Unit] =
+    searchResultsRef.getAndSet(results).flatMap(_.release)
 
   def search(commands: Vector[Command[Any]], aliases: Map[String, List[String]])(
       searchTerm: String
@@ -31,9 +35,7 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
 
     Command
       .search(commands, aliases, searchTerm, context)
-      .tap { r =>
-        searchResultsRef.set(r)
-      }
+      .tap(replaceResults)
   }
 
   def run(cursorIndex: Int): URIO[Env, Option[PreviewResult[Any]]] =
@@ -45,11 +47,7 @@ final case class HeadlessTerminal(searchResultsRef: Ref[SearchResults[Any]]) ext
            }
     } yield previewResult
 
-  def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
-  ): RIO[Env, Unit] =
+  def showMore[A](moreResults: Chunk[PreviewResult[A]], nextSource: Option[PreviewResult[A]]): RIO[Env, Unit] =
     ZIO.unit
 }
 

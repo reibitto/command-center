@@ -32,9 +32,7 @@ object SearchSpec extends CommandBaseSpec {
       def title: String = name
 
       def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
-        ZIO
-          .fromOption(searchInput.asArgs)
-          .orElseFail(CommandError.NotApplicable)
+        searchInput.args
           .as(PreviewResults.one(Preview(name).onRun(ranOrder.update(_ :+ name))))
     }
 
@@ -133,6 +131,34 @@ object SearchSpec extends CommandBaseSpec {
                          defaultCommandContext
                        )
           } yield assertTrue(results.previews.length == 1) // only cmda's own result
+        },
+        test("a command that allows semicolons also gets the unsplit line") {
+          val semicolonCommand = new Command[String] {
+            val commandType: CommandType = CommandType.ExitCommand
+            val commandNames: List[String] = List("calc")
+            val title: String = "calc"
+            override def allowsSemicolons: Boolean = true
+
+            def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[String]] =
+              searchInput.args.map(input => PreviewResults.one(Preview(input.args.mkString(" "))))
+          }
+
+          for {
+            results <- Command.search(Vector(semicolonCommand), Map.empty, "calc 20; 16", defaultCommandContext)
+          } yield assertTrue(results.previews.collect { case p: PreviewResult.Some[?] => p.result }.contains("20; 16"))
+        },
+        test("aliases are expanded in every statement, not just the first") {
+          for {
+            order   <- Ref.make(List.empty[String])
+            results <- Command.search(
+                         Vector(trackingCommand("cmda", order), trackingCommand("cmdb", order)),
+                         Map("b" -> List("cmdb")),
+                         "cmda 1; b 2",
+                         defaultCommandContext
+                       )
+            _        <- results.previews.head.onRun
+            ranOrder <- order.get
+          } yield assertTrue(ranOrder == List("cmda", "cmdb"))
         },
         test("a trailing semicolon with nothing after it is treated as a single statement") {
           for {

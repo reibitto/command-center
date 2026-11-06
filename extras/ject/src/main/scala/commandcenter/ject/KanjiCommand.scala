@@ -49,11 +49,8 @@ final case class KanjiCommand(
   // TODO: Consider creating a StrBuilder class to make this nicer
   def render(k: KanjiDoc, score: Double): Str =
     (if (k.isJouyouKanji) Str(" ") else Color.Red("×")) ++
-      Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) "" else " ") ++ k.kunYomi.map { ku =>
-        Color.Magenta(ku)
-      }.reduceOption(_ ++ " " ++ _).getOrElse(Str("")) ++ " " ++ k.onYomi.map { o =>
-        Color.Cyan(o)
-      }.reduceOption(_ ++ " " ++ _).getOrElse(Str("")) ++ " " ++ k.meaning.mkString("; ") ++
+      Color.Green(k.kanji) ++ (if (k.kunYomi.isEmpty) "" else " ") ++ Str.join(k.kunYomi.map(Color.Magenta(_)), " ") ++
+      " " ++ Str.join(k.onYomi.map(Color.Cyan(_)), " ") ++ " " ++ k.meaning.mkString("; ") ++
       (if (showScore) Color.DarkGray(" %1.2f".format(score)) else "")
 
 }
@@ -63,15 +60,10 @@ object KanjiCommand extends CommandPlugin[KanjiCommand] {
   def make(config: Config): ZIO[Scope, CommandPluginError, KanjiCommand] =
     // TODO: Ensure index exists. If not, create it here (put data in .command-center folder)
     for {
-      commandNames   <- config.getZIO[Option[List[String]]]("commandNames")
+      commandNames   <- commandNames(config, "kanji", "k")
       dictionaryPath <- config.getZIO[Path]("dictionaryPath")
       luceneIndex    <- KanjiReader.make(dictionaryPath).mapError(CommandPluginError.UnexpectedException.apply)
-      showScore      <- config.getZIO[Option[Boolean]]("showScore")
-      quickPrefixes  <- config.getZIO[Option[List[String]]]("quickPrefixes")
-    } yield KanjiCommand(
-      commandNames.getOrElse(List("kanji", "k")),
-      luceneIndex,
-      quickPrefixes.getOrElse(Nil),
-      showScore.getOrElse(false)
-    )
+      showScore      <- config.getZIO("showScore", false)
+      quickPrefixes  <- config.getZIO("quickPrefixes", List.empty[String])
+    } yield KanjiCommand(commandNames, luceneIndex, quickPrefixes, showScore)
 }

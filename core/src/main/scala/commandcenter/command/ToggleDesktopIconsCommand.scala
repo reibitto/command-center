@@ -13,9 +13,7 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
   override val supportedOS: Set[OS] = Set(OS.MacOS)
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
-    for {
-      input <- ZIO.fromOption(searchInput.asKeyword).orElseFail(CommandError.NotApplicable)
-    } yield {
+    searchInput.keyword.map { input =>
       val run = for {
         showingIcons <- PCommand("defaults", "read", "com.apple.finder", "CreateDesktop").string.map(_.trim == "1")
         _            <-
@@ -30,7 +28,5 @@ final case class ToggleDesktopIconsCommand(commandNames: List[String]) extends C
 object ToggleDesktopIconsCommand extends CommandPlugin[ToggleDesktopIconsCommand] {
 
   def make(config: Config): IO[CommandPluginError, ToggleDesktopIconsCommand] =
-    for {
-      commandNames <- config.getZIO[Option[List[String]]]("commandNames")
-    } yield ToggleDesktopIconsCommand(commandNames.getOrElse(List("icons")))
+    commandNames(config, "icons").map(ToggleDesktopIconsCommand(_))
 }

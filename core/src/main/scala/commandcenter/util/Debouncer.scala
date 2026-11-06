@@ -17,13 +17,7 @@ final case class Debouncer[R, E, A](
 
   /** Interrupt the in-progress search immediately (if it exists) */
   def interruptSearch: UIO[Unit] =
-    stateRef.getAndUpdateZIO { stateOpt =>
-      ZIO
-        .foreachDiscard(stateOpt) { state =>
-          state.running.interrupt
-        }
-        .as(stateOpt)
-    }.unit
+    stateRef.updateZIO(stateOpt => ZIO.foreachDiscard(stateOpt)(_.running.interrupt).as(stateOpt))
 
   def triggerNow: IO[E, Option[Promise[Nothing, Unit]]] =
     stateRef.modifyZIO {
@@ -36,12 +30,7 @@ final case class Debouncer[R, E, A](
     }
 
   def triggerNowAwait: IO[E, Unit] =
-    for {
-      promiseOpt <- triggerNow
-      _          <- ZIO.foreachDiscard(promiseOpt) { promise =>
-             promise.await
-           }
-    } yield ()
+    triggerNow.flatMap(ZIO.foreachDiscard(_)(_.await))
 
 }
 
@@ -58,19 +47,11 @@ object Debouncer {
                    _                 <- ZIO.foreachDiscard(state) { s =>
                           s.running.interruptFork.unless(s.triggered)
                         }
-                   opFiber <- (for {
-                                _      <- delayPromise.await.timeout(waitTime)
-                                result <- opTimeout match {
-                                            case Some(timeout) =>
-                                              op.timeout(timeout).flatMap {
-                                                case Some(a) => ZIO.succeed(a)
-                                                case None    =>
-                                                  val errorMessage = "Operation in debouncer timed out"
-                                                  ZIO.logWarning(errorMessage) *> ZIO.dieMessage(errorMessage)
-                                              }
-                                            case None => op
-                                          }
-                              } yield result).forkDaemon
+                   opFiber <- (delayPromise.await.timeout(waitTime) *> opTimeout.fold(op) { timeout =>
+                                val errorMessage = "Operation in debouncer timed out"
+                                op.timeout(timeout)
+                                  .someOrElseZIO(ZIO.logWarning(errorMessage) *> ZIO.dieMessage(errorMessage))
+                              }).forkDaemon
                    _ <- (opFiber.await *> completionPromise.succeed(())).forkDaemon
                    updatedDebounceState = DebounceState(opFiber, delayPromise, completionPromise, triggered = false)
                  } yield (opFiber, Some(updatedDebounceState))
