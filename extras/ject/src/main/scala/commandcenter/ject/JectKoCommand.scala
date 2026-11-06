@@ -3,7 +3,6 @@ package commandcenter.ject
 import com.typesafe.config.Config
 import commandcenter.command.*
 import commandcenter.config.Decoders.*
-import commandcenter.event.KeyModifier
 import commandcenter.locale.KoreanText
 import commandcenter.tools.Tools
 import commandcenter.CCRuntime.Env
@@ -41,7 +40,7 @@ final case class JectKoCommand(commandNames: List[String], luceneIndex: WordRead
 
         Preview.unit
           .score(Scores.high(searchInput.context))
-          .onAlternativeRun(KeyModifier.Shift)(Tools.setClipboard(targetWord))
+          .onRun(Tools.setClipboard(targetWord))
           .renderedAnsi(renderWord(word.doc, word.score))
       },
       initialPageSize = 10,
