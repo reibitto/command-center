@@ -18,8 +18,14 @@ final case class RadixCommand(commandNames: List[String]) extends Command[Unit] 
   val commandType: CommandType = CommandType.RadixCommand
   val title: String = "Convert base"
 
-  val fromRadixOpt = Opts.option[Int]("from", "Radix to convert from", "f").orNone
-  val toRadixOpt = Opts.option[Int]("to", "Radix to convert to", "t").orNone
+  // BigInt silently falls back to base 10 for radixes outside 2-36, so they're rejected up front
+  private def validRadix(opt: Opts[Int]): Opts[Int] =
+    opt.validate(s"Radix must be between ${Character.MIN_RADIX} and ${Character.MAX_RADIX}")(r =>
+      r >= Character.MIN_RADIX && r <= Character.MAX_RADIX
+    )
+
+  val fromRadixOpt = validRadix(Opts.option[Int]("from", "Radix to convert from", "f")).orNone
+  val toRadixOpt = validRadix(Opts.option[Int]("to", "Radix to convert to", "t")).orNone
   val numberArg = Opts.argument[String]("number")
 
   val radixCommand = decline.Command("radix", title)((fromRadixOpt, toRadixOpt, numberArg).tupled)

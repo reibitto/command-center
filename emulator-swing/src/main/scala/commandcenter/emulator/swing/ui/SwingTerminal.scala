@@ -17,6 +17,7 @@ import java.awt.event.KeyEvent
 import javax.swing.*
 import javax.swing.plaf.basic.BasicScrollBarUI
 import javax.swing.text.{DefaultStyledDocument, SimpleAttributeSet, StyleConstants, StyleContext}
+import scala.util.Try
 
 final case class SwingTerminal(
     commandCursorRef: Ref[Int],
@@ -108,10 +109,11 @@ final case class SwingTerminal(
 
   override protected def render(searchResults: SearchResults[Any]): URIO[Env, Unit] =
     commandCursorRef.get.map { commandCursor =>
-      if (frame.isVisible) { // If the frame isn't visible, trying to insert into the document will throw an exception
-        SwingUtilities.invokeLater { () =>
-          document.remove(0, document.getLength)
+      SwingUtilities.invokeLater { () =>
+        document.remove(0, document.getLength)
 
+        // If the frame isn't visible, trying to insert into the document will throw an exception
+        if (frame.isVisible) {
           var scrollToPosition: Int = 0
 
           def renderBar(rowIndex: Int): Unit = {
@@ -181,25 +183,27 @@ final case class SwingTerminal(
           }
 
           outputTextPane.setCaretPosition(scrollToPosition)
+        }
 
-          frame.pack()
-        }
-      } else {
-        SwingUtilities.invokeLater { () =>
-          document.remove(0, document.getLength)
-          frame.pack()
-        }
+        frame.pack()
       }
+    }
+
+  // Runs `f` on the EDT and waits for it. Runs inline if already on the EDT, where waiting would deadlock.
+  private def onEdt[A](f: => A): Task[A] =
+    ZIO.suspendSucceed {
+      if (SwingUtilities.isEventDispatchThread) ZIO.attempt(f)
+      else ZIO.async[Any, Throwable, A](cb => SwingUtilities.invokeLater(() => cb(Exit.fromTry(Try(f)))))
     }
 
   def reset: URIO[Env, Unit] =
     for {
       _ <- commandCursorRef.set(0)
-      _ <- ZIO.succeed {
+      _ <- onEdt {
              inputTextField.setText("")
              document.remove(0, document.getLength)
-           }
-      _ <- searchResultsRef.set(SearchResults.empty)
+           }.orDie
+      _ <- replaceResults(SearchResults.empty)
     } yield ()
 
   inputTextField.addZKeyListener(new ZKeyAdapter {
@@ -219,27 +223,22 @@ final case class SwingTerminal(
         case KeyEvent.VK_DOWN =>
           e.consume() // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
 
-          for {
-            previousResults <- searchResultsRef.get
-            previousCursor  <-
-              commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-            // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
-            _ <- render(previousResults).when(previousCursor < previousResults.previews.length - 1)
-          } yield ()
+          // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
+          moveCursorAndRender(1)
 
         case KeyEvent.VK_UP =>
           e.consume() // Not ideal to have it outside the for-comprehension, but wrapping this in UIO will not work
 
-          for {
-            previousResults <- searchResultsRef.get
-            previousCursor  <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
-            // TODO: Add `renderSelectionCursor` optimization here too (refer to SwtTerminal)
-            _ <- render(previousResults).when(previousCursor > 0)
-          } yield ()
+          moveCursorAndRender(-1)
 
         case _ => runShortcut(KeyboardShortcutUtil.fromKeyEvent(e))
       }
   })
+
+  private def moveCursorAndRender(delta: Int): URIO[Env, Unit] =
+    moveCursor(delta).flatMap { case (previousCursor, cursor) =>
+      searchResultsRef.get.flatMap(render).when(previousCursor != cursor).unit
+    }
 
   frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
 
@@ -249,7 +248,7 @@ final case class SwingTerminal(
   def open: RIO[Env, Unit] =
     for {
       conf <- Conf.config
-      _    <- ZIO.attempt {
+      _    <- onEdt {
              val bounds =
                GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
 
@@ -260,30 +259,30 @@ final case class SwingTerminal(
            }
     } yield ()
 
-  def hide: URIO[Conf, Unit] =
+  protected def hideWindow: URIO[Conf, Unit] =
     for {
       keepOpen <- Conf.get(_.general.keepOpen)
       _        <- if (keepOpen)
              WindowManager.switchFocusToPreviousActiveWindow.ignore
            else
-             ZIO.succeed(frame.setVisible(false))
+             onEdt(frame.setVisible(false)).orDie
     } yield ()
 
   def activate: RIO[Tools, Unit] =
     OS.os match {
       case OS.MacOS => Tools.activate
       case _        =>
-        ZIO.succeed {
+        onEdt {
           frame.toFront()
           frame.requestFocus()
           inputTextField.requestFocusInWindow()
-        }
+        }.unit.orDie
     }
 
-  def opacity: RIO[Env, Float] = ZIO.succeed(frame.getOpacity)
+  def opacity: RIO[Env, Float] = onEdt(frame.getOpacity)
 
   def setOpacity(opacity: Float): RIO[Env, Unit] =
-    ZIO.attempt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported).unit
+    onEdt(frame.setOpacity(opacity)).whenZIO(isOpacitySupported).unit
 
   def isOpacitySupported: URIO[Env, Boolean] =
     ZIO
@@ -293,7 +292,7 @@ final case class SwingTerminal(
       )
       .orElseSucceed(false)
 
-  def size: RIO[Env, Dimension] = ZIO.succeed(frame.getSize)
+  def size: RIO[Env, Dimension] = onEdt(frame.getSize)
 
   def setSize(width: Int, maxHeight: Int): RIO[Env, Unit] = ZIO.unit
 

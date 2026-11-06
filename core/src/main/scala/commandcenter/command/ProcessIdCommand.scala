@@ -17,22 +17,26 @@ final case class ProcessIdCommand(commandNames: List[String]) extends Command[Un
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
-      input <- searchInput.prefixed
-      processes = ProcessHandle
-                    .allProcesses()
-                    .iterator()
-                    .asScala
-                    .toSeq
-                    .flatMap { p =>
-                      (p.info.command.toScala, p.info.startInstant.toScala) match {
-                        case (Some(command), Some(startTime)) =>
-                          Some(ProcessInfo(p.pid(), command, startTime))
+      input     <- searchInput.prefixed
+      processes <- ZIO.blocking(
+                     ZIO.succeed(
+                       ProcessHandle
+                         .allProcesses()
+                         .iterator()
+                         .asScala
+                         .toSeq
+                         .flatMap { p =>
+                           (p.info.command.toScala, p.info.startInstant.toScala) match {
+                             case (Some(command), Some(startTime)) =>
+                               Some(ProcessInfo(p.pid(), command, startTime))
 
-                        case _ =>
-                          None
-                      }
-                    }
-                    .sortBy(_.startTime)(Ordering[Instant].reverse)
+                             case _ =>
+                               None
+                           }
+                         }
+                         .sortBy(_.startTime)(Ordering[Instant].reverse)
+                     )
+                   )
     } yield PreviewResults.Paginated.fromIterable(
       processes.map { process =>
         val run = Tools.setClipboard(process.pid.toString)

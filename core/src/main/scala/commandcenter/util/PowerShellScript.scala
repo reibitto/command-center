@@ -6,14 +6,14 @@ import zio.process.*
 
 object PowerShellScript {
 
-  def loadFunction2[A, A2](
-      cache: ZCache[String, String]
-  )(resource: String): (A, A2) => Task[String] =
+  // Escapes a value for use inside a single-quoted PowerShell string
+  def escape(s: String): String = s.replace("'", "''")
+
+  def loadFunction2[A, A2](cache: ZCache[String, String])(resource: String): (A, A2) => Task[String] =
     (a, a2) =>
-      for {
-        script <- cache(s"powershell/$resource")
-        result <- Command("powershell", script.replace("{0}", a.toString).replace("{1}", a2.toString)).string
-      } yield result
+      cache(s"powershell/$resource").flatMap { script =>
+        Command("powershell", ScriptTemplate.fill(script, Seq(a, a2), escape)).string
+      }
 
   def executeCommand(command: String): IO[CommandError, Process] =
     Command("powershell", "-command", command).run

@@ -61,7 +61,9 @@ object UnitConversionCommandSpec extends CommandBaseSpec {
         assertTrue(
           rendered("1/2 cup").contains("118.3 ml"),
           rendered("1 1/2 cups").contains("354.9 ml"),
-          rendered("1/0 cup").isEmpty
+          rendered("1/0 cup").isEmpty,
+          rendered("10/4 km").contains("1.6 mi"),
+          rendered("11/2 cups").contains("1,301.2 ml")
         )
       },
       test("temperature") {

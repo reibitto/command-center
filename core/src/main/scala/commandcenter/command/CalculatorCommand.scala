@@ -23,6 +23,8 @@ final case class CalculatorCommand(parameters: Parameters) extends Command[BigDe
 
   val title: String = "Calculator"
 
+  override def allowsSemicolons: Boolean = parameters.parameterSeparator == ';'
+
   private val helpTypeOpt = Opts.argument[String]("functions or parameters").mapValidated {
     case arg if arg.matches("functions?")  => Validated.valid(FunctionsList)
     case arg if arg.matches("parameters?") => Validated.valid(ParametersList)

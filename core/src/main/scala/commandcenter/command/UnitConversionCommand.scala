@@ -27,22 +27,24 @@ final case class UnitConversionCommand() extends Command[Double] {
   private def escapedGroupingSeparator: String = s"\\$groupingSeparator"
   private def escapedDecimalSeparator: String = s"\\$decimalSeparator"
 
-  // sign, number, fraction, unit ("100 km", "1 1/2 cups"). Units can't start with "/" so "1/2" parses as a fraction.
+  // Either a fraction with an optional whole part separated by a space ("1/2", "1 1/2") or a plain number, then the unit
   val unitRegex: Regex =
-    s"""^([+-])?(?:([\\d$escapedGroupingSeparator]+(?:$escapedDecimalSeparator\\d+)?)\\s*)?(?:(\\d+)/(\\d+))?\\s*([^\\d\\s/].*)$$""".r
+    s"""^([+-])?(?:(?:(\\d+)\\s+)?(\\d+)/(\\d+)|([\\d$escapedGroupingSeparator]+(?:$escapedDecimalSeparator\\d+)?))\\s*([^\\d\\s/].*)$$""".r
 
   def parseQuantity(input: String): Option[(Double, UnitOfMeasure)] =
     unitRegex.unapplySeq(input.trim).flatMap {
-      case List(sign, whole, numerator, denominator, unitText) if whole != null || numerator != null =>
+      case List(sign, whole, numerator, denominator, plain, unitText) =>
         for {
-          wholeValue <- Option(whole).fold(Option(0.0)) { w =>
-                          w.replace(groupingSeparator.toString, "").replace(decimalSeparator, '.').toDoubleOption
+          number <- Option(plain) match {
+                      case Some(p) =>
+                        p.replace(groupingSeparator.toString, "").replace(decimalSeparator, '.').toDoubleOption
+                      case None =>
+                        Option.when(denominator.toDouble != 0) {
+                          Option(whole).fold(0.0)(_.toDouble) + numerator.toDouble / denominator.toDouble
                         }
-          fractionValue <- Option(numerator).fold(Option(0.0)) { n =>
-                             Option.when(denominator.toDouble != 0)(n.toDouble / denominator.toDouble)
-                           }
+                    }
           unit <- UnitOfMeasure.parse(unitText)
-        } yield ((if (sign == "-") -1 else 1) * (wholeValue + fractionValue), unit)
+        } yield ((if (sign == "-") -1 else 1) * number, unit)
 
       case _ => None
     }
@@ -66,23 +68,12 @@ object UnitConversionCommand extends CommandPlugin[UnitConversionCommand] {
 
 final case class ConversionResult(value: Double, unitOfMeasure: UnitOfMeasure)
 
-sealed trait Dimension
-
-object Dimension {
-  case object Length extends Dimension
-  case object Speed extends Dimension
-  case object Mass extends Dimension
-  case object Volume extends Dimension
-  case object Temperature extends Dimension
-  case object Data extends Dimension
-}
-
 /** A unit is converted through its dimension's base unit: `base = (value +
   * offset) * factor`. `offset` is only needed for temperatures.
   */
 class UnitOfMeasure(
     val symbol: String,
-    val dimension: Dimension,
+    val dimension: UnitOfMeasure.Dimension,
     val factor: Double,
     val digits: Int,
     val names: Set[String],
@@ -98,6 +89,18 @@ class UnitOfMeasure(
 }
 
 object UnitOfMeasure {
+
+  sealed trait Dimension
+
+  object Dimension {
+    case object Length extends Dimension
+    case object Speed extends Dimension
+    case object Mass extends Dimension
+    case object Volume extends Dimension
+    case object Temperature extends Dimension
+    case object Data extends Dimension
+  }
+
   import Dimension.*
 
   private def unit(symbol: String, dimension: Dimension, factor: Double, digits: Int, names: String*): UnitOfMeasure =

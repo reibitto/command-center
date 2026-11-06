@@ -23,7 +23,7 @@ object Main {
 
       val rawTerminal = new RawSwtTerminal(config)
 
-      runtime.unsafe.run {
+      val setup = runtime.unsafe.run {
         (for {
           runtime  <- ZIO.runtime[Env]
           terminal <- SwtTerminal.create(runtime, rawTerminal)
@@ -31,7 +31,12 @@ object Main {
         } yield ()).tapErrorCause(ZIO.logFatalCause("Fatal error", _))
       }
 
-      rawTerminal.loop()
+      if (setup.isFailure) {
+        rawTerminal.display.dispose()
+        java.lang.System.exit(1)
+      }
+
+      rawTerminal.loop(t => runtime.unsafe.run(ZIO.logErrorCause("Uncaught error in UI loop", Cause.die(t))))
     }
   }
 }

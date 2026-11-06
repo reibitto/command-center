@@ -6,7 +6,9 @@ import zio.*
 final case class SearchResults[A](
     searchTerm: String,
     previews: Chunk[PreviewResult[A]],
-    errors: Chunk[CommandError] = Chunk.empty
+    errors: Chunk[CommandError] = Chunk.empty,
+    // Closes the streams kept open for "More" results. Call it once these results are replaced.
+    release: UIO[Unit] = ZIO.unit
 ) {
   lazy val rendered: Chunk[Rendered] = previews.map(_.renderFn())
 

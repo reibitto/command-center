@@ -29,7 +29,8 @@ final case class SwtTerminal(
     extends BaseGuiTerminal {
   val terminalType: TerminalType = TerminalType.Swt
 
-  val smartBuffer: TerminalBuffer = new TerminalBuffer(new StringBuilder, mutable.ArrayDeque.empty)
+  // UI-thread only: line start offsets of the text currently shown in `outputBox`
+  private var displayedLineStarts: Vector[Int] = Vector.empty
 
   terminal.display.asyncExec { () =>
     terminal.inputBox.addModifyListener(new ModifyListener {
@@ -86,24 +87,12 @@ final case class SwtTerminal(
           case SWT.ARROW_DOWN =>
             e.doit = false // Must be set synchronously in the SWT callback, so it can't be part of the effect
 
-            fork {
-              for {
-                previousResults <- searchResultsRef.get
-                previousCursor  <-
-                  commandCursorRef.getAndUpdate(cursor => (cursor + 1) min (previousResults.previews.length - 1))
-                _ <- renderSelectionCursor(-1).when(previousCursor < previousResults.previews.length - 1)
-              } yield ()
-            }
+            fork(moveCursor(1).flatMap(renderSelectionCursor))
 
           case SWT.ARROW_UP =>
             e.doit = false // Must be set synchronously in the SWT callback, so it can't be part of the effect
 
-            fork {
-              for {
-                previousCursor <- commandCursorRef.getAndUpdate(cursor => (cursor - 1) max 0)
-                _              <- renderSelectionCursor(1).when(previousCursor > 0)
-              } yield ()
-            }
+            fork(moveCursor(-1).flatMap(renderSelectionCursor))
 
           case _ =>
             val shortcutPressed = KeyboardShortcutUtil.fromKeyEvent(e)
@@ -114,51 +103,37 @@ final case class SwtTerminal(
 
   private def fork(effect: URIO[Env, Any]): Unit = runtime.unsafeFork(effect)
 
-  private def renderSelectionCursor(cursorDelta: Int): UIO[Unit] =
-    for {
-      commandCursor <- commandCursorRef.get
-      textIndex = smartBuffer.lineStartIndices(commandCursor)
-      priorTextIndex = smartBuffer.lineStartIndices(commandCursor + cursorDelta)
-      _ <- invoke {
-             terminal.outputBox.replaceStyleRanges(
-               0,
-               0,
-               Array(
-                 new StyleRange(
-                   priorTextIndex,
-                   1,
-                   null,
-                   terminal.darkGray
-                 ),
-                 new StyleRange(
-                   textIndex,
-                   1,
-                   null,
-                   terminal.green
-                 )
-               ).sortBy(_.start)
-             )
+  private def renderSelectionCursor(cursors: (Int, Int)): UIO[Unit] = {
+    val (previousCursor, cursor) = cursors
 
-             terminal.outputBox.setSelection(textIndex)
-           }
-    } yield ()
+    invoke {
+      val lineStarts = displayedLineStarts
+      val ranges = Array(previousCursor -> terminal.darkGray, cursor -> terminal.green).collect {
+        case (row, color) if lineStarts.isDefinedAt(row) => new StyleRange(lineStarts(row), 1, null, color)
+      }
+
+      if (ranges.nonEmpty) terminal.outputBox.replaceStyleRanges(0, 0, ranges.sortBy(_.start))
+      lineStarts.lift(cursor).foreach(terminal.outputBox.setSelection)
+    }.when(previousCursor != cursor).unit
+  }
 
   override protected def render(searchResults: SearchResults[Any]): URIO[Env, Unit] =
     for {
-      commandCursor              <- commandCursorRef.get
-      (styles, scrollToPosition) <- ZIO.succeed(fillBuffer(searchResults, commandCursor))
-      config                     <- Conf.config
-      _                          <- invoke {
-             if (smartBuffer.buffer.isEmpty || !terminal.shell.isVisible) {
+      commandCursor <- commandCursorRef.get
+      snapshot      <- ZIO.succeed(renderSnapshot(searchResults, commandCursor))
+      config        <- Conf.config
+      _             <- invoke {
+             if (snapshot.text.isEmpty || !terminal.shell.isVisible) {
                terminal.outputBox.setVisible(false)
                terminal.outputBoxGridData.exclude = true
                terminal.outputBox.setText("")
+               displayedLineStarts = Vector.empty
              } else {
                terminal.outputBox.setVisible(true)
                terminal.outputBoxGridData.exclude = false
-               terminal.outputBox.setText(smartBuffer.buffer.toString)
-
-               terminal.outputBox.setStyleRanges(styles)
+               terminal.outputBox.setText(snapshot.text)
+               terminal.outputBox.setStyleRanges(snapshot.styles)
+               displayedLineStarts = snapshot.lineStarts
              }
 
              val newSize = terminal.shell.computeSize(config.display.width, SWT.DEFAULT)
@@ -168,14 +143,14 @@ final case class SwtTerminal(
 
              terminal.shell.setSize(config.display.width, newHeight min config.display.maxHeight)
 
-             terminal.outputBox.setSelection(scrollToPosition)
+             terminal.outputBox.setSelection(snapshot.scrollToPosition)
            }
     } yield ()
 
-  // Rewrites `smartBuffer` with the rendered results and returns the style ranges and the cursor's scroll position.
-  private def fillBuffer(searchResults: SearchResults[Any], commandCursor: Int): (Array[StyleRange], Int) = {
-    smartBuffer.clear()
-
+  // Built off the UI thread as an immutable snapshot so the text and its style ranges are always applied together.
+  private def renderSnapshot(searchResults: SearchResults[Any], commandCursor: Int): SwtTerminal.RenderSnapshot = {
+    val buffer = new StringBuilder
+    val lineStarts = Vector.newBuilder[Int]
     val styles = mutable.ArrayBuffer.empty[StyleRange]
     var scrollToPosition = 0
     var lineStart = 0
@@ -185,20 +160,20 @@ final case class SwtTerminal(
 
       case (ar: Rendered.Ansi, row) =>
         val barColor = if (row == commandCursor) terminal.green else terminal.darkGray
-        styles.append(new StyleRange(smartBuffer.buffer.length, 1, terminal.black, barColor))
-        smartBuffer.buffer.append("  ")
+        styles.append(new StyleRange(buffer.length, 1, terminal.black, barColor))
+        buffer.append("  ")
 
         if (row < commandCursor)
           scrollToPosition += ar.ansiStr.length + 3
 
         val renderStr = if (row < searchResults.rendered.length - 1) ar.ansiStr ++ "\n" else ar.ansiStr
 
-        smartBuffer.lineStartIndices.addOne(lineStart)
+        lineStarts.addOne(lineStart)
         lineStart += renderStr.length + 2
 
         AnsiRun.runs(renderStr).foreach { run =>
-          val start = smartBuffer.buffer.length
-          smartBuffer.buffer.append(run.text)
+          val start = buffer.length
+          buffer.append(run.text)
 
           val foreground = terminal.fromFansiColorCode(run.foreground)
           val background = terminal.fromFansiColorCode(run.background)
@@ -209,7 +184,7 @@ final case class SwtTerminal(
         }
     }
 
-    (styles.toArray, scrollToPosition)
+    SwtTerminal.RenderSnapshot(buffer.toString, styles.toArray, lineStarts.result(), scrollToPosition)
   }
 
   def invoke(effect: => Unit): UIO[Unit] =
@@ -227,7 +202,7 @@ final case class SwtTerminal(
       _ <- invoke {
              terminal.inputBox.setText("")
            }
-      _ <- searchResultsRef.set(SearchResults.empty)
+      _ <- replaceResults(SearchResults.empty)
     } yield ()
 
   def openActivated: RIO[Env, Unit] =
@@ -251,7 +226,7 @@ final case class SwtTerminal(
            }
     } yield ()
 
-  def hide: URIO[Conf, Unit] =
+  protected def hideWindow: URIO[Conf, Unit] =
     for {
       keepOpen <- Conf.get(_.general.keepOpen)
       _        <- if (keepOpen)
@@ -294,6 +269,13 @@ final case class SwtTerminal(
 }
 
 object SwtTerminal {
+
+  final private case class RenderSnapshot(
+      text: String,
+      styles: Array[StyleRange],
+      lineStarts: Vector[Int],
+      scrollToPosition: Int
+  )
 
   def create(runtime: Runtime[Env], terminal: RawSwtTerminal): RIO[Scope & Env, SwtTerminal] =
     for {

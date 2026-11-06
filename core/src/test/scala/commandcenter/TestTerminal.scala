@@ -21,11 +21,7 @@ object TestTerminal extends CCTerminal {
 
   def reload: RIO[Env, Unit] = ZIO.unit
 
-  def showMore[A](
-      moreResults: Chunk[PreviewResult[A]],
-      previewSource: PreviewResult[A],
-      pageSize: Int
-  ): RIO[Env, Unit] = ZIO.unit
+  def showMore[A](moreResults: Chunk[PreviewResult[A]], nextSource: Option[PreviewResult[A]]): RIO[Env, Unit] = ZIO.unit
 
   def reset: URIO[Env, Unit] = ZIO.unit
 }

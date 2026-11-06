@@ -27,7 +27,8 @@ object Main extends ZIOApp {
       _        <- terminal.render(SearchResults.empty)
       _        <- ZStream
              .fromQueue(terminal.renderQueue)
-             .foreach(terminal.render(_).ignore) // One failed render must not stop all future renders
+             // One failed render (including defects) must not stop all future renders
+             .foreach(terminal.render(_).catchAllCause(ZIO.logErrorCause("Failed to render", _)))
              .forkScoped
       _ <- terminal
              .processEvent(config.commands, config.aliases)

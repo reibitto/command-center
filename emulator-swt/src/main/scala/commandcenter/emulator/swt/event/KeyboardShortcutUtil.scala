@@ -79,6 +79,10 @@ object KeyboardShortcutUtil {
     case SWT.KEYPAD_9              => KeyCode.Numpad9
     case SWT.KEYPAD_EQUAL          => KeyCode.Equals
     case SWT.KEYPAD_CR             => KeyCode.Enter
+    case SWT.CR                    => KeyCode.Enter
+    case SWT.LF                    => KeyCode.Enter
+    case SWT.BS                    => KeyCode.BackSpace
+    case SWT.INSERT                => KeyCode.Insert
     case SWT.HELP                  => KeyCode.Help
     case SWT.NUM_LOCK              => KeyCode.NumLock
     case SWT.CAPS_LOCK             => KeyCode.CapsLock

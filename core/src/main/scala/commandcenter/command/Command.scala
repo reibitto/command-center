@@ -9,7 +9,6 @@ import commandcenter.CCRuntime.Env
 import commandcenter.CommandContext
 import fansi.{Color, Str}
 import zio.*
-import zio.stream.ZSink
 
 import java.util.Locale
 
@@ -21,6 +20,9 @@ trait Command[+A] {
   def locales: Set[Locale] = Set.empty
   def supportedOS: Set[OS] = Set.empty
   def shortcuts: Set[KeyboardShortcut] = Set.empty
+
+  // If true, input with `;` statements is also passed to this command unsplit (e.g. `gcd 20; 16`)
+  def allowsSemicolons: Boolean = false
 
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[A]]
 
@@ -68,19 +70,66 @@ object Command {
   ): URIO[Env, SearchResults[A]] =
     if (input.isEmpty)
       ZIO.succeed(SearchResults(input, Chunk.empty))
-    else {
-      val (commandPart, rest) = SearchInput.splitCommandAndRest(input)
-
-      // The user's input, plus every matching alias resolved (expanded) to its full text value.
-      val candidates = (input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)).distinct
-
-      ZIO.foreach(Chunk.fromIterable(candidates))(searchExpandedInput(commands, _, context)).map { candidateResults =>
-        SearchResults(
-          input,
-          candidateResults.flatMap(_.previews).sortBy(_.score)(Ordering.Double.TotalOrdering.reverse),
-          candidateResults.flatMap(_.errors)
-        )
+    else
+      // Paginated streams stay open in this scope until the results are released (closed right away on failure)
+      ZIO.acquireReleaseExitWith(Scope.make)((scope: Scope.Closeable, exit: Exit[Any, Any]) =>
+        scope.close(exit).unless(exit.isSuccess)
+      ) { scope =>
+        scope
+          .extend[Env](
+            ZIO.foreach(Chunk.fromIterable(expandAliases(aliases, input)))(
+              searchCandidate(commands, aliases, _, context)
+            )
+          )
+          .map { candidateResults =>
+            SearchResults(
+              input,
+              candidateResults.flatMap(_.previews).sortBy(_.score)(Ordering.Double.TotalOrdering.reverse),
+              candidateResults.flatMap(_.errors),
+              // Forked, since closing waits for a page that's still loading (e.g. an HTTP request)
+              release = scope.close(Exit.unit).forkDaemon.unit
+            )
+          }
       }
+
+  // The input plus every alias target its first word maps to.
+  private def expandAliases(aliases: Map[String, List[String]], input: String): List[String] = {
+    val (commandPart, rest) = SearchInput.splitCommandAndRest(input)
+
+    (input :: aliases.getOrElse(commandPart, List.empty).map(_ + rest)).distinct
+  }
+
+  /** Searches an alias-expanded line. A line with multiple `;` statements is
+    * searched per statement (with each statement's own aliases expanded), plus
+    * a combined "run all" entry. Commands with `allowsSemicolons` also get the
+    * unsplit line.
+    */
+  private def searchCandidate[A](
+      commands: Vector[Command[A]],
+      aliases: Map[String, List[String]],
+      input: String,
+      context: CommandContext
+  ): URIO[Env & Scope, SearchResults[A]] =
+    SearchInput.splitStatements(input) match {
+      case statements @ (_ :: _ :: _) =>
+        for {
+          whole           <- searchStatement(commands.filter(_.allowsSemicolons), input, context)
+          statementResult <- ZIO.foreach(Chunk.fromIterable(statements)) { statement =>
+                               ZIO
+                                 .foreach(Chunk.fromIterable(expandAliases(aliases, statement)))(
+                                   searchStatement(commands, _, context)
+                                 )
+                                 .map(rs => SearchResults(statement, rs.flatMap(_.previews), rs.flatMap(_.errors)))
+                             }
+        } yield SearchResults(
+          input,
+          Chunk.fromIterable(combinedRunAllPreview(statementResult)) ++ whole.previews ++
+            statementResult.flatMap(_.previews),
+          whole.errors ++ statementResult.flatMap(_.errors)
+        )
+
+      case statement :: Nil => searchStatement(commands, statement, context).map(_.copy(searchTerm = input))
+      case Nil              => ZIO.succeed(SearchResults(input, Chunk.empty))
     }
 
   /** Runs a single command directly by its own canonical name, bypassing
@@ -90,46 +139,24 @@ object Command {
     */
   def searchByCommandName[A](command: Command[A], context: CommandContext): URIO[Env, Option[PreviewResult[A]]] =
     command.commandNames.headOption match {
-      case Some(name) => search(Vector(command), Map.empty, name, context).map(_.previews.maxByOption(_.score))
-      case None       => ZIO.none
+      // Released right away since the preview is only run, never paged
+      case Some(name) =>
+        search(Vector(command), Map.empty, name, context).flatMap(r => r.release.as(r.previews.maxByOption(_.score)))
+      case None => ZIO.none
     }
-
-  /** Searches for commands matching a single already alias-expanded input
-    * string, splitting it into semicolon-separated statements first if it
-    * contains any.
-    */
-  private def searchExpandedInput[A](
-      commands: Vector[Command[A]],
-      input: String,
-      context: CommandContext
-  ): URIO[Env, SearchResults[A]] =
-    if (!input.contains(';'))
-      searchStatement(commands, input, context)
-    else
-      SearchInput.splitStatements(input) match {
-        case Nil              => ZIO.succeed(SearchResults(input, Chunk.empty))
-        case statement :: Nil => searchStatement(commands, statement, context).map(_.copy(searchTerm = input))
-        case statements       =>
-          ZIO.foreach(Chunk.fromIterable(statements))(searchStatement(commands, _, context)).map { statementResults =>
-            SearchResults(
-              input,
-              combinedRunAllPreview(statementResults).fold(Chunk.empty[PreviewResult[A]])(Chunk.single) ++
-                statementResults.flatMap(_.previews),
-              statementResults.flatMap(_.errors)
-            )
-          }
-      }
 
   /** Synthesizes a single combined entry that, when run, sequentially runs the
     * top (highest-scored) match of every statement, in the order they were
     * typed.
     *
-    * Returns None if any statement failed to match anything.
+    * Returns None if any statement has no real match. Error messages and
+    * fallbacks (e.g. searching the web for the raw input) don't count.
     */
   private def combinedRunAllPreview[A](statementResults: Chunk[SearchResults[A]]): Option[PreviewResult[A]] = {
-    // Each statement's own previews aren't sorted (only the fully merged list is, once, in `search`), so the
-    // top match has to be found with `maxByOption` here rather than assumed to be the head.
-    val topPerStatement = statementResults.map(_.previews.maxByOption(_.score))
+    // Error messages are `PreviewResult.None` rows, so only real command results (`Some`) count
+    val topPerStatement = statementResults.map(
+      _.previews.collect { case p: PreviewResult.Some[A] if !p.isFallback => p }.maxByOption(_.score)
+    )
 
     Option.when(topPerStatement.nonEmpty && topPerStatement.forall(_.isDefined)) {
       val topResults = topPerStatement.flatten
@@ -151,16 +178,12 @@ object Command {
     }
   }
 
-  /** Runs a search for a single command statement (i.e. with no
-    * semicolon-separated statements, and no further alias expansion - both of
-    * those are already resolved by the time this is called from [[search]] /
-    * [[searchExpandedInput]]).
-    */
+  /** Runs a search for a single, already alias-expanded command statement. */
   private def searchStatement[A](
       commands: Vector[Command[A]],
       input: String,
       context: CommandContext
-  ): URIO[Env, SearchResults[A]] =
+  ): URIO[Env & Scope, SearchResults[A]] =
     (for {
       _            <- ZIO.logTrace(s"Searching on input `$input` for ${commands.length} commands")
       resultChunks <-
@@ -173,22 +196,19 @@ object Command {
               ZIO
                 .suspendSucceed(command.preview(SearchInput(input, List(input), command.commandNames, context)))
                 .flatMap {
-                  case PreviewResults.Single(r)    => ZIO.succeed(Chunk.single(r))
-                  case PreviewResults.Multiple(rs) => ZIO.succeed(rs)
-                  case p @ PreviewResults.Paginated(
-                        rs,
-                        initialPageSize,
-                        _,
-                        totalRemaining
-                      ) =>
+                  case PreviewResults.Single(r)       => ZIO.succeed(Chunk.single(r))
+                  case PreviewResults.Multiple(rs)    => ZIO.succeed(rs)
+                  case p: PreviewResults.Paginated[A] =>
                     for {
-                      (results, restStream) <- Scope.global.use {
-                                                 rs.peel(ZSink.take[PreviewResult[A]](initialPageSize))
-                                               }
-                    } yield results match {
-                      case beforeLast :+ last if results.length >= initialPageSize =>
+                      reader          <- PageReader.make(p.results)
+                      (page, hasMore) <- reader.nextPage(p.initialPageSize)
+                    } yield page match {
+                      case beforeLast :+ last if hasMore =>
                         val more = MoreResults.Remaining(
-                          p.copy(results = restStream, totalRemaining = totalRemaining.map(_ - initialPageSize))
+                          reader,
+                          p.initialPageSize,
+                          p.morePageSize,
+                          p.totalRemaining.map(_ - page.length)
                         )
 
                         if (beforeLast.isEmpty)
@@ -196,12 +216,12 @@ object Command {
                         else
                           beforeLast :+ last :+
                             PreviewResult
-                              .nothing(Rendered.Ansi(Color.Yellow(p.moreMessage)))
+                              .nothing(Rendered.Ansi(Color.Yellow(more.moreMessage)))
                               .runOption(RunOption.RemainOpen)
                               .score(last.score)
                               .moreResults(more)
 
-                      case chunk => chunk
+                      case _ => page
                     }
                 }
                 .catchAllDefect(t => ZIO.fail(CommandError.UnexpectedError(t, command)))

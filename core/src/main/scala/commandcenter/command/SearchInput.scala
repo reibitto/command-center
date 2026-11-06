@@ -132,18 +132,21 @@ object SearchInput {
     * mirroring nushell semantics (`;` is the statement separator).
     *
     * For example, `md5 a; md5 b` is split into `List("md5 a", "md5 b")`, while
-    * `echo "a;b"` is left as a single statement since the semicolon is inside
-    * quotes.
+    * `echo "a;b"` and `gcd(20; 16)` are left as single statements since the
+    * semicolon is inside quotes or parentheses. A `'` only opens a quote at the
+    * start of a word, so apostrophes like in `don't` are left alone.
     */
   def splitStatements(input: String): List[String] = {
     val statements = List.newBuilder[String]
     val current = new StringBuilder
     var quoteChar: Char = 0
+    var parenDepth = 0
     var i = 0
     val n = input.length
 
     while (i < n) {
       val c = input.charAt(i)
+      val atWordStart = i == 0 || Character.isWhitespace(input.charAt(i - 1)) || input.charAt(i - 1) == '('
 
       if (quoteChar != 0)
         if (quoteChar == '"' && c == '\\' && i + 1 < n) {
@@ -155,15 +158,17 @@ object SearchInput {
             quoteChar = 0
           i += 1
         }
-      else if (c == '"' || c == '\'') {
+      else if (c == '"' || (c == '\'' && atWordStart)) {
         quoteChar = c
         current.append(c)
         i += 1
-      } else if (c == ';') {
+      } else if (c == ';' && parenDepth == 0) {
         statements += current.toString
         current.clear()
         i += 1
       } else {
+        if (c == '(') parenDepth += 1
+        else if (c == ')') parenDepth = (parenDepth - 1) max 0
         current.append(c)
         i += 1
       }

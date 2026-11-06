@@ -14,11 +14,12 @@ import scala.util.Try
 // TODO: Handle Windows and Linux cases. Perhaps fallback to doing nothing since this is only needed for macOS for now.
 final case class ToolsLive(pid: Long, toolsPath: Option[File], scriptCache: ZCache[String, String]) extends Tools {
 
-  private val notifyFn =
-    if (OS.os == OS.MacOS)
-      AppleScript.loadFunction2[String, String](scriptCache)("system/notify.applescript")
-    else
-      PowerShellScript.loadFunction2[String, String](scriptCache)("system/notify.ps1")
+  private val notifyFn: (String, String) => Task[String] =
+    OS.os match {
+      case OS.MacOS   => AppleScript.loadFunction2[String, String](scriptCache)("system/notify.applescript")
+      case OS.Windows => PowerShellScript.loadFunction2[String, String](scriptCache)("system/notify.ps1")
+      case _          => (message, title) => PCommand("notify-send", title, message).string
+    }
 
   // Headless environments don't have a clipboard and throw `HeadlessException`
   private val clipboard: Option[Clipboard] =

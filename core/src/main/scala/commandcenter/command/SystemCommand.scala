@@ -116,7 +116,7 @@ final case class SystemCommand(commandNames: List[String]) extends Command[Unit]
         }.unit
 
       case OS.MacOS =>
-        AppleScript.runScript("""activate application "ScreenSaverEngine"""").unit
+        PCommand("pmset", "displaysleepnow").successfulExitCode.unit
 
       case _ => ZIO.unit
     }

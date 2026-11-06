@@ -20,14 +20,10 @@ final case class SnippetsCommand(commandNames: List[String], snippets: List[Snip
         ZIO.fromOption(searchInput.asPrefixed).mapBoth(_ => (false, searchInput.input), s => (true, s.rest)).merge
 
     } yield PreviewResults.fromIterable(snippets.map { snip =>
+      // TODO: Implement better scoring algorithm (like Sublime Text fuzzy search)
       val score =
-        if (isPrefixed)
-          Scores.veryHigh(searchInput.context)
-        else {
-          // TODO: Implement better scoring algorithm (like Sublime Text fuzzy search)
-          val matchScore = LengthScorer.scoreDefault(snip.keyword, snippetSearch)
-          Scores.veryHigh(searchInput.context) * matchScore
-        }
+        if (isPrefixed && snippetSearch.isEmpty) Scores.veryHigh(searchInput.context)
+        else Scores.veryHigh(searchInput.context) * LengthScorer.scoreDefault(snip.keyword, snippetSearch)
 
       (snip, score)
     }.collect {

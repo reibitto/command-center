@@ -11,7 +11,7 @@ import enumeratum.{CirceEnum, Enum, EnumEntry}
 import enumeratum.EnumEntry.LowerCamelcase
 import fansi.{Color, Str}
 import zio.*
-import zio.process.Command as PCommand
+import zio.process.{Command as PCommand, ProcessOutput}
 
 /** Runs an arbitrary shell command line. Meant as a lightweight way to wire up
   * dozens of small utilities (each its own `commandNames` + `command` in
@@ -31,6 +31,8 @@ final case class ShellCommand(
 ) extends Command[Unit] {
   val commandType: CommandType = CommandType.ShellCommand
 
+  override def allowsSemicolons: Boolean = true
+
   def preview(searchInput: SearchInput): ZIO[Env, CommandError, PreviewResults[Unit]] =
     for {
       input <- searchInput.prefixed
@@ -42,11 +44,12 @@ final case class ShellCommand(
         .rendered(Renderer.renderDefault(title, Str("Run ") ++ Color.Magenta(commandLine)))
     )
 
+  // Output that isn't read is inherited, since an unread pipe fills up and blocks the process
   private def process(commandLine: String): PCommand =
-    OS.os match {
+    (OS.os match {
       case OS.Windows => PCommand("cmd", "/c", commandLine)
       case _          => PCommand("sh", "-c", commandLine)
-    }
+    }).stderr(ProcessOutput.Inherit)
 
   // Windows balloon-tip notifications (see notify.ps1) are backed by the Win32 NOTIFYICONDATA.szInfo field, a
   // fixed WCHAR[256] buffer. Anything past 255 characters gets silently truncated. macOS seems to have no hard limit,
@@ -62,9 +65,6 @@ final case class ShellCommand(
     Tools.notify(message, title)
   }
 
-  private def escapeForAppleScriptString(s: String): String =
-    s.replace("\\", "\\\\").replace("\"", "\\\"")
-
   private def openInTerminal(commandLine: String, keepOpen: Boolean): RIO[Env, Unit] =
     OS.os match {
       case OS.Windows =>
@@ -73,7 +73,7 @@ final case class ShellCommand(
       case OS.MacOS =>
         val toRun = if (runAsAdmin) s"sudo $commandLine" else commandLine
         val finalCommand = if (keepOpen) toRun else s"$toRun; exit"
-        val escapedCommand = escapeForAppleScriptString(finalCommand)
+        val escapedCommand = AppleScript.escape(finalCommand)
         AppleScript.runScript(s"""tell application "Terminal" to do script "$escapedCommand"""").unit
 
       // Best-effort: unlike Windows/macOS there's no single standard terminal emulator on Linux. This relies on the
@@ -127,7 +127,7 @@ final case class ShellCommand(
         openInTerminal(commandLine, keepOpen = false)
 
       case (OS.MacOS, _) =>
-        val escapedCommand = escapeForAppleScriptString(commandLine)
+        val escapedCommand = AppleScript.escape(commandLine)
         PCommand("osascript", "-e", s"""do shell script "$escapedCommand" with administrator privileges""").string
           .flatMap(handleCapturedOutput)
 
@@ -144,7 +144,7 @@ final case class ShellCommand(
   private def runNormal(commandLine: String): RIO[Env, Unit] =
     outputMode match {
       case ShellOutputMode.Silent =>
-        process(commandLine).successfulExitCode.unit
+        process(commandLine).stdout(ProcessOutput.Inherit).successfulExitCode.unit
 
       case ShellOutputMode.Clipboard =>
         process(commandLine).string.flatMap(output => Tools.setClipboard(output.trim))

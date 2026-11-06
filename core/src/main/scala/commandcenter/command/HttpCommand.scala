@@ -51,6 +51,7 @@ final case class HttpCommand(
           PreviewResults.one(
             Preview.unit
               .score(Scores.high(searchInput.context) * 0.35)
+              .asFallback
               .onRun(executeHttpRequest(searchInput.input))
               .rendered(
                 Renderer.renderDefault(title, Str("Execute ") ++ Color.Magenta(searchInput.input))

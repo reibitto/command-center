@@ -42,16 +42,18 @@ object ProcessUtil {
         for {
           asn       <- PCommand("lsappinfo", "front").string
           pidString <- PCommand("lsappinfo", "info", "-only", "pid", asn.trim).string
-          pid       <- pidString.split('=') match {
-                   case Array(_, pid) => ZIO.succeed(pid.trim.toLong)
-                   case _             => ZIO.fail(new Exception(s"pid could not be extracted from: $pidString"))
-                 }
+          pid       <- ZIO
+                   .fromOption(pidString.split('=').lift(1).flatMap(_.trim.toLongOption))
+                   .orElseFail(new Exception(s"pid could not be extracted from: $pidString"))
         } yield Some(pid)
 
       case OS.Windows =>
         WindowManager.frontWindow.map(_.map(_.pid))
 
-      case _ =>
+      case OS.Linux =>
+        PCommand("xdotool", "getactivewindow", "getwindowpid").string.map(_.trim.toLongOption)
+
+      case OS.Other(_) =>
         ZIO.fail(
           new UnsupportedOperationException(s"Getting the frontmost process's PID not supported yet for ${OS.os}")
         )
@@ -66,12 +68,11 @@ object ProcessUtil {
 
         command.successfulExitCode.unit
 
+      // explorer.exe exits with 1 even on success, so its exit code is ignored
       case OS.Windows =>
-        val arg =
-          if (file.isDirectory) file.getCanonicalPath
-          else s"/select,${file.getAbsolutePath}"
-
-        PCommand("explorer.exe", arg).successfulExitCode.unit
+        ZIO
+          .attemptBlocking(if (file.isDirectory) file.getCanonicalPath else s"/select,${file.getAbsolutePath}")
+          .flatMap(arg => PCommand("explorer.exe", arg).exitCode.unit)
 
       // TODO: To properly support Linux, we probably need to detect the Linux flavor
       case OS.Linux | OS.Other(_) => ZIO.attemptBlocking(Desktop.getDesktop.browseFileDirectory(file))

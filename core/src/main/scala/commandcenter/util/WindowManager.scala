@@ -12,7 +12,7 @@ import scala.collection.mutable
 
 object WindowManager {
 
-  def centerScreen: Task[Unit] = ZIO.attempt {
+  def centerScreen: Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -34,7 +34,7 @@ object WindowManager {
     User32.INSTANCE.SetWindowPos(window, null, x, y, windowWidth, windowHeight, WinUser.SWP_NOZORDER)
   }
 
-  def resizeToScreenSize: Task[Unit] = ZIO.attempt {
+  def resizeToScreenSize: Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -53,7 +53,7 @@ object WindowManager {
     User32.INSTANCE.SetWindowPos(window, null, x, y, monitorWidth, monitorHeight, WinUser.SWP_NOZORDER)
   }
 
-  def resizeFullHeightMaintainAspectRatio: Task[Unit] = ZIO.attempt {
+  def resizeFullHeightMaintainAspectRatio: Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -75,25 +75,25 @@ object WindowManager {
     User32.INSTANCE.SetWindowPos(window, null, x, y, windowWidth, monitorHeight, WinUser.SWP_NOZORDER)
   }
 
-  def minimizeWindow: Task[Unit] = ZIO.attempt {
+  def minimizeWindow: Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     User32.INSTANCE.ShowWindow(window, WinUser.SW_FORCEMINIMIZE)
   }
 
-  def maximizeWindow: Task[Unit] = ZIO.attempt {
+  def maximizeWindow: Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     User32.INSTANCE.ShowWindow(window, WinUser.SW_MAXIMIZE)
   }
 
-  def restoreWindow: Task[Unit] = ZIO.attempt {
+  def restoreWindow: Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     User32.INSTANCE.ShowWindow(window, WinUser.SW_RESTORE)
   }
 
-  def toggleMaximizeWindow: Task[Unit] = ZIO.attempt {
+  def toggleMaximizeWindow: Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
 
     val windowPlacement = new WINDOWPLACEMENT()
@@ -121,7 +121,7 @@ object WindowManager {
       _ <- transform(boundsList(newIndex))
     } yield ()
 
-  def transform(bounds: WindowBounds): Task[Unit] = ZIO.attempt {
+  def transform(bounds: WindowBounds): Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -161,7 +161,7 @@ object WindowManager {
 
   def moveToPreviousDisplay: Task[Unit] = moveToDisplay(-1)
 
-  def moveToDisplay(delta: Int): Task[Unit] = ZIO.attempt {
+  def moveToDisplay(delta: Int): Task[Unit] = ZIO.attemptBlocking {
     val window = User32.INSTANCE.GetForegroundWindow()
     val monitor = User32.INSTANCE.MonitorFromWindow(window, WinUser.MONITOR_DEFAULTTONEAREST)
 
@@ -239,9 +239,9 @@ object WindowManager {
 
   def frontWindow: Task[Option[FrontWindow]] =
     for {
-      windowHandleOpt <- ZIO.attempt(Option(User32.INSTANCE.GetForegroundWindow()))
+      windowHandleOpt <- ZIO.attemptBlocking(Option(User32.INSTANCE.GetForegroundWindow()))
       window          <- ZIO.foreach(windowHandleOpt) { windowHandle =>
-                  ZIO.attempt {
+                  ZIO.attemptBlocking {
                     val title = fromCString(512)(a => User32.INSTANCE.GetWindowText(windowHandle, a, a.length))
                     val processId = new IntByReference()
                     User32.INSTANCE.GetWindowThreadProcessId(windowHandle, processId).toLong
@@ -251,32 +251,32 @@ object WindowManager {
                 }
     } yield window
 
-  def lastErrorCode: Task[Option[Int]] = ZIO.attempt {
+  def lastErrorCode: Task[Option[Int]] = ZIO.attemptBlocking {
     val errorCode = Kernel32.INSTANCE.GetLastError()
     Option.when(errorCode != 0)(errorCode)
   }
 
   def openProcess(pid: Long): RIO[Scope, WinNT.HANDLE] = ZIO.acquireRelease(
-    ZIO.attempt {
+    ZIO.attemptBlocking {
       Kernel32.INSTANCE.OpenProcess(WinNT.PROCESS_SUSPEND_RESUME, false, pid.toInt)
     }
   ) { handle =>
-    ZIO.attempt {
+    ZIO.attemptBlocking {
       Kernel32.INSTANCE.CloseHandle(handle)
     }.tapErrorCause { t =>
       ZIO.logWarningCause(s"Could not close handle: $handle", t)
     }.ignore
   }
 
-  def suspendProcess(process: WinNT.HANDLE): Task[Int] = ZIO.attempt {
+  def suspendProcess(process: WinNT.HANDLE): Task[Int] = ZIO.attemptBlocking {
     NtApi.Lib.INSTANCE.NtSuspendProcess(process)
   }
 
-  def resumeProcess(process: WinNT.HANDLE): Task[Int] = ZIO.attempt {
+  def resumeProcess(process: WinNT.HANDLE): Task[Int] = ZIO.attemptBlocking {
     NtApi.Lib.INSTANCE.NtResumeProcess(process)
   }
 
-  def commandCenterWindow: Task[Option[HWND]] = ZIO.attempt {
+  def commandCenterWindow: Task[Option[HWND]] = ZIO.attemptBlocking {
     val currentProcess = ProcessHandle.current()
     var ccWindow: Option[HWND] = None
 
@@ -298,7 +298,7 @@ object WindowManager {
     ccWindow
   }
 
-  def topLevelWindows: Task[List[TopLevelWindow]] = ZIO.attempt {
+  def topLevelWindows: Task[List[TopLevelWindow]] = ZIO.attemptBlocking {
     // This list comes from GoToWindow: https://github.com/christianrondeau/GoToWindow/blob/master/GoToWindow.Api/WindowsListFactory.cs
     val ignoredClasses: Set[String] = Set(
       "Button",
@@ -340,7 +340,7 @@ object WindowManager {
     windows.toList
   }
 
-  def giveWindowFocus(window: HWND): Task[Unit] = ZIO.attempt {
+  def giveWindowFocus(window: HWND): Task[Unit] = ZIO.attemptBlocking {
     val windowPlacement = new WINDOWPLACEMENT()
     User32.INSTANCE.GetWindowPlacement(window, windowPlacement)
 

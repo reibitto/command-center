@@ -26,13 +26,16 @@ final case class SpeakCommand(
         speakFn(voice, speakText).unit
 
       case OS.MacOS =>
-        val voice = Language.detect(speakText) match {
-          case Locale.ENGLISH  => "Samantha"
-          case Locale.KOREAN   => "Yuna"
-          case Locale.JAPANESE => "Kyoko"
-        }
+        val macVoice =
+          if (voice.nonEmpty) voice
+          else
+            Language.detect(speakText) match {
+              case Locale.KOREAN   => "Yuna"
+              case Locale.JAPANESE => "Kyoko"
+              case _               => "Samantha"
+            }
 
-        PCommand("say", "-v", voice, speakText).exitCode.unit
+        PCommand("say", "-v", macVoice, speakText).exitCode.unit
 
       case _ => ZIO.unit
 
@@ -57,10 +60,12 @@ final case class SpeakCommand(
       .when(speakText.isEmpty)
       .as(
         PreviewResults.one(
-          Preview.unit
+          inputOpt
+            .fold(Preview.unit.score(Scores.hide).asFallback)(input =>
+              Preview.unit.score(Scores.veryHigh(input.context))
+            )
             .onRun(speak(voice, speakText))
             .runOption(RunOption.RemainOpen)
-            .score(inputOpt.fold(Scores.hide)(input => Scores.veryHigh(input.context)))
         )
       )
   }

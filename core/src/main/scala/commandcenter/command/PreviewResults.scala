@@ -34,15 +34,7 @@ object PreviewResults {
       initialPageSize: Int,
       morePageSize: Int,
       totalRemaining: Option[Long]
-  ) extends PreviewResults[A] {
-
-    def moreMessage: String =
-      totalRemaining match {
-        case Some(remaining) => s"Load $morePageSize of $remaining more..."
-        case None            => "More..."
-      }
-
-  }
+  ) extends PreviewResults[A]
 
   object Paginated {
 

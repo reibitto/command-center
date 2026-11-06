@@ -26,40 +26,40 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
     val input = searchInput.input
     if (!input.startsWith("/") && !input.startsWith("~/") && drivePathRegex.findPrefixOf(input).isEmpty)
       ZIO.fail(NotApplicable)
-    else {
-      val file = homeDirectory match {
-        case Some(home) if input == "~/"          => new File(home)
-        case Some(home) if input.startsWith("~/") => new File(home, input.tail)
-        case _                                    => new File(input)
-      }
-
-      val exists = file.exists()
-      val score = if (exists) 101 else 100
-      val titleColor = if (exists) Color.Blue else Color.Red
-
-      val sameLevel = Option(file.getParentFile)
-        .map(f => ZStream.fromJavaStream(Files.list(f.toPath)).catchAll(_ => ZStream.empty))
-        .getOrElse(ZStream.empty)
-        .map(_.toFile)
-        .filter { f =>
-          val listedPath = f.getAbsolutePath.toLowerCase
-          val inputFile = file.getAbsolutePath.toLowerCase
-          listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
+    else
+      ZIO.blocking(ZIO.succeed {
+        val file = homeDirectory match {
+          case Some(home) if input == "~/"          => new File(home)
+          case Some(home) if input.startsWith("~/") => new File(home, input.tail)
+          case _                                    => new File(input)
         }
 
-      val children = Option
-        .when(file.isDirectory)(file)
-        .filter(_.isDirectory)
-        .map(f => ZStream.fromJavaStream(Files.list(f.toPath)).catchAll(_ => ZStream.empty))
-        .getOrElse(ZStream.empty)
-        .map(_.toFile)
-        .filter { f =>
-          val listedPath = f.getAbsolutePath.toLowerCase
-          val inputFile = file.getAbsolutePath.toLowerCase
-          listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
-        }
+        val exists = file.exists()
+        val score = if (exists) 101 else 100
+        val titleColor = if (exists) Color.Blue else Color.Red
 
-      ZIO.succeed {
+        val sameLevel = Option(file.getParentFile)
+          .map(f => ZStream.blocking(ZStream.fromJavaStream(Files.list(f.toPath))).catchAll(_ => ZStream.empty))
+          .getOrElse(ZStream.empty)
+          .map(_.toFile)
+          .filter { f =>
+            val listedPath = f.getAbsolutePath.toLowerCase
+            val inputFile = file.getAbsolutePath.toLowerCase
+            listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
+          }
+
+        val children = Option
+          .when(file.isDirectory)(file)
+          .filter(_.isDirectory)
+          .map(f => ZStream.blocking(ZStream.fromJavaStream(Files.list(f.toPath))).catchAll(_ => ZStream.empty))
+          .getOrElse(ZStream.empty)
+          .map(_.toFile)
+          .filter { f =>
+            val listedPath = f.getAbsolutePath.toLowerCase
+            val inputFile = file.getAbsolutePath.toLowerCase
+            listedPath.startsWith(inputFile) && listedPath.length != inputFile.length
+          }
+
         PreviewResults.paginated(
           ZStream.succeed(
             Preview(file)
@@ -75,8 +75,7 @@ final case class FileNavigationCommand(homeDirectory: Option[String]) extends Co
           initialPageSize = 10,
           morePageSize = 20
         )
-      }
-    }
+      })
   }
 }
 

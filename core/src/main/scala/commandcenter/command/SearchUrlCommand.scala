@@ -53,6 +53,7 @@ final case class SearchUrlCommand(
           PreviewResults.one(
             Preview.unit
               .score(Scores.high(searchInput.context) * 0.35)
+              .asFallback
               .onRun(openBrowser(searchInput.input))
               .rendered(
                 Renderer.renderDefault(title, Str("Search for ") ++ Color.Magenta(searchInput.input))
