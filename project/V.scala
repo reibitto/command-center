@@ -39,7 +39,7 @@ object V {
 
   val zioLogging = "2.5.4"
 
-  val zioPrelude = "1.0.0-RC48"
+  val zioPrelude = "1.0.0-RC49"
 
   val zioProcess = "0.8.1"
 }
